@@ -1,0 +1,7 @@
+Useful repos:
+
+Sequential Social Dilemma Games:
+https://github.com/eugenevinitsky/sequential_social_dilemma_games
+Environment implementation seems useful, also compatible with
+OpenAI Gym and other common RL environments.
+

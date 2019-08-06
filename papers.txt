@@ -1,8 +1,13 @@
+Useful papers:
+
 Social Influence as Intrinsic Motivation for Multi-Agent Deep Reinforcement Learning
 https://arxiv.org/abs/1810.08647
 Has an interesting set of tasks for evaluation, and also they use certain modules
 (like an explicit communication channel for all agents to read/write from/to) that
 could be useful.
+Figure 10 of this paper does show that in these games, individual agents are motivated
+to defect, even though everyone gets more through cooperation. Not sure if I agree with
+this payoff structure and this is something to consider when designing the environment.
 
 Evolving Neural Networks through Augmenting Topologies
 http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf
