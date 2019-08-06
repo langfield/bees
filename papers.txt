@@ -1,0 +1,10 @@
+Social Influence as Intrinsic Motivation for Multi-Agent Deep Reinforcement Learning
+https://arxiv.org/abs/1810.08647
+Has an interesting set of tasks for evaluation, and also they use certain modules
+(like an explicit communication channel for all agents to read/write from/to) that
+could be useful.
+
+Evolving Neural Networks through Augmenting Topologies
+http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf
+Kind of old but a good resource for ideas about training networks through evolution.
+If nothing else, look at more recent papers which have cited this paper.
