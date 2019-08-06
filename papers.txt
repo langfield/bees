@@ -7,9 +7,15 @@ Has an interesting set of tasks for evaluation, and also they use certain module
 could be useful.
 Figure 10 of this paper does show that in these games, individual agents are motivated
 to defect, even though everyone gets more through cooperation. Not sure if I agree with
-this payoff structure and this is something to consider when designing the environment.
+the exact payoff structure, because only a small degree of cooperation is required to
+gain more reward than defecting, which is not too difficult to learn. This is something
+to go over in more detail and consider when building the environment. 
 
 Evolving Neural Networks through Augmenting Topologies
 http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf
 Kind of old but a good resource for ideas about training networks through evolution.
 If nothing else, look at more recent papers which have cited this paper.
+
+Asynchronous Methods for Deep Reinforcement Learning
+https://arxiv.org/abs/1602.01783
+Good reference for baseline RL algorithms, will find other options through references.
