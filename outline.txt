@@ -1,0 +1,24 @@
+Actions:
+Movement (left, right, up, down, none)
+Speech (real valued vector)
+Consume (yes, no)
+
+Input at each timestep:
+Sight
+Audio
+Health
+
+At each timestep, sight is passed into a convolutional-recurrent network and
+audio is passed into a multi-head attention (?) network. The individual outputs
+of these networks are then concatenated with the agent's health, and the
+result is passed into a recurrent-ish (LSTM?) network which then outputs scores
+for each action (this score vector will be of length 7 + n, where n is the length
+of the speech vector), which determines the actions of the agent. These 3 networks
+are then trained using an undecided RL algorithm to maximize the reward function.
+
+Reward function is implemented as a (fully connected?) network which takes as
+input the previous observations (sight, audio, health) and outputs a real number.
+The reward function is fixed during an agents lifetime, and is initialized for
+each agent as some mixture of the reward functions of that agent's parents. The
+first generation has randomly initialized reward functions.
+
