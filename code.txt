@@ -1,7 +1,10 @@
-Useful repos:
+Useful repos/libraries:
 
 Reinforcement Learning Resources:
 https://github.com/aikorea/awesome-rl
+
+RLLib: Scalable Reinforcement Learning:
+https://ray.readthedocs.io/en/latest/rllib.html
 
 Sequential Social Dilemma Games:
 https://github.com/eugenevinitsky/sequential_social_dilemma_games
@@ -10,3 +13,7 @@ OpenAI Gym and other common RL environments.
 
 Evolutionary Computation Library:
 https://github.com/DEAP/deap
+
+Projects that use RLlib, would be good references.
+https://github.com/ermongroup/MA-AIRL
+https://github.com/social-dilemma/multiagent
