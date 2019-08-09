@@ -19,3 +19,18 @@ If nothing else, look at more recent papers which have cited this paper.
 Asynchronous Methods for Deep Reinforcement Learning
 https://arxiv.org/abs/1602.01783
 Good reference for baseline RL algorithms, will find other options through references.
+
+Emergence of Linguistic Communication from Referential Games with Symbolic and Pixel Input:
+https://arxiv.org/abs/1804.03984
+
+Emergent Communication through Negotiation:
+https://arxiv.org/abs/1804.03980
+
+Negotiating Team Formation Using Deep Reinforcement Learning:
+https://openreview.net/forum?id=HJG0ojCcFm
+
+Learning to Teach with Dynamic Loss Functions:
+https://arxiv.org/abs/1810.12081
+
+Optimal Rewards for Cooperative Agents:
+https://web.eecs.umich.edu/~baveja/Papers/06920028.pdf
