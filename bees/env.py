@@ -1,3 +1,4 @@
+"""Environment with Bees."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -20,20 +21,23 @@ from ray.rllib.env.base_env import _MultiAgentEnvToBaseEnv
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.tune.registry import register_env
 
-
 def one_hot(i, n):
     out = [0.0] * n
     out[i] = 1.0
     return out
 
 class BeeEnv(MultiAgentEnv):
-    """Env of N independent agents, each of which exits after 25 steps."""
+    """Environment with bees in it."""
 
     def __init__(self, env_config: dict) -> None:
-        
-        # Construct ``grid``. 
+
+        # Parse env_config
         self.rows = env_config["rows"]
         self.cols = env_config["cols"]
+        self.sight_len = env_config["sight_len"]
+        self.obj_types = env_config["obj_types"]
+
+        # Construct ``grid``. 
         grid = []
         for i in range(self.rows):
             row = []
@@ -42,11 +46,31 @@ class BeeEnv(MultiAgentEnv):
                 row.append(objects)
             grid.append(row)
         self.grid = grid
- 
+
+        # Construct observation and action spaces
+        self.action_space = gym.spaces.Dict({
+                "move": gym.spaces.Discrete(5),
+                "consume": gym.spaces.Discrete(2)
+        })
+
+        obs_dict = {}
+        for x in range(self.sight_len):
+            for y in range(self.sight_len):
+                obs_dict[(x, y)] = gym.spaces.Discrete(self.obj_types)
+        self.observation_space = gym.spaces.Dict(obs_dict)
+
+        # Misc settings
         self.dones = set()
-        self.observation_space = gym.spaces.Discrete(2)
-        self.action_space = gym.spaces.Discrete(2)
         self.resetted = False
+
+        # Fill environment
+        self.fill_env()
+
+    def fill_env(self):
+        """Populate the environment with food and agents."""
+
+        
+        pass
 
     def reset(self):
         self.resetted = True
