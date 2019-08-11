@@ -1,46 +1,51 @@
 Rough outline of macro details:
 
-Environment:
-The simplest version of the environment consists of a 2d grid in which each square
-of the grid can be inhabited by nothing, an agent, or a piece of food. The agents
-have a continuously declining health bar, and they die when health reaches zero.
-Eating food increases health. In this very simple environment, the agent's only
-need to learn to move towards and consume food, which shouldn't be too difficult.
-In a slightly more difficult version, we can also create lava squares, which will
-injure or kill an agent upon entering. By placing food in certain pockets with many
-lava squares, the agents will need to learn to avoid lava and find food. Still a
-very simple problem that requires no coordination with other agents. The simplest
-environmental obstacle that would require some degree of coordination is a payout
-structure for food that benefits agents who share food, such as in the games
-'harvest' or 'cleanup' which are used in the social influence paper. These games
-still don't require a sophisticated degree of communication, just an ability to
-see past the greedy motivations and engage in socially responsible behavior. A
-natural next step past this benchmark and into the territory of communication is
-the inclusion of tasks which explicity require communication, such as synchronized
-button pushing or delivery of a piece of token information. We should start with
-the simplest version and move our way up.
+    Environment:
+    The simplest version of the environment consists of a 2d grid in which each square
+    of the grid can be inhabited by nothing, an agent, or a piece of food. The agents
+    have a continuously declining health bar, and they die when health reaches zero.
+    Eating food increases health. In this very simple environment, the agent's only
+    need to learn to move towards and consume food, which shouldn't be too difficult.
+    In a slightly more difficult version, we can also create lava squares, which will
+    injure or kill an agent upon entering. By placing food in certain pockets with many
+    lava squares, the agents will need to learn to avoid lava and find food. Still a
+    very simple problem that requires no coordination with other agents. The simplest
+    environmental obstacle that would require some degree of coordination is a payout
+    structure for food that benefits agents who share food, such as in the games
+    'harvest' or 'cleanup' which are used in the social influence paper. These games
+    still don't require a sophisticated degree of communication, just an ability to
+    see past the greedy motivations and engage in socially responsible behavior. A
+    natural next step past this benchmark and into the territory of communication is
+    the inclusion of tasks which explicity require communication, such as synchronized
+    button pushing or delivery of a piece of token information. We should start with
+    the simplest version and move our way up.
 
-Actions:
-Movement (left, right, up, down, none)
-Speech (real valued vector)
-Consume (yes, no)
+    Actions:
+    Movement (left, right, up, down, none)
+    Speech (real valued vector)
+    Consume (yes, no)
 
-Input at each timestep:
-Sight
-Audio
-Health
+    Input at each timestep:
+    Sight
+    Audio
+    Health
 
-At each timestep, sight is passed into a convolutional-recurrent network and
-audio is passed into a multi-head attention (?) network. The individual outputs
-of these networks are then concatenated with the agent's health, and the
-result is passed into a recurrent-ish (LSTM?) network which then outputs scores
-for each action (this score vector will be of length 7 + n, where n is the length
-of the speech vector), which determines the actions of the agent. These 3 networks
-are then trained using an undecided RL algorithm to maximize the reward function.
+    At each timestep, sight is passed into a convolutional-recurrent network and
+    audio is passed into a multi-head attention (?) network. The individual outputs
+    of these networks are then concatenated with the agent's health, and the
+    result is passed into a recurrent-ish (LSTM?) network which then outputs scores
+    for each action (this score vector will be of length 7 + n, where n is the length
+    of the speech vector), which determines the actions of the agent. These 3 networks
+    are then trained using an undecided RL algorithm to maximize the reward function.
 
-Reward function is implemented as a (fully connected?) network which takes as
-input the previous observations (sight, audio, health) and outputs a real number.
-The reward function is fixed during an agents lifetime, and is initialized for
-each agent as some mixture of the reward functions of that agent's parents. The
-first generation has randomly initialized reward functions.
+    Reward function is implemented as a (fully connected?) network which takes as
+    input the previous observations (sight, audio, health) and outputs a real number.
+    The reward function is fixed during an agents lifetime, and is initialized for
+    each agent as some mixture of the reward functions of that agent's parents. The
+    first generation has randomly initialized reward functions.
 
+#=====================================================================================
+Things to come back to:
+
+    Considering the order in which agents make decisions, dealing with collisions 
+    between the actions of two agents during environment steps.  
