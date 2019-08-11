@@ -44,8 +44,17 @@ Rough outline of macro details:
     each agent as some mixture of the reward functions of that agent's parents. The
     first generation has randomly initialized reward functions.
 
+    TODO: Should we make them choose between moving or eating at a given timestep, 
+    or allow them to do both?
+
 #=====================================================================================
 Things to come back to:
 
+    Make ``self.grid`` a numpy array instead of a ``Dict`` with ``Tuple`` keys. 
+
     Considering the order in which agents make decisions, dealing with collisions 
     between the actions of two agents during environment steps.  
+
+    Instead of ``self.rows``, ``self.cols`` and whatever, we just have a 
+    ``self.env_config`` and pass it to the rest of the class and call variables using 
+    string keys.
