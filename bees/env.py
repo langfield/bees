@@ -6,7 +6,7 @@ from __future__ import print_function
 import math
 import random
 import itertools
-from typing import List, Tuple, Dict
+from typing import Tuple, Dict
 
 import gym
 import numpy as np
@@ -14,9 +14,9 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from agent import Agent
 
+
 class Env(MultiAgentEnv):
     """Environment with bees in it."""
-
     def __init__(self, env_config: dict) -> None:
 
         # Parse ``env_config``.
@@ -36,16 +36,16 @@ class Env(MultiAgentEnv):
                 # Dict of object indices. Keys are objtype strings.
                 objects = {}
                 key = tuple([x, y])
-                grid.update({key:objects})
+                grid.update({key: objects})
         self.grid = grid
-        
+
         # Compute number of foods.
         self.num_foods = math.floor(self.food_density * len(self.grid))
 
         # Construct observation and action spaces
         self.action_space = gym.spaces.Dict({
-                "move": gym.spaces.Discrete(5),
-                "consume": gym.spaces.Discrete(2)
+            "move": gym.spaces.Discrete(5),
+            "consume": gym.spaces.Discrete(2)
         })
 
         obs_dict = {}
@@ -68,10 +68,7 @@ class Env(MultiAgentEnv):
         """Populate the environment with food and agents."""
 
         # Set unique agent positions
-        grid_positions = itertools.product(
-                range(self.rows),
-                range(self.cols)
-        )
+        grid_positions = itertools.product(range(self.rows), range(self.cols))
         agent_positions = random.sample(grid_positions, self.num_agents)
         for agent_id, agent in enumerate(self.agents):
             pos = agent_positions[agent_id]
@@ -145,12 +142,13 @@ class Env(MultiAgentEnv):
             consume = action[1]
             if "food" in self.grid[pos] and consume == "eat":
                 del self.grid[pos]["food"]
-            food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
+            food_size = np.random.normal(self.food_size_mean,
+                                         self.food_size_stddev)
             agent.health = min(1, agent.health + food_size)
 
     def _get_obs(self, pos: Tuple[int]) -> np.array:
         obs_size = 2 * self.sight_len - 1
-        one_hot_dim = max(len(self.agents), self.num_foods) 
+        one_hot_dim = max(len(self.agents), self.num_foods)
         obs = np.zeros((obs_size, obs_size, one_hot_dim))
         return obs
 
@@ -169,7 +167,7 @@ class Env(MultiAgentEnv):
         for agent_id, agent in enumerate(self.agents):
             # Compute ovservation.
             obs[agent_id] = self._get_obs(agent.pos)
-            rew[agent_id] = 1 # TODO: implement.
+            rew[agent_id] = 1  # TODO: implement.
             done[agent_id] = False
         """
         for i, action in action_dict.items():
