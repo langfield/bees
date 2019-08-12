@@ -1,2 +1,9 @@
+import random
+
 class Policy:
-    pass
+
+    def get_action(self, observation):
+        move = random.choice(["left", "right", "up", "down", "stay"])
+        consume = random.choice(["eat", "noeat"])
+
+        return {"move": move, "consume": consume}
