@@ -134,6 +134,7 @@ class Env(MultiAgentEnv):
         Takes as input a collision-free ``action_dict`` and
         executes the ``consume`` action for all agents.
         """
+        rew = {}
         for agent_id, action in action_dict.items():
             agent = self.agents[agent_id]
             pos = agent.pos
@@ -143,7 +144,11 @@ class Env(MultiAgentEnv):
                 del self.grid[pos]["food"]
             food_size = np.random.normal(self.food_size_mean,
                                          self.food_size_stddev)
+            original_health = agent.health
             agent.health = min(1, agent.health + food_size)
+            rew[agent_id] = agent.health - original_health
+
+        return rew
 
     def _get_obs(self, pos: Tuple[int]) -> np.array:
         obs_size = 2 * self.sight_len - 1
@@ -173,13 +178,13 @@ class Env(MultiAgentEnv):
         """
         # Compute collisions and update ``self.grid``.
         action_dict = self._move(action_dict)
-        self._consume(action_dict)
+        rew = self._consume(action_dict)
         obs, rew, done, info = {}, {}, {}, {}
         for agent_id, agent in enumerate(self.agents):
+
             # Compute observation.
             obs[agent_id] = self._get_obs(agent.pos)
             agent.observation = obs[agent_id]
-            rew[agent_id] = 1  # TODO: implement.
             done[agent_id] = False
 
         return obs, rew, done, info
