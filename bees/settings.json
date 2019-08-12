@@ -1,0 +1,13 @@
+{
+    "env_config": {
+        "rows": 10,
+        "cols": 10,
+        "sight_len": 3,
+        "obj_types": 2,
+        "num_agents": 5,
+        "food_density": 0.1,
+        "food_size_mean": 0.01,
+        "food_size_stddev": 0.0
+    },
+    "time_steps": 10
+}

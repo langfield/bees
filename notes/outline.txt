@@ -58,3 +58,6 @@ Things to come back to:
     Instead of ``self.rows``, ``self.cols`` and whatever, we just have a 
     ``self.env_config`` and pass it to the rest of the class and call variables using 
     string keys.
+
+    Make Env object less monolithic. Break it up into environment functionality (_move
+    and _consume, for example) and running functionality (get_action_dict).

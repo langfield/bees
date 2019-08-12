@@ -61,19 +61,16 @@ class Env(MultiAgentEnv):
         self.dones = set()
         self.resetted = False
 
-        # Fill environment
-        self.fill()
-
     def fill(self):
         """Populate the environment with food and agents."""
 
         # Set unique agent positions
-        grid_positions = itertools.product(range(self.rows), range(self.cols))
+        grid_positions = list(itertools.product(range(self.rows), range(self.cols)))
         agent_positions = random.sample(grid_positions, self.num_agents)
         for agent_id, agent in enumerate(self.agents):
             pos = agent_positions[agent_id]
             self.grid[pos]["agent"] = agent_id
-            agent.pos = agent_positions[agent_id]
+            agent.pos = pos
 
         # Set unique food positions
         food_positions = random.sample(grid_positions, self.num_foods)
@@ -102,13 +99,15 @@ class Env(MultiAgentEnv):
             new_pos = pos
         return new_pos
 
-    def _move(self, action_dict: Dict[Tuple[str]]) -> Dict[Tuple[str]]:
+    def _move(self, action_dict: Dict[str,Dict[str,str]]) -> Dict[str,Dict[str,str]]:
         """
         Identify collisions and update ``action_dict``,
         ``self.grid``, and ``agent.pos``.
         """
         # Shuffle the keys.
-        for agent_id, action in random.shuffle(action_dict.items()):
+        shuffled_items = list(action_dict.items())
+        random.shuffle(shuffled_items)
+        for agent_id, action in shuffled_items:
             agent = self.agents[agent_id]
             pos = agent.pos
             move = action["move"]
@@ -120,9 +119,9 @@ class Env(MultiAgentEnv):
                 out_of_bounds = True
             if new_pos[1] < 0 or new_pos[1] >= self.rows:
                 out_of_bounds = True
-            if "agent" in self.grid[new_pos] or out_of_bounds:
-                consume = action[1]
-                action_dict[agent_id] = tuple(["stay", consume])
+            if out_of_bounds or "agent" in self.grid[new_pos]:
+                consume = action["consume"]
+                action_dict[agent_id] = {"move": "stay", "consume": consume}
             else:
                 del self.grid[pos]["agent"]
                 self.grid[new_pos]["agent"] = agent_id
@@ -130,7 +129,7 @@ class Env(MultiAgentEnv):
 
         return action_dict
 
-    def _consume(self, action_dict: Dict[Tuple[str]]) -> None:
+    def _consume(self, action_dict: Dict[str,Dict[str,str]]) -> None:
         """
         Takes as input a collision-free ``action_dict`` and
         executes the ``consume`` action for all agents.
@@ -139,7 +138,7 @@ class Env(MultiAgentEnv):
             agent = self.agents[agent_id]
             pos = agent.pos
             # If they try to eat when there's nothing there, do nothing.
-            consume = action[1]
+            consume = action["consume"]
             if "food" in self.grid[pos] and consume == "eat":
                 del self.grid[pos]["food"]
             food_size = np.random.normal(self.food_size_mean,
@@ -152,11 +151,23 @@ class Env(MultiAgentEnv):
         obs = np.zeros((obs_size, obs_size, one_hot_dim))
         return obs
 
-    def step(self, action_dict: Dict[Tuple[str]]):
+    def get_action_dict(self) -> Dict[str,Dict[str,str]]:
         """
-        ``action_dict`` has agent indices as keys and a tuple of the form
-        ``(<move>, <consume>)`` where the tuple elements are strings
-        from the sets
+        Constructs ``action_dict`` by querying individual agents for
+        their actions based on their observations.
+        """
+        action_dict = {}
+        
+        for agent_id, agent in enumerate(self.agents):
+            action_dict[agent_id] = agent.get_action()
+
+        return action_dict
+
+    def step(self, action_dict: Dict[str,Dict[str,str]]):
+        """
+        ``action_dict`` has agent indices as keys and a dict of the form
+        ``{"move": <move>, "consume": <consume>)`` where the dict values
+        are strings from the sets
             ``movements = set(["up", "down", "left", "right", "stay"])``
             ``consumptions = set(["eat", "noeat"])``.
         """
@@ -165,16 +176,32 @@ class Env(MultiAgentEnv):
         self._consume(action_dict)
         obs, rew, done, info = {}, {}, {}, {}
         for agent_id, agent in enumerate(self.agents):
-            # Compute ovservation.
+            # Compute observation.
             obs[agent_id] = self._get_obs(agent.pos)
+            agent.observation = obs[agent_id]
             rew[agent_id] = 1  # TODO: implement.
             done[agent_id] = False
-        """
-        for i, action in action_dict.items():
-            # Updated agent info should contain new grid positions.
-            obs[i], rew[i], done[i], info[i] = self.agents[i].step(action)
-            if done[i]:
-                self.dones.add(i)
-        done["__all__"] = len(self.dones) == len(self.agents)
-        """
+
         return obs, rew, done, info
+
+    def __repr__(self):
+        """
+        Returns a representation of the environment state.
+        """
+
+        output = ""
+        for y in range(self.rows):
+            for x in range(self.cols):
+                pos = (x, y)
+                object_id = '_'
+                if 'agent' in self.grid[pos]:
+                    object_id = 'B'
+                elif 'food' in self.grid[pos]:
+                    object_id = '*'
+
+                output += object_id + ' '
+
+            output += "\n"
+
+        return output
+
