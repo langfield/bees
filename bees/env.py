@@ -13,6 +13,7 @@ import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from agent import Agent
+from utils import one_hot
 
 
 class Env(MultiAgentEnv):
@@ -20,8 +21,8 @@ class Env(MultiAgentEnv):
     def __init__(self, env_config: dict) -> None:
 
         # Parse ``env_config``.
-        self.rows = env_config["rows"]
-        self.cols = env_config["cols"]
+        self.height = env_config["height"]
+        self.width = env_config["width"]
         self.sight_len = env_config["sight_len"]
         self.obj_types = env_config["obj_types"]
         self.num_agents = env_config["num_agents"]
@@ -29,18 +30,25 @@ class Env(MultiAgentEnv):
         self.food_size_mean = env_config["food_size_mean"]
         self.food_size_stddev = env_config["food_size_stddev"]
 
+        # Construct object identifier dictionary
+        self.obj_id = {
+            "agent": 0,
+            "food": 1
+        }
+
         # Construct ``grid``.
         grid = {}
-        for y in range(self.rows):
-            for x in range(self.cols):
+        for y in range(self.height):
+            for x in range(self.width):
                 # Dict of object indices. Keys are objtype strings.
                 objects = {}
                 key = tuple([x, y])
                 grid.update({key: objects})
-        self.grid = grid
+        self.grid = numpy.zeros((self.width, self.height, self.obj_types))
 
         # Compute number of foods.
-        self.num_foods = math.floor(self.food_density * len(self.grid))
+        num_squares = self.width * self.height
+        self.num_foods = math.floor(self.food_density * num_squares)
 
         # Construct observation and action spaces
         self.action_space = gym.spaces.Dict({
@@ -48,11 +56,16 @@ class Env(MultiAgentEnv):
             "consume": gym.spaces.Discrete(2)
         })
 
-        obs_dict = {}
+        # Each observation is a k * k matrix with values from a discrete
+        # space of size self.obj_types + 1, where k = 2 * self.sight_len - 1
+        outerList = []
         for x in range(-self.sight_len + 1, self.sight_len):
+            innerList = []
             for y in range(-self.sight_len + 1, self.sight_len):
-                obs_dict[(x, y)] = gym.spaces.Discrete(self.obj_types)
-        self.observation_space = gym.spaces.Dict(obs_dict)
+                innerList.append(gym.spaces.Discrete(self.obj_types + 1))
+            innerSpace = gym.spaces.Tuple(tuple(innerList))
+            outerList.append(innerSpace)
+        self.observation_space = gym.spaces.Tuple(tuple(outerList))
 
         # Construct agents
         self.agents = [Agent() for i in range(self.num_agents)]
@@ -65,18 +78,18 @@ class Env(MultiAgentEnv):
         """Populate the environment with food and agents."""
 
         # Set unique agent positions
-        grid_positions = list(itertools.product(range(self.rows), range(self.cols)))
+        grid_positions = list(itertools.product(range(self.height), range(self.width)))
         agent_positions = random.sample(grid_positions, self.num_agents)
         for agent_id, agent in enumerate(self.agents):
             pos = agent_positions[agent_id]
-            self.grid[pos]["agent"] = agent_id
+            self.grid[pos] = one_hot(obj_id["agent"], self.obj_types)
             agent.pos = pos
 
         # Set unique food positions
         food_positions = random.sample(grid_positions, self.num_foods)
         for agent_id, agent in enumerate(range(self.num_foods)):
             pos = food_positions[agent_id]
-            self.grid[pos]["food"] = agent_id
+            self.grid[pos] = one_hot(obj_id["food"], self.obj_types)
 
     def reset(self):
         self.resetted = True
@@ -115,9 +128,9 @@ class Env(MultiAgentEnv):
 
             # Validate new position.
             out_of_bounds = False
-            if new_pos[0] < 0 or new_pos[0] >= self.cols:
+            if new_pos[0] < 0 or new_pos[0] >= self.width:
                 out_of_bounds = True
-            if new_pos[1] < 0 or new_pos[1] >= self.rows:
+            if new_pos[1] < 0 or new_pos[1] >= self.height:
                 out_of_bounds = True
             if out_of_bounds or "agent" in self.grid[new_pos]:
                 consume = action["consume"]
@@ -152,7 +165,7 @@ class Env(MultiAgentEnv):
 
     def _get_obs(self, pos: Tuple[int]) -> np.array:
         obs_size = 2 * self.sight_len - 1
-        one_hot_dim = max(len(self.agents), self.num_foods)
+        one_hot_dim = self.obj_types + self.num_agents
         obs = np.zeros((obs_size, obs_size, one_hot_dim))
         return obs
 
@@ -195,8 +208,8 @@ class Env(MultiAgentEnv):
         """
 
         output = ""
-        for y in range(self.rows):
-            for x in range(self.cols):
+        for y in range(self.height):
+            for x in range(self.width):
                 pos = (x, y)
                 object_id = '_'
                 if 'agent' in self.grid[pos]:
