@@ -61,3 +61,13 @@ Things to come back to:
 
     Make Env object less monolithic. Break it up into environment functionality (_move
     and _consume, for example) and running functionality (get_action_dict).
+
+    Unique identifiers for an unbounded number of agents. For now, an agent's observation
+    representaiton is a one hot vector for the object type identifier together with a
+    one hot vector that distinguishes that agent from all other agents. This only works
+    when the total number of agents is static. We will keep it this way for now but this
+    needs to change to have agents die and new ones born. Maybe use agent DNA as the unique
+    identifier. 
+
+    Something to consider: Should empty squares be given their own one-hot encoding or should
+    those appear as all zeros?
