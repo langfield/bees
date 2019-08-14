@@ -10,7 +10,7 @@ def main(settings):
     env = Env(settings['env_config'])
     env.reset()
     print(env)
-    time.sleep(2)
+    time.sleep(0.2)
 
     for timestep in range(settings['time_steps']):
 
@@ -20,7 +20,7 @@ def main(settings):
         # Print out environment state
         os.system('clear')
         print(env)
-        time.sleep(2)
+        time.sleep(0.5)
 
 if __name__ == "__main__":
 
