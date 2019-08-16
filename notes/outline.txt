@@ -30,7 +30,7 @@ Rough outline of macro details:
     Audio
     Health
 
-    At each timestep, sight is passed into a convolutional-recurrent network and
+    At each timestep, sight is passed into a convolutional network and
     audio is passed into a multi-head attention (?) network. The individual outputs
     of these networks are then concatenated with the agent's health, and the
     result is passed into a recurrent-ish (LSTM?) network which then outputs scores
@@ -71,3 +71,13 @@ Things to come back to:
 
     Something to consider: Should empty squares be given their own one-hot encoding or should
     those appear as all zeros?
+
+    In env.py, self.grid is implemented as a 4 dimensional numpy array. This is bad because it
+    makes it impossible to process without flattening it or embedding it or something. Right
+    now our solution is to make agents mask food (if an agent is standing on top of a piece of
+    food, it's invisible to other agents) to make the observation into a 3 dimensional array.
+    This is not a permanent solution though, and we need to change this eventually.
+
+    Instead of going with the above paragraph, what we are instead going to do is get rid of
+    instance identifiers entirely, so that agents are indistinguishable from other agents by
+    sight, food is indistinguishable from other food, etc. 

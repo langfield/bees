@@ -14,7 +14,7 @@ class Agent:
 
     def get_action(self):
         """Uses the policy to choose an action based on the observation."""
-        return self.policy.get_action(self.observation)
+        return self.policy.get_action(self.observation, self.health)
         
     
     def reset(self):
