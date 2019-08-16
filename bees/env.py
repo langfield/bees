@@ -41,9 +41,7 @@ class Env(MultiAgentEnv):
         self.max_obj_count = max(self.num_agents, self.num_foods)
 
         # Construct ``grid``.
-        self.grid = np.zeros(
-            (self.width, self.height, self.obj_types, self.max_obj_count)
-        )
+        self.grid = np.zeros((self.width, self.height, self.obj_types))
 
         # Construct observation and action spaces
         self.action_space = gym.spaces.Dict(
@@ -73,25 +71,19 @@ class Env(MultiAgentEnv):
     def fill(self):
         """Populate the environment with food and agents."""
         # Reset ``self.grid``.
-        self.grid = np.zeros(
-            (self.width, self.height, self.obj_types, self.max_obj_count)
-        )
+        self.grid = np.zeros((self.width, self.height, self.obj_types))
 
         # Set unique agent positions.
         grid_positions = list(itertools.product(range(self.height), range(self.width)))
         agent_positions = random.sample(grid_positions, self.num_agents)
-        for agent_id, agent in enumerate(self.agents):
-            # Shape: (4,).
-            grid_idx = agent_positions[agent_id] + (self.obj_id["agent"], agent_id)
-            self.grid[grid_idx] = 1
-            agent.pos = agent_positions[agent_id]
+        for agent, agent_pos in zip(self.agents, agent_positions):
+            self._place(self.obj_id["agent"], agent_pos)
+            agent.pos = agent_pos
 
         # Set unique food positions
         food_positions = random.sample(grid_positions, self.num_foods)
-        for agent_id, agent in enumerate(range(self.num_foods)):
-            # Shape: (4,).
-            grid_idx = food_positions[agent_id] + (self.obj_id["food"], self.food_id)
-            self.grid[grid_idx] = 1
+        for food_pos in food_positions:
+            self._place(self.obj_id["food"], food_pos)
 
     def reset(self):
         self.resetted = True
@@ -114,6 +106,21 @@ class Env(MultiAgentEnv):
             new_pos = pos
         return new_pos
 
+    def _remove(self, obj_id: int, pos: Tuple[int]) -> None:
+
+        grid_idx = pos + (obj_id,)
+        self.grid[grid_idx] = 0
+
+    def _place(self, obj_id: int, pos: Tuple[int]) -> None:
+
+        grid_idx = pos + (obj_id,)
+        self.grid[grid_idx] = 1
+
+    def _obj_exists(self, obj_id: int, pos: Tuple[int]) -> bool:
+
+        grid_idx = pos + (obj_id,)
+        return self.grid[grid_idx] == 1
+
     def _move(
         self, action_dict: Dict[str, Dict[str, str]]
     ) -> Dict[str, Dict[str, str]]:
@@ -127,8 +134,6 @@ class Env(MultiAgentEnv):
         for agent_id, action in shuffled_items:
             agent = self.agents[agent_id]
             pos = agent.pos
-            # Shape: (4,).
-            grid_idx = pos + (self.obj_id["agent"], agent_id)
             move = action["move"]
             new_pos = Env._update_pos(pos, move)
 
@@ -138,14 +143,13 @@ class Env(MultiAgentEnv):
                 out_of_bounds = True
             if new_pos[1] < 0 or new_pos[1] >= self.height:
                 out_of_bounds = True
-            # Shape: (4,).
-            new_grid_idx = new_pos + (self.obj_id["agent"], agent_id)
-            if out_of_bounds or self.grid[new_grid_idx] == 1:
+
+            if out_of_bounds or self._obj_exists(self.obj_id['agent'], new_pos):
                 consume = action["consume"]
                 action_dict[agent_id] = {"move": "stay", "consume": consume}
             else:
-                self.grid[grid_idx] = 0
-                self.grid[new_grid_idx] = 1
+                self._remove(self.obj_id["agent"], pos)
+                self._place(self.obj_id["agent"], new_pos)
                 agent.pos = new_pos
 
         return action_dict
@@ -159,11 +163,11 @@ class Env(MultiAgentEnv):
         for agent_id, action in action_dict.items():
             agent = self.agents[agent_id]
             pos = agent.pos
-            grid_idx = pos + (self.obj_id["agent"], self.food_id)
+
             # If they try to eat when there's nothing there, do nothing.
             consume = action["consume"]
-            if self.grid[grid_idx] == 1 and consume == "eat":
-                self.grid[grid_idx] = 0
+            if self._obj_exists(self.obj_id["food"], pos) and consume == "eat":
+                self._remove(self.obj_id["food"], pos)
             food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
             original_health = agent.health
             agent.health = min(1, agent.health + food_size)
@@ -182,12 +186,8 @@ class Env(MultiAgentEnv):
         sight_right = min(sight_right, self.width) 
         sight_bottom = max(sight_bottom, 0)
         sight_top = min(sight_top, self.height)
-        agent_obs = self.grid[sight_left:sight_right, sight_bottom: sight_top, self.obj_id["agent"]]
-        food_obs = self.grid[sight_left:sight_right, sight_bottom: sight_top, self.obj_id["food"]]
-        # if agent -> agent
-        # if ~agent and food -> food
-        # else 0
-        # TODO: Consolidate ``agent_obs`` and ``food_obs``.
+        # Shape: (2 * sight_len - 1, 2 * sight_len - 1, self.num_objs)
+        obs = self.grid[sight_left:sight_right, sight_bottom: sight_top]
         
         return obs
 
@@ -232,16 +232,16 @@ class Env(MultiAgentEnv):
         output = ""
         for y in range(self.height):
             for x in range(self.width):
+
                 pos = (x, y)
-                grid_agent_vec_idx = pos + (self.obj_id["agent"],)
-                grid_food_vec_idx = pos + (self.obj_id["food"],)
                 object_id = "_"
-                # Check if nonzero vals in ``self.grid[grid_agent_vec_idx]``.
-                if len(np.nonzero(self.grid[grid_agent_vec_idx])[0]) > 0:
+
+                # Check if there is an agent in ``pos``.
+                if self._obj_exists(self.obj_id["agent"], pos):
                     object_id = "B"
                 # NOTE: ``B`` currently overwrites ``*``.
-                # Check if nonzero vals in ``self.grid[grid_food_vec_idx]``.
-                elif len(np.nonzero(self.grid[grid_food_vec_idx])[0]) > 0:
+                # Check if there is a food in ``pos``.
+                elif self._obj_exists(self.obj_id["food"], pos):
                     object_id = "*"
 
                 output += object_id + " "
