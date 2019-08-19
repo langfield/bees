@@ -144,7 +144,7 @@ class Env(MultiAgentEnv):
             if new_pos[1] < 0 or new_pos[1] >= self.height:
                 out_of_bounds = True
 
-            if out_of_bounds or self._obj_exists(self.obj_id['agent'], new_pos):
+            if out_of_bounds or self._obj_exists(self.obj_id["agent"], new_pos):
                 consume = action["consume"]
                 action_dict[agent_id] = {"move": "stay", "consume": consume}
             else:
@@ -178,17 +178,17 @@ class Env(MultiAgentEnv):
     def _get_obs(self, pos: Tuple[int]) -> np.ndarray:
         x = pos[0]
         y = pos[1]
-        sight_left = x - self.sight_len + 1 
+        sight_left = x - self.sight_len + 1
         sight_right = x + self.sight_len
         sight_bottom = y - self.sight_len + 1
         sight_top = y + self.sight_len
         sight_left = max(sight_left, 0)
-        sight_right = min(sight_right, self.width) 
+        sight_right = min(sight_right, self.width)
         sight_bottom = max(sight_bottom, 0)
         sight_top = min(sight_top, self.height)
         # Shape: (2 * sight_len - 1, 2 * sight_len - 1, self.num_objs)
-        obs = self.grid[sight_left:sight_right, sight_bottom: sight_top]
-        
+        obs = self.grid[sight_left:sight_right, sight_bottom:sight_top]
+
         return obs
 
     def get_action_dict(self) -> Dict[str, Dict[str, str]]:
@@ -221,6 +221,10 @@ class Env(MultiAgentEnv):
             obs[agent_id] = self._get_obs(agent.pos)
             agent.observation = obs[agent_id]
             done[agent_id] = False
+
+        os.system("clear")
+        print(self.__repr__())
+        time.sleep(0.5)
 
         return obs, rew, done, info
 
