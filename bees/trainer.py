@@ -1,4 +1,4 @@
-"""Example of using two different training methods at once in multi-agent.
+""" Example of using two different training methods at once in multi-agent.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -16,11 +16,11 @@ from ray.tune.registry import register_env
 
 from env import Env
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--num-iters", type=int, default=20)
+# parser = argparse.ArgumentParser()
+# parser.add_argument("--num-iters", type=int, default=20)
 
 if __name__ == "__main__":
-    args = parser.parse_args()
+    # args = parser.parse_args()
     ray.init()
 
     # Get ``settings`` file for now.
@@ -61,9 +61,13 @@ if __name__ == "__main__":
     #   policy_reward_mean:
     #     dqn_policy: X
     #     ppo_policy: Y
-    for i in range(args.num_iters):
+    for i in range(settings['time_steps']):
         print("== Iteration", i, "==")
 
         # improve the PPO policy
         print("-- PPO --")
         print(pretty_print(ppo_trainer.train()))
+
+        # os.system("clear")
+        # print(env)
+        # time.sleep(0.5)
