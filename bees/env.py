@@ -44,9 +44,9 @@ class Env(MultiAgentEnv):
         self.grid = np.zeros((self.width, self.height, self.obj_types))
 
         # Construct observation and action spaces
-        self.action_space = gym.spaces.Dict(
-            {"move": gym.spaces.Discrete(5), "consume": gym.spaces.Discrete(2)}
-        )
+        self.action_space = gym.spaces.Tuple((
+            gym.spaces.Discrete(5), gym.spaces.Discrete(2)
+        ))
 
         # Each observation is a k * k matrix with values from a discrete
         # space of size self.obj_types + 1, where k = 2 * self.sight_len - 1
