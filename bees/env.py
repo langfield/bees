@@ -13,6 +13,7 @@ import numpy as np
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from agent import Agent
+from utils import convert_obs_to_tuple
 
 
 class Env(MultiAgentEnv):
@@ -89,6 +90,11 @@ class Env(MultiAgentEnv):
         self.resetted = True
         self.dones = set()
         self.fill()
+
+        # Set initial agent observations
+        for agent_id, agent in enumerate(self.agents):
+            agent.observation = self._get_obs(agent.pos)
+
         return {i: a.reset() for i, a in enumerate(self.agents)}
 
     @staticmethod
@@ -188,6 +194,7 @@ class Env(MultiAgentEnv):
         sight_top = min(sight_top, self.height)
         # Shape: (2 * sight_len - 1, 2 * sight_len - 1, self.num_objs)
         obs = self.grid[sight_left:sight_right, sight_bottom:sight_top]
+        obs = convert_obs_to_tuple(obs)
 
         return obs
 

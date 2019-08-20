@@ -21,4 +21,4 @@ class Agent:
 
     def reset(self):
         """ Reset the agent. """
-        pass
+        return self.observation
