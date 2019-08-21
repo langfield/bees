@@ -2,7 +2,7 @@
     "env_config": {
         "width": 10,
         "height": 10,
-        "sight_len": 3,
+        "sight_len": 2,
         "obj_types": 2,
         "num_agents": 5,
         "food_density": 0.1,

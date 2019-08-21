@@ -50,11 +50,11 @@ class Env(MultiAgentEnv):
         ))
 
         # Each observation is a k * k matrix with values from a discrete
-        # space of size self.obj_types + 1, where k = 2 * self.sight_len - 1
+        # space of size self.obj_types + 1, where k = 2 * self.sight_len + 1
         outer_list = []
-        for _x in range(-self.sight_len + 1, self.sight_len):
+        for _x in range(-self.sight_len, self.sight_len + 1):
             inner_list = []
-            for _y in range(-self.sight_len + 1, self.sight_len):
+            for _y in range(-self.sight_len, self.sight_len + 1):
                 agent_space = gym.spaces.Discrete(2)
                 food_space = gym.spaces.Discrete(2)
                 inner_list.append(gym.spaces.Tuple((agent_space, food_space)))
@@ -182,19 +182,33 @@ class Env(MultiAgentEnv):
         return rew
 
     def _get_obs(self, pos: Tuple[int]) -> np.ndarray:
+
+        # Calculate bounds of field of vision
         x = pos[0]
         y = pos[1]
-        sight_left = x - self.sight_len + 1
+        sight_left = x - self.sight_len
         sight_right = x + self.sight_len
-        sight_bottom = y - self.sight_len + 1
+        sight_bottom = y - self.sight_len
         sight_top = y + self.sight_len
+
+        # Calculate length of zero-padding in case sight goes out of bounds
+        pad_left = max(-sight_left, 0)
+        pad_right = max(sight_right - self.width + 1, 0)
+        pad_bottom = max(-sight_bottom, 0)
+        pad_top = max(sight_top - self.height + 1, 0)
+
+        # Constrain field of vision within grid bounds
         sight_left = max(sight_left, 0)
-        sight_right = min(sight_right, self.width)
+        sight_right = min(sight_right, self.width - 1)
         sight_bottom = max(sight_bottom, 0)
-        sight_top = min(sight_top, self.height)
-        # Shape: (2 * sight_len - 1, 2 * sight_len - 1, self.num_objs)
-        obs = self.grid[sight_left:sight_right, sight_bottom:sight_top]
-        obs = convert_obs_to_tuple(obs)
+        sight_top = min(sight_top, self.height - 1)
+        
+        # Construct observation
+        obs_length = 2 * self.sight_len + 1
+        obs = np.zeros((obs_length, obs_length, self.obj_types))
+        pad_x_length = obs_length - pad_left - pad_right
+        pad_y_length = obs_length - pad_top - pad_bottom
+        obs[pad_left: pad_left + pad_x_length,  pad_bottom: pad_bottom + pad_y_length] = self.grid[sight_left: sight_right + 1, sight_bottom: sight_top + 1]
 
         return obs
 
