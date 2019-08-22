@@ -38,10 +38,7 @@ class Env(MultiAgentEnv):
 
         # Compute number of foods.
         num_squares = self.width * self.height
-        self.num_foods = math.floor(self.food_density * num_squares)
-        # Foods are not currently unique.
-        self.food_id = 0
-        self.max_obj_count = max(self.num_agents, self.num_foods)
+        self.initial_num_foods = math.floor(self.food_density * num_squares)
 
         # Construct ``grid``.
         self.grid = np.zeros((self.width, self.height, self.obj_types))
@@ -71,6 +68,7 @@ class Env(MultiAgentEnv):
         self.dones = set()
         self.resetted = False
 
+
     def fill(self):
         """Populate the environment with food and agents."""
         # Reset ``self.grid``.
@@ -84,11 +82,13 @@ class Env(MultiAgentEnv):
             agent.pos = agent_pos
 
         # Set unique food positions
-        food_positions = random.sample(grid_positions, self.num_foods)
+        food_positions = random.sample(grid_positions, self.initial_num_foods)
+        self.num_foods = self.initial_num_foods
         for food_pos in food_positions:
             self._place(self.obj_id["food"], food_pos)
 
     def reset(self):
+        self.iteration = 0
         self.resetted = True
         self.dones = set()
         self.fill()
@@ -178,6 +178,8 @@ class Env(MultiAgentEnv):
             move, consume = action
             if self._obj_exists(self.obj_id["food"], pos) and consume == EAT:
                 self._remove(self.obj_id["food"], pos)
+                self.num_foods -= 1
+
             food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
             original_health = agent.health
             agent.health = min(1, agent.health + food_size)
@@ -248,12 +250,14 @@ class Env(MultiAgentEnv):
             # Compute observation.
             obs[agent_id] = self._get_obs(agent.pos)
             agent.observation = obs[agent_id]
-            done[agent_id] = False
+            done[agent_id] = self.num_foods == 0
 
-        done["__all__"] = False
+        done["__all__"] = self.num_foods == 0
 
         # Write environment representation to log
+        self.iteration += 1
         with open(reprLog, 'a+') as f:
+            f.write("Iteration %d:\n" % self.iteration)
             f.write(self.__repr__())
             f.write(',\n')
 

@@ -9,5 +9,5 @@
         "food_size_mean": 0.01,
         "food_size_stddev": 0.0
     },
-    "time_steps": 100
+    "time_steps": 5
 }
