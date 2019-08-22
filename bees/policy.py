@@ -1,9 +1,11 @@
 import random
 
+from constants import *
+
 
 class Policy:
     def get_action(self, obs, agent_health):
-        move = random.choice(["left", "right", "up", "down", "stay"])
-        consume = random.choice(["eat", "noeat"])
+        move = random.choice(LEFT, RIGHT, UP, DOWN, STAY)
+        consume = random.choice(EAT, NO_EAT)
 
-        return {"move": move, "consume": consume}
+        return (move, consume)

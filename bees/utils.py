@@ -16,8 +16,8 @@ def convert_obs_to_tuple(obs: np.ndarray):
         for y in range(obs.shape[1]):
 
             # Convert floats to int
-            pointObs = obs[x, y]
-            for c in range(pointObs.shape[0]):
+            pointObs = list(obs[x, y])
+            for c in range(len(pointObs)):
                 pointObs[c] = int(pointObs[c])
 
             innerList.append(tuple(pointObs))
