@@ -14,7 +14,9 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from agent import Agent
 from utils import convert_obs_to_tuple
+from constants import *
 
+reprLog = 'logs/reprLog.txt'
 
 class Env(MultiAgentEnv):
     """Environment with bees in it."""
@@ -98,18 +100,21 @@ class Env(MultiAgentEnv):
         return {i: a.reset() for i, a in enumerate(self.agents)}
 
     @staticmethod
-    def _update_pos(pos: Tuple[int], move: str) -> Tuple[int]:
+    def _update_pos(pos: Tuple[int], move: int) -> Tuple[int]:
         """Compute new position from a given move."""
-        if move == "up":
+        if move == UP:
             new_pos = tuple([pos[0], pos[1] + 1])
-        elif move == "down":
+        elif move == DOWN:
             new_pos = tuple([pos[0], pos[1] - 1])
-        elif move == "left":
+        elif move == LEFT:
             new_pos = tuple([pos[0] - 1, pos[1]])
-        elif move == "right":
+        elif move == RIGHT:
             new_pos = tuple([pos[0] + 1, pos[1]])
-        else:
+        elif move == STAY:
             new_pos = pos
+        else:
+            raise ValueError("'%s' is not a valid action.")
+
         return new_pos
 
     def _remove(self, obj_id: int, pos: Tuple[int]) -> None:
@@ -128,8 +133,8 @@ class Env(MultiAgentEnv):
         return self.grid[grid_idx] == 1
 
     def _move(
-        self, action_dict: Dict[str, Dict[str, str]]
-    ) -> Dict[str, Dict[str, str]]:
+        self, action_dict: Dict[int, Tuple[int]]
+    ) -> Dict[int, Tuple[int]]:
         """
         Identify collisions and update ``action_dict``,
         ``self.grid``, and ``agent.pos``.
@@ -140,7 +145,7 @@ class Env(MultiAgentEnv):
         for agent_id, action in shuffled_items:
             agent = self.agents[agent_id]
             pos = agent.pos
-            move = action["move"]
+            move, consume = action
             new_pos = Env._update_pos(pos, move)
 
             # Validate new position.
@@ -151,8 +156,7 @@ class Env(MultiAgentEnv):
                 out_of_bounds = True
 
             if out_of_bounds or self._obj_exists(self.obj_id["agent"], new_pos):
-                consume = action["consume"]
-                action_dict[agent_id] = {"move": "stay", "consume": consume}
+                action_dict[agent_id] = (STAY, consume)
             else:
                 self._remove(self.obj_id["agent"], pos)
                 self._place(self.obj_id["agent"], new_pos)
@@ -171,8 +175,8 @@ class Env(MultiAgentEnv):
             pos = agent.pos
 
             # If they try to eat when there's nothing there, do nothing.
-            consume = action["consume"]
-            if self._obj_exists(self.obj_id["food"], pos) and consume == "eat":
+            move, consume = action
+            if self._obj_exists(self.obj_id["food"], pos) and consume == EAT:
                 self._remove(self.obj_id["food"], pos)
             food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
             original_health = agent.health
@@ -202,17 +206,18 @@ class Env(MultiAgentEnv):
         sight_right = min(sight_right, self.width - 1)
         sight_bottom = max(sight_bottom, 0)
         sight_top = min(sight_top, self.height - 1)
-        
+
         # Construct observation
         obs_length = 2 * self.sight_len + 1
         obs = np.zeros((obs_length, obs_length, self.obj_types))
         pad_x_length = obs_length - pad_left - pad_right
         pad_y_length = obs_length - pad_top - pad_bottom
         obs[pad_left: pad_left + pad_x_length,  pad_bottom: pad_bottom + pad_y_length] = self.grid[sight_left: sight_right + 1, sight_bottom: sight_top + 1]
+        obs = convert_obs_to_tuple(obs)
 
         return obs
 
-    def get_action_dict(self) -> Dict[str, Dict[str, str]]:
+    def get_action_dict(self) -> Dict[str, Tuple[int]]:
         """
         Constructs ``action_dict`` by querying individual agents for
         their actions based on their observations.
@@ -224,7 +229,7 @@ class Env(MultiAgentEnv):
 
         return action_dict
 
-    def step(self, action_dict: Dict[str, Dict[str, str]]):
+    def step(self, action_dict: Dict[str, Tuple[int]]):
         """
         ``action_dict`` has agent indices as keys and a dict of the form
         ``{"move": <move>, "consume": <consume>)`` where the dict values
@@ -232,10 +237,12 @@ class Env(MultiAgentEnv):
             ``movements = set(["up", "down", "left", "right", "stay"])``
             ``consumptions = set(["eat", "noeat"])``.
         """
-        # Compute collisions and update ``self.grid``.
+
+        # Execute move actions and consume actions, and calculate reward
         action_dict = self._move(action_dict)
-        rew = self._consume(action_dict)
         obs, rew, done, info = {}, {}, {}, {}
+        rew = self._consume(action_dict)
+
         for agent_id, agent in enumerate(self.agents):
 
             # Compute observation.
@@ -243,9 +250,12 @@ class Env(MultiAgentEnv):
             agent.observation = obs[agent_id]
             done[agent_id] = False
 
-        os.system("clear")
-        print(self.__repr__())
-        time.sleep(0.5)
+        done["__all__"] = False
+
+        # Write environment representation to log
+        with open(reprLog, 'a+') as f:
+            f.write(self.__repr__())
+            f.write(',\n')
 
         return obs, rew, done, info
 
