@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import math
 import random
 import itertools
@@ -251,16 +252,12 @@ class Env(MultiAgentEnv):
             obs[agent_id] = self._get_obs(agent.pos)
             agent.observation = obs[agent_id]
             done[agent_id] = self.num_foods == 0
-
         done["__all__"] = self.num_foods == 0
 
         # Write environment representation to log
-        self.iteration += 1
-        with open(reprLog, 'a+') as f:
-            f.write("Iteration %d:\n" % self.iteration)
-            f.write(self.__repr__())
-            f.write(',\n')
+        self._log_state()
 
+        self.iteration += 1
         return obs, rew, done, info
 
     def __repr__(self):
@@ -288,3 +285,14 @@ class Env(MultiAgentEnv):
             output += "\n"
 
         return output
+
+    def _log_state(self):
+
+        logDir = os.path.dirname(reprLog)
+        if not os.path.isdir(logDir):
+            os.makedirs(logDir)
+        with open(reprLog, 'a+') as f:
+            f.write("Iteration %d:\n" % self.iteration)
+            f.write(self.__repr__())
+            f.write(',\n')
+
