@@ -33,6 +33,7 @@ class Env(MultiAgentEnv):
         self.food_density = env_config["food_density"]
         self.food_size_mean = env_config["food_size_mean"]
         self.food_size_stddev = env_config["food_size_stddev"]
+        self.aging_rate = env_config["aging_rate"]
 
         # Construct object identifier dictionary
         self.obj_id = {"agent": 0, "food": 1}
@@ -246,13 +247,15 @@ class Env(MultiAgentEnv):
         obs, rew, done, info = {}, {}, {}, {}
         rew = self._consume(action_dict)
 
+        # Decrease agent health, compute observations and dones.
         for agent_id, agent in enumerate(self.agents):
-
-            # Compute observation.
+            agent.health -= self.aging_rate
             obs[agent_id] = self._get_obs(agent.pos)
             agent.observation = obs[agent_id]
-            done[agent_id] = self.num_foods == 0
-        done["__all__"] = self.num_foods == 0
+            done[agent_id] = self.num_foods == 0 or agent.health == 0.
+
+        agentsDone = [done[agent_id] for agent_id in range(len(self.agents))]
+        done["__all__"] = all(agentsDone)
 
         # Write environment representation to log
         self._log_state()

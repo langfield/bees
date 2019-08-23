@@ -1,2 +1,5 @@
 ray
 gym
+tensorflow
+lz4
+psutil
