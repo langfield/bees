@@ -252,7 +252,7 @@ class Env(MultiAgentEnv):
             agent.health -= self.aging_rate
             obs[agent_id] = self._get_obs(agent.pos)
             agent.observation = obs[agent_id]
-            done[agent_id] = self.num_foods == 0 or agent.health == 0.
+            done[agent_id] = self.num_foods == 0 or agent.health <= 0.
 
         agentsDone = [done[agent_id] for agent_id in range(len(self.agents))]
         done["__all__"] = all(agentsDone)

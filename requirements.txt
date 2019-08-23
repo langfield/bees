@@ -1,6 +1,6 @@
 ray
 gym
-tensorflow
+tensorflow-gpu
 lz4
 psutil
 pandas
