@@ -7,7 +7,8 @@
         "num_agents": 5,
         "food_density": 0.1,
         "food_size_mean": 0.1,
-        "food_size_stddev": 0.01
+        "food_size_stddev": 0.01,
+	"aging_rate": 0.01
     },
     "time_steps": 10
 }
