@@ -3,3 +3,5 @@ gym
 tensorflow
 lz4
 psutil
+pandas
+opencv-python
