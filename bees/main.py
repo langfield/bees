@@ -15,21 +15,20 @@ def main(settings):
     print(env)
     time.sleep(0.2)
 
-    for timestep in range(settings["time_steps"]):
+    for _ in range(settings["time_steps"]):
 
         action_dict = env.get_action_dict()
-        obs, rew, done, info = env.step(action_dict)
+        _obs, _rew, _done, _info = env.step(action_dict)
 
         # Print out environment state
         os.system("clear")
         print(env)
         time.sleep(0.5)
 
-
+# pylint: disable=invalid-name
 if __name__ == "__main__":
 
     settings_file = sys.argv[1]
     with open(settings_file, "r") as f:
         SETTINGS = json.load(f)
-
     main(SETTINGS)
