@@ -3,21 +3,27 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+# Standard imports.
 import os
 import math
 import random
 import itertools
 from typing import Tuple, Dict
 
-import gym
+# Third-party imports.
 import numpy as np
+
+# Package imports.
+import gym
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
+# Bees imports.
 from agent import Agent
 from utils import convert_obs_to_tuple
-from constants import *
 
-reprLog = 'logs/reprLog.txt'
+# HARDCODE
+REPR_LOG = "logs/repr_log.txt"
+
 
 class Env(MultiAgentEnv):
     """Environment with bees in it."""
@@ -35,20 +41,24 @@ class Env(MultiAgentEnv):
         self.food_size_stddev = env_config["food_size_stddev"]
         self.aging_rate = env_config["aging_rate"]
 
+        # Get constants.
+        self.consts = env_config["constants"]
+
         # Construct object identifier dictionary
         self.obj_id = {"agent": 0, "food": 1}
 
         # Compute number of foods.
         num_squares = self.width * self.height
         self.initial_num_foods = math.floor(self.food_density * num_squares)
+        self.num_foods = self.initial_num_foods
 
         # Construct ``grid``.
         self.grid = np.zeros((self.width, self.height, self.obj_types))
 
         # Construct observation and action spaces
-        self.action_space = gym.spaces.Tuple((
-            gym.spaces.Discrete(5), gym.spaces.Discrete(2)
-        ))
+        self.action_space = gym.spaces.Tuple(
+            (gym.spaces.Discrete(5), gym.spaces.Discrete(2))
+        )
 
         # Each observation is a k * k matrix with values from a discrete
         # space of size self.obj_types + 1, where k = 2 * self.sight_len + 1
@@ -69,7 +79,7 @@ class Env(MultiAgentEnv):
         # Misc settings
         self.dones = set()
         self.resetted = False
-
+        self.iteration = 0
 
     def fill(self):
         """Populate the environment with food and agents."""
@@ -85,34 +95,33 @@ class Env(MultiAgentEnv):
 
         # Set unique food positions
         food_positions = random.sample(grid_positions, self.initial_num_foods)
-        self.num_foods = self.initial_num_foods
         for food_pos in food_positions:
             self._place(self.obj_id["food"], food_pos)
 
     def reset(self):
+        """ Reset the entire environment. """
         self.iteration = 0
         self.resetted = True
         self.dones = set()
         self.fill()
 
         # Set initial agent observations
-        for agent_id, agent in enumerate(self.agents):
+        for _, agent in enumerate(self.agents):
             agent.observation = self._get_obs(agent.pos)
 
         return {i: a.reset() for i, a in enumerate(self.agents)}
 
-    @staticmethod
-    def _update_pos(pos: Tuple[int], move: int) -> Tuple[int]:
+    def _update_pos(self, pos: Tuple[int], move: int) -> Tuple[int]:
         """Compute new position from a given move."""
-        if move == UP:
+        if move == self.consts["UP"]:
             new_pos = tuple([pos[0], pos[1] + 1])
-        elif move == DOWN:
+        elif move == self.consts["DOWN"]:
             new_pos = tuple([pos[0], pos[1] - 1])
-        elif move == LEFT:
+        elif move == self.consts["LEFT"]:
             new_pos = tuple([pos[0] - 1, pos[1]])
-        elif move == RIGHT:
+        elif move == self.consts["RIGHT"]:
             new_pos = tuple([pos[0] + 1, pos[1]])
-        elif move == STAY:
+        elif move == self.consts["STAY"]:
             new_pos = pos
         else:
             raise ValueError("'%s' is not a valid action.")
@@ -134,12 +143,9 @@ class Env(MultiAgentEnv):
         grid_idx = pos + (obj_id,)
         return self.grid[grid_idx] == 1
 
-    def _move(
-        self, action_dict: Dict[int, Tuple[int]]
-    ) -> Dict[int, Tuple[int]]:
-        """
-        Identify collisions and update ``action_dict``,
-        ``self.grid``, and ``agent.pos``.
+    def _move(self, action_dict: Dict[int, Tuple[int]]) -> Dict[int, Tuple[int]]:
+        """ Identify collisions and update ``action_dict``,
+            ``self.grid``, and ``agent.pos``.
         """
         # Shuffle the keys.
         shuffled_items = list(action_dict.items())
@@ -148,7 +154,7 @@ class Env(MultiAgentEnv):
             agent = self.agents[agent_id]
             pos = agent.pos
             move, consume = action
-            new_pos = Env._update_pos(pos, move)
+            new_pos = self._update_pos(pos, move)
 
             # Validate new position.
             out_of_bounds = False
@@ -158,7 +164,7 @@ class Env(MultiAgentEnv):
                 out_of_bounds = True
 
             if out_of_bounds or self._obj_exists(self.obj_id["agent"], new_pos):
-                action_dict[agent_id] = (STAY, consume)
+                action_dict[agent_id] = (self.consts["STAY"], consume)
             else:
                 self._remove(self.obj_id["agent"], pos)
                 self._place(self.obj_id["agent"], new_pos)
@@ -167,9 +173,8 @@ class Env(MultiAgentEnv):
         return action_dict
 
     def _consume(self, action_dict: Dict[str, Dict[str, str]]) -> None:
-        """
-        Takes as input a collision-free ``action_dict`` and
-        executes the ``consume`` action for all agents.
+        """ Takes as input a collision-free ``action_dict`` and
+            executes the ``consume`` action for all agents.
         """
         rew = {}
         for agent_id, action in action_dict.items():
@@ -177,8 +182,11 @@ class Env(MultiAgentEnv):
             pos = agent.pos
 
             # If they try to eat when there's nothing there, do nothing.
-            move, consume = action
-            if self._obj_exists(self.obj_id["food"], pos) and consume == EAT:
+            _, consume = action
+            if (
+                self._obj_exists(self.obj_id["food"], pos)
+                and consume == self.consts["EAT"]
+            ):
                 self._remove(self.obj_id["food"], pos)
                 self.num_foods -= 1
 
@@ -190,8 +198,9 @@ class Env(MultiAgentEnv):
         return rew
 
     def _get_obs(self, pos: Tuple[int]) -> np.ndarray:
+        """ Returns a ``np.ndarray`` of observations given an agent ``pos``. """
 
-        # Calculate bounds of field of vision
+        # Calculate bounds of field of vision.
         x = pos[0]
         y = pos[1]
         sight_left = x - self.sight_len
@@ -199,24 +208,26 @@ class Env(MultiAgentEnv):
         sight_bottom = y - self.sight_len
         sight_top = y + self.sight_len
 
-        # Calculate length of zero-padding in case sight goes out of bounds
+        # Calculate length of zero-padding in case sight goes out of bounds.
         pad_left = max(-sight_left, 0)
         pad_right = max(sight_right - self.width + 1, 0)
         pad_bottom = max(-sight_bottom, 0)
         pad_top = max(sight_top - self.height + 1, 0)
 
-        # Constrain field of vision within grid bounds
+        # Constrain field of vision within grid bounds.
         sight_left = max(sight_left, 0)
         sight_right = min(sight_right, self.width - 1)
         sight_bottom = max(sight_bottom, 0)
         sight_top = min(sight_top, self.height - 1)
 
-        # Construct observation
-        obs_length = 2 * self.sight_len + 1
-        obs = np.zeros((obs_length, obs_length, self.obj_types))
-        pad_x_length = obs_length - pad_left - pad_right
-        pad_y_length = obs_length - pad_top - pad_bottom
-        obs[pad_left: pad_left + pad_x_length,  pad_bottom: pad_bottom + pad_y_length] = self.grid[sight_left: sight_right + 1, sight_bottom: sight_top + 1]
+        # Construct observation.
+        obs_len = 2 * self.sight_len + 1
+        obs = np.zeros((obs_len, obs_len, self.obj_types))
+        pad_x_len = obs_len - pad_left - pad_right
+        pad_y_len = obs_len - pad_top - pad_bottom
+        obs[
+            pad_left : pad_left + pad_x_len, pad_bottom : pad_bottom + pad_y_len
+        ] = self.grid[sight_left : sight_right + 1, sight_bottom : sight_top + 1]
         obs = convert_obs_to_tuple(obs)
 
         return obs
@@ -252,10 +263,10 @@ class Env(MultiAgentEnv):
             agent.health -= self.aging_rate
             obs[agent_id] = self._get_obs(agent.pos)
             agent.observation = obs[agent_id]
-            done[agent_id] = self.num_foods == 0 or agent.health <= 0.
+            done[agent_id] = self.num_foods == 0 or agent.health <= 0.0
 
-        agentsDone = [done[agent_id] for agent_id in range(len(self.agents))]
-        done["__all__"] = all(agentsDone)
+        agents_done = [done[agent_id] for agent_id in range(len(self.agents))]
+        done["__all__"] = all(agents_done)
 
         # Write environment representation to log
         self._log_state()
@@ -290,12 +301,15 @@ class Env(MultiAgentEnv):
         return output
 
     def _log_state(self):
+        """
+        Logs the state of the environment as a string to a
+        prespecified log file path.
+        """
 
-        logDir = os.path.dirname(reprLog)
-        if not os.path.isdir(logDir):
-            os.makedirs(logDir)
-        with open(reprLog, 'a+') as f:
+        log_dir = os.path.dirname(REPR_LOG)
+        if not os.path.isdir(log_dir):
+            os.makedirs(log_dir)
+        with open(REPR_LOG, "a+") as f:
             f.write("Iteration %d:\n" % self.iteration)
             f.write(self.__repr__())
-            f.write(',\n')
-
+            f.write(",\n")

@@ -1,4 +1,4 @@
-# Action definitions
+""" Action definitions. """
 STAY = 0
 LEFT = 1
 RIGHT = 2
@@ -7,4 +7,3 @@ DOWN = 4
 
 EAT = 0
 NO_EAT = 1
-
