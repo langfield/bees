@@ -18,12 +18,15 @@ def main(settings):
     for _ in range(settings["time_steps"]):
 
         action_dict = env.get_action_dict()
-        _obs, _rew, _done, _info = env.step(action_dict)
+        _obs, _rew, done, _info = env.step(action_dict)
 
         # Print out environment state
         os.system("clear")
         print(env)
         time.sleep(0.5)
+        if all(done.values()):
+            print("All agents have died.")
+            break
 
 # pylint: disable=invalid-name
 if __name__ == "__main__":
