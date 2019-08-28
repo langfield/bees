@@ -261,15 +261,16 @@ class Env(MultiAgentEnv):
 
         # Decrease agent health, compute observations and dones.
         for agent_id, agent in enumerate(self.agents):
-            agent.health -= self.aging_rate
-            obs[agent_id] = self._get_obs(agent.pos)
-            agent.observation = obs[agent_id]
-            done[agent_id] = self.num_foods == 0 or agent.health <= 0.0
+            if agent.health > 0.0:
+                agent.health -= self.aging_rate
+                obs[agent_id] = self._get_obs(agent.pos)
+                agent.observation = obs[agent_id]
+                done[agent_id] = self.num_foods == 0 or agent.health <= 0.0
 
-            # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
-            if done[agent_id]:
-                self._remove(self.obj_type_id["agent"], agent.pos)
-                agent.pos = self.heaven
+                # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
+                if done[agent_id]:
+                    self._remove(self.obj_type_id["agent"], agent.pos)
+                    agent.pos = self.heaven
 
         agents_done = [done[agent_id] for agent_id in range(len(self.agents))]
         done["__all__"] = all(agents_done)
