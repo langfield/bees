@@ -43,9 +43,10 @@ class Env(MultiAgentEnv):
 
         # Get constants.
         self.consts = env_config["constants"]
+        self.heaven = tuple(self.consts["BEE_HEAVEN"])
 
         # Construct object identifier dictionary
-        self.obj_id = {"agent": 0, "food": 1}
+        self.obj_type_id = {"agent": 0, "food": 1}
 
         # Compute number of foods.
         num_squares = self.width * self.height
@@ -90,13 +91,13 @@ class Env(MultiAgentEnv):
         grid_positions = list(itertools.product(range(self.height), range(self.width)))
         agent_positions = random.sample(grid_positions, self.num_agents)
         for agent, agent_pos in zip(self.agents, agent_positions):
-            self._place(self.obj_id["agent"], agent_pos)
+            self._place(self.obj_type_id["agent"], agent_pos)
             agent.pos = agent_pos
 
         # Set unique food positions
         food_positions = random.sample(grid_positions, self.initial_num_foods)
         for food_pos in food_positions:
-            self._place(self.obj_id["food"], food_pos)
+            self._place(self.obj_type_id["food"], food_pos)
 
     def reset(self):
         """ Reset the entire environment. """
@@ -128,19 +129,19 @@ class Env(MultiAgentEnv):
 
         return new_pos
 
-    def _remove(self, obj_id: int, pos: Tuple[int]) -> None:
+    def _remove(self, obj_type_id: int, pos: Tuple[int]) -> None:
 
-        grid_idx = pos + (obj_id,)
+        grid_idx = pos + (obj_type_id,)
         self.grid[grid_idx] = 0
 
-    def _place(self, obj_id: int, pos: Tuple[int]) -> None:
+    def _place(self, obj_type_id: int, pos: Tuple[int]) -> None:
 
-        grid_idx = pos + (obj_id,)
+        grid_idx = pos + (obj_type_id,)
         self.grid[grid_idx] = 1
 
-    def _obj_exists(self, obj_id: int, pos: Tuple[int]) -> bool:
+    def _obj_exists(self, obj_type_id: int, pos: Tuple[int]) -> bool:
 
-        grid_idx = pos + (obj_id,)
+        grid_idx = pos + (obj_type_id,)
         return self.grid[grid_idx] == 1
 
     def _move(self, action_dict: Dict[int, Tuple[int]]) -> Dict[int, Tuple[int]]:
@@ -163,11 +164,11 @@ class Env(MultiAgentEnv):
             if new_pos[1] < 0 or new_pos[1] >= self.height:
                 out_of_bounds = True
 
-            if out_of_bounds or self._obj_exists(self.obj_id["agent"], new_pos):
+            if out_of_bounds or self._obj_exists(self.obj_type_id["agent"], new_pos):
                 action_dict[agent_id] = (self.consts["STAY"], consume)
             else:
-                self._remove(self.obj_id["agent"], pos)
-                self._place(self.obj_id["agent"], new_pos)
+                self._remove(self.obj_type_id["agent"], pos)
+                self._place(self.obj_type_id["agent"], new_pos)
                 agent.pos = new_pos
 
         return action_dict
@@ -184,10 +185,10 @@ class Env(MultiAgentEnv):
             # If they try to eat when there's nothing there, do nothing.
             _, consume = action
             if (
-                self._obj_exists(self.obj_id["food"], pos)
+                self._obj_exists(self.obj_type_id["food"], pos)
                 and consume == self.consts["EAT"]
             ):
-                self._remove(self.obj_id["food"], pos)
+                self._remove(self.obj_type_id["food"], pos)
                 self.num_foods -= 1
 
             food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
@@ -265,6 +266,11 @@ class Env(MultiAgentEnv):
             agent.observation = obs[agent_id]
             done[agent_id] = self.num_foods == 0 or agent.health <= 0.0
 
+            # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
+            if done[agent_id]:
+                self._remove(self.obj_type_id["agent"], agent.pos)
+                agent.pos = self.heaven
+
         agents_done = [done[agent_id] for agent_id in range(len(self.agents))]
         done["__all__"] = all(agents_done)
 
@@ -287,11 +293,11 @@ class Env(MultiAgentEnv):
                 object_id = "_"
 
                 # Check if there is an agent in ``pos``.
-                if self._obj_exists(self.obj_id["agent"], pos):
+                if self._obj_exists(self.obj_type_id["agent"], pos):
                     object_id = "B"
                 # NOTE: ``B`` currently overwrites ``*``.
                 # Check if there is a food in ``pos``.
-                elif self._obj_exists(self.obj_id["food"], pos):
+                elif self._obj_exists(self.obj_type_id["food"], pos):
                     object_id = "*"
 
                 output += object_id + " "

@@ -8,18 +8,18 @@
         "food_density": 0.1,
         "food_size_mean": 0.1,
         "food_size_stddev": 0.01,
-        "aging_rate": 0.01
+        "aging_rate": 0.01,
+        "constants": {
+            "STAY":0,
+            "LEFT":1,
+            "RIGHT":2,
+            "UP":3,
+            "DOWN":4,
+            "EAT":0,
+            "NO_EAT":1,
+            "BEE_HEAVEN":[-1,-1]
+        }
     },
+    "time_steps": 10
 
-    "time_steps": 10,
-
-    "constants": {
-        "STAY":0,
-        "LEFT":1,
-        "RIGHT":2,
-        "UP":3,
-        "DOWN":4,
-        "EAT":0,
-        "NO_EAT":1
-    }
 }
