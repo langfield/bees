@@ -9,6 +9,7 @@ import math
 import random
 import itertools
 from typing import Tuple, Dict
+import datetime
 
 # Third-party imports.
 import numpy as np
@@ -22,7 +23,10 @@ from agent import Agent
 from utils import convert_obs_to_tuple
 
 # HARDCODE
-REPR_LOG = "logs/repr_log.txt"
+dt = datetime.datetime.now()
+dt = str(dt).replace(" ", "_")
+REPR_LOG = "logs/%s_repr_log.txt" % dt
+REW_LOG = "logs/%s_rew_log.txt" % dt
 
 
 class Env(MultiAgentEnv):
@@ -101,6 +105,12 @@ class Env(MultiAgentEnv):
 
     def reset(self):
         """ Reset the entire environment. """
+
+        # Get average rewards for agents from previous episode
+        avg_reward = np.mean([agent.avg_reward for agent in self.agents])
+        with open(REW_LOG, 'a+') as f:
+            f.write('{:.10f}'.format(avg_reward) + '\n')
+
         self.iteration = 0
         self.resetted = True
         self.dones = set()
@@ -200,6 +210,7 @@ class Env(MultiAgentEnv):
                 agent.health = min(1, agent.health + food_size)
 
             rew[agent_id] = agent.health - original_health
+            agent.update_average_reward(rew[agent_id])
 
         return rew
 
@@ -312,7 +323,8 @@ class Env(MultiAgentEnv):
 
         for agent_id, agent in enumerate(self.agents):
             if agent.health > 0.0:
-                output += "Agent %d health: %f\n" % (agent_id, agent.health)
+                output += "Agent %d: " % agent_id
+                output += agent.__repr__()
         output += "\n"
 
         output += "Dones: " + str(self.dones) + "\n"

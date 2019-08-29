@@ -5,9 +5,9 @@
         "sight_len": 2,
         "obj_types": 2,
         "num_agents": 5,
-        "food_density": 0.25,
-        "food_size_mean": 0.3,
-        "food_size_stddev": 0.0,
+        "food_density": 0.125,
+        "food_size_mean": 0.25,
+        "food_size_stddev": 0.05,
         "aging_rate": 0.1,
         "constants": {
             "STAY":0,
@@ -20,6 +20,6 @@
             "BEE_HEAVEN":[-1,-1]
         }
     },
-    "time_steps": 100
+    "time_steps": 1000
 
 }
