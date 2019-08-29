@@ -23,10 +23,11 @@ def main(settings):
         # Print out environment state
         os.system("clear")
         print(env)
-        time.sleep(0.5)
+        time.sleep(2.5)
         if all(done.values()):
             print("All agents have died.")
             break
+
 
 # pylint: disable=invalid-name
 if __name__ == "__main__":

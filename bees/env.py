@@ -5,7 +5,6 @@ from __future__ import print_function
 
 # Standard imports.
 import os
-import time
 import math
 import random
 import itertools
@@ -183,8 +182,13 @@ class Env(MultiAgentEnv):
             agent = self.agents[agent_id]
             pos = agent.pos
 
+            # If the agent is dead, don't do anything
+            if agent.health <= 0.0:
+                continue
+
             # If they try to eat when there's nothing there, do nothing.
             _, consume = action
+            original_health = agent.health
             if (
                 self._obj_exists(self.obj_type_id["food"], pos)
                 and consume == self.consts["EAT"]
@@ -193,9 +197,9 @@ class Env(MultiAgentEnv):
                 self.num_foods -= 1
                 # FIX: this was dedented.
                 food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
-                original_health = agent.health
                 agent.health = min(1, agent.health + food_size)
-                rew[agent_id] = agent.health - original_health
+
+            rew[agent_id] = agent.health - original_health
 
         return rew
 
@@ -264,8 +268,6 @@ class Env(MultiAgentEnv):
         for agent_id, agent in enumerate(self.agents):
             if agent.health > 0.0:
                 agent.health -= self.aging_rate
-                # DEBUG
-                print("Agent", agent_id, "health:", agent.health)
                 obs[agent_id] = self._get_obs(agent.pos)
                 agent.observation = obs[agent_id]
                 done[agent_id] = self.num_foods == 0 or agent.health <= 0.0
@@ -274,11 +276,9 @@ class Env(MultiAgentEnv):
                 if done[agent_id]:
                     self._remove(self.obj_type_id["agent"], agent.pos)
                     agent.pos = self.heaven
-        time.sleep(2)
 
-        #agents_done = [done[agent_id] for agent_id in range(len(self.agents))]
-        #done["__all__"] = all(agents_done)
         done["__all__"] = all(done.values())
+        self.dones = dict(done)
 
         # Write environment representation to log
         self._log_state()
@@ -309,6 +309,13 @@ class Env(MultiAgentEnv):
                 output += object_id + " "
 
             output += "\n"
+
+        for agent_id, agent in enumerate(self.agents):
+            if agent.health > 0.0:
+                output += "Agent %d health: %f\n" % (agent_id, agent.health)
+        output += "\n"
+
+        output += "Dones: " + str(self.dones) + "\n"
 
         return output
 

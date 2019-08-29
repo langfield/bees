@@ -82,6 +82,10 @@ Things to come back to:
     instance identifiers entirely, so that agents are indistinguishable from other agents by
     sight, food is indistinguishable from other food, etc. 
 
+    In env.py, we set self.dones (which is initialized as a set) to the done dictionary in
+    step(). This doesn't seem to cause any problems right now, but we also don't know if
+    self.dones is needed for anything external.
+
 #=====================================================================================
 
     Craw has discovered that the agents themselves do not need a step function. Rather, 
