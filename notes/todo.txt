@@ -1,3 +1,0 @@
-Get non-zero rewards (most likely by implementing decreasing health and agents dying)
-Clean up our policy code that doesn't do anything
-Refactor
