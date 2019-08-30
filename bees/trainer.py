@@ -6,6 +6,9 @@ from __future__ import print_function
 import sys
 import json
 
+from typing import Dict, Tuple, Any
+
+import gym
 import ray
 from ray.rllib.agents.ppo.ppo import PPOTrainer
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
@@ -32,7 +35,9 @@ if __name__ == "__main__":
 
     # You can also have multiple policies per trainer, but here we just
     # show one each for PPO and DQN.
-    policies = {"ppo_policy": (PPOTFPolicy, obs_space, act_space, {})}
+    policies: Dict[str, Tuple[Any, gym.Space, gym.Space, Dict[Any, Any]]] = {
+        "ppo_policy": (PPOTFPolicy, obs_space, act_space, {})
+    }
 
     def policy_mapping_fn(_agent_id):
         """ Returns the given agent's policy identifier. """
