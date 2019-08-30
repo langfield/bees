@@ -1,3 +1,4 @@
+""" Run to animate an environment log. """
 import argparse
 import time
 
@@ -27,9 +28,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("log_path", type=str, help="Path of log to play.")
-    args = parser.parse_args()
-
-    main(args)
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument("log_path", type=str, help="Path of log to play.")
+    ARGS = PARSER.parse_args()
+    main(ARGS)
