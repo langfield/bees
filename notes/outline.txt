@@ -1,46 +1,93 @@
 Rough outline of macro details:
 
-Environment:
-The simplest version of the environment consists of a 2d grid in which each square
-of the grid can be inhabited by nothing, an agent, or a piece of food. The agents
-have a continuously declining health bar, and they die when health reaches zero.
-Eating food increases health. In this very simple environment, the agent's only
-need to learn to move towards and consume food, which shouldn't be too difficult.
-In a slightly more difficult version, we can also create lava squares, which will
-injure or kill an agent upon entering. By placing food in certain pockets with many
-lava squares, the agents will need to learn to avoid lava and find food. Still a
-very simple problem that requires no coordination with other agents. The simplest
-environmental obstacle that would require some degree of coordination is a payout
-structure for food that benefits agents who share food, such as in the games
-'harvest' or 'cleanup' which are used in the social influence paper. These games
-still don't require a sophisticated degree of communication, just an ability to
-see past the greedy motivations and engage in socially responsible behavior. A
-natural next step past this benchmark and into the territory of communication is
-the inclusion of tasks which explicity require communication, such as synchronized
-button pushing or delivery of a piece of token information. We should start with
-the simplest version and move our way up.
+    Environment:
+    The simplest version of the environment consists of a 2d grid in which each square
+    of the grid can be inhabited by nothing, an agent, or a piece of food. The agents
+    have a continuously declining health bar, and they die when health reaches zero.
+    Eating food increases health. In this very simple environment, the agent's only
+    need to learn to move towards and consume food, which shouldn't be too difficult.
+    In a slightly more difficult version, we can also create lava squares, which will
+    injure or kill an agent upon entering. By placing food in certain pockets with many
+    lava squares, the agents will need to learn to avoid lava and find food. Still a
+    very simple problem that requires no coordination with other agents. The simplest
+    environmental obstacle that would require some degree of coordination is a payout
+    structure for food that benefits agents who share food, such as in the games
+    'harvest' or 'cleanup' which are used in the social influence paper. These games
+    still don't require a sophisticated degree of communication, just an ability to
+    see past the greedy motivations and engage in socially responsible behavior. A
+    natural next step past this benchmark and into the territory of communication is
+    the inclusion of tasks which explicity require communication, such as synchronized
+    button pushing or delivery of a piece of token information. We should start with
+    the simplest version and move our way up.
 
-Actions:
-Movement (left, right, up, down, none)
-Speech (real valued vector)
-Consume (yes, no)
+    Actions:
+    Movement (left, right, up, down, none)
+    Speech (real valued vector)
+    Consume (yes, no)
 
-Input at each timestep:
-Sight
-Audio
-Health
+    Input at each timestep:
+    Sight
+    Audio
+    Health
 
-At each timestep, sight is passed into a convolutional-recurrent network and
-audio is passed into a multi-head attention (?) network. The individual outputs
-of these networks are then concatenated with the agent's health, and the
-result is passed into a recurrent-ish (LSTM?) network which then outputs scores
-for each action (this score vector will be of length 7 + n, where n is the length
-of the speech vector), which determines the actions of the agent. These 3 networks
-are then trained using an undecided RL algorithm to maximize the reward function.
+    At each timestep, sight is passed into a convolutional network and
+    audio is passed into a multi-head attention (?) network. The individual outputs
+    of these networks are then concatenated with the agent's health, and the
+    result is passed into a recurrent-ish (LSTM?) network which then outputs scores
+    for each action (this score vector will be of length 7 + n, where n is the length
+    of the speech vector), which determines the actions of the agent. These 3 networks
+    are then trained using an undecided RL algorithm to maximize the reward function.
 
-Reward function is implemented as a (fully connected?) network which takes as
-input the previous observations (sight, audio, health) and outputs a real number.
-The reward function is fixed during an agents lifetime, and is initialized for
-each agent as some mixture of the reward functions of that agent's parents. The
-first generation has randomly initialized reward functions.
+    Reward function is implemented as a (fully connected?) network which takes as
+    input the previous observations (sight, audio, health) and outputs a real number.
+    The reward function is fixed during an agents lifetime, and is initialized for
+    each agent as some mixture of the reward functions of that agent's parents. The
+    first generation has randomly initialized reward functions.
 
+    TODO: Should we make them choose between moving or eating at a given timestep, 
+    or allow them to do both?
+
+#=====================================================================================
+Things to come back to:
+
+    Make ``self.grid`` a numpy array instead of a ``Dict`` with ``Tuple`` keys. 
+
+    Considering the order in which agents make decisions, dealing with collisions 
+    between the actions of two agents during environment steps.  
+
+    Instead of ``self.rows``, ``self.cols`` and whatever, we just have a 
+    ``self.env_config`` and pass it to the rest of the class and call variables using 
+    string keys.
+
+    Make Env object less monolithic. Break it up into environment functionality (_move
+    and _consume, for example) and running functionality (get_action_dict).
+
+    Unique identifiers for an unbounded number of agents. For now, an agent's observation
+    representaiton is a one hot vector for the object type identifier together with a
+    one hot vector that distinguishes that agent from all other agents. This only works
+    when the total number of agents is static. We will keep it this way for now but this
+    needs to change to have agents die and new ones born. Maybe use agent DNA as the unique
+    identifier. 
+
+    Something to consider: Should empty squares be given their own one-hot encoding or should
+    those appear as all zeros?
+
+    In env.py, self.grid is implemented as a 4 dimensional numpy array. This is bad because it
+    makes it impossible to process without flattening it or embedding it or something. Right
+    now our solution is to make agents mask food (if an agent is standing on top of a piece of
+    food, it's invisible to other agents) to make the observation into a 3 dimensional array.
+    This is not a permanent solution though, and we need to change this eventually.
+
+    Instead of going with the above paragraph, what we are instead going to do is get rid of
+    instance identifiers entirely, so that agents are indistinguishable from other agents by
+    sight, food is indistinguishable from other food, etc. 
+
+    In env.py, we set self.dones (which is initialized as a set) to the done dictionary in
+    step(). This doesn't seem to cause any problems right now, but we also don't know if
+    self.dones is needed for anything external.
+
+#=====================================================================================
+
+    Craw has discovered that the agents themselves do not need a step function. Rather, 
+    in RLlib, the agents objects ARE instances of (single-agent) environments, and they are 
+    calling the step function of those environments in a loop.

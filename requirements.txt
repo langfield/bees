@@ -1,0 +1,7 @@
+ray
+gym
+tensorflow-gpu
+lz4
+psutil
+pandas
+opencv-python
