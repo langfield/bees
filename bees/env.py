@@ -8,7 +8,7 @@ import os
 import math
 import random
 import itertools
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 import datetime
 
 # Third-party imports.
@@ -23,8 +23,8 @@ from agent import Agent
 from utils import convert_obs_to_tuple
 
 # HARDCODE
-DT = datetime.datetime.now()
-DT = str(DT).replace(" ", "_")
+DT = str(datetime.datetime.now())
+DT = DT.replace(" ", "_")
 REPR_LOG = "logs/%s_repr_log.txt" % DT
 REW_LOG = "logs/%s_rew_log.txt" % DT
 
@@ -82,7 +82,7 @@ class Env(MultiAgentEnv):
         self.agents = [Agent() for i in range(self.num_agents)]
 
         # Misc settings
-        self.dones = set()
+        self.dones: Dict[int, bool] = {}
         self.resetted = False
         self.iteration = 0
 
@@ -113,7 +113,7 @@ class Env(MultiAgentEnv):
 
         self.iteration = 0
         self.resetted = True
-        self.dones = set()
+        self.dones = {}
         self.fill()
 
         # Set initial agent observations
@@ -122,8 +122,9 @@ class Env(MultiAgentEnv):
 
         return {i: a.reset() for i, a in enumerate(self.agents)}
 
-    def _update_pos(self, pos: Tuple[int], move: int) -> Tuple[int]:
+    def _update_pos(self, pos: Tuple[int, int], move: int) -> Tuple[int, int]:
         """Compute new position from a given move."""
+        new_pos = tuple([0, 0])
         if move == self.consts["UP"]:
             new_pos = tuple([pos[0], pos[1] + 1])
         elif move == self.consts["DOWN"]:
@@ -139,22 +140,24 @@ class Env(MultiAgentEnv):
 
         return new_pos
 
-    def _remove(self, obj_type_id: int, pos: Tuple[int]) -> None:
+    def _remove(self, obj_type_id: int, pos: Tuple[int, int]) -> None:
 
         grid_idx = pos + (obj_type_id,)
         self.grid[grid_idx] = 0
 
-    def _place(self, obj_type_id: int, pos: Tuple[int]) -> None:
+    def _place(self, obj_type_id: int, pos: Tuple[int, int]) -> None:
 
         grid_idx = pos + (obj_type_id,)
         self.grid[grid_idx] = 1
 
-    def _obj_exists(self, obj_type_id: int, pos: Tuple[int]) -> bool:
+    def _obj_exists(self, obj_type_id: int, pos: Tuple[int, int]) -> bool:
 
         grid_idx = pos + (obj_type_id,)
         return self.grid[grid_idx] == 1
 
-    def _move(self, action_dict: Dict[int, Tuple[int]]) -> Dict[int, Tuple[int]]:
+    def _move(
+        self, action_dict: Dict[int, Tuple[int, int]]
+    ) -> Dict[int, Tuple[int, int]]:
         """ Identify collisions and update ``action_dict``,
             ``self.grid``, and ``agent.pos``.
         """
@@ -183,7 +186,10 @@ class Env(MultiAgentEnv):
 
         return action_dict
 
-    def _consume(self, action_dict: Dict[str, Dict[str, str]]) -> None:
+    def _reward(self, action: Dict[str, str], obs: np.ndarray) -> Dict[int, float]:
+        pass
+
+    def _consume(self, action_dict: Dict[int, Tuple[int, int]]) -> Dict[int, float]:
         """ Takes as input a collision-free ``action_dict`` and
             executes the ``consume`` action for all agents.
         """
@@ -214,7 +220,7 @@ class Env(MultiAgentEnv):
 
         return rew
 
-    def _get_obs(self, pos: Tuple[int]) -> np.ndarray:
+    def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
         """ Returns a ``np.ndarray`` of observations given an agent ``pos``. """
 
         # Calculate bounds of field of vision.
@@ -249,7 +255,7 @@ class Env(MultiAgentEnv):
 
         return obs
 
-    def get_action_dict(self) -> Dict[str, Tuple[int]]:
+    def get_action_dict(self) -> Dict[int, Tuple[int, int]]:
         """
         Constructs ``action_dict`` by querying individual agents for
         their actions based on their observations.
@@ -261,7 +267,11 @@ class Env(MultiAgentEnv):
 
         return action_dict
 
-    def step(self, action_dict: Dict[str, Tuple[int]]):
+    def step(
+        self, action_dict: Dict[int, Tuple[int, int]]
+    ) -> Tuple[
+        Dict[int, np.ndarray], Dict[int, float], Dict[Any, bool], Dict[int, Any]
+    ]:
         """
         ``action_dict`` has agent indices as keys and a dict of the form
         ``{"move": <move>, "consume": <consume>)`` where the dict values
@@ -273,7 +283,9 @@ class Env(MultiAgentEnv):
         # Execute move actions and consume actions, and calculate reward
         action_dict = self._move(action_dict)
         obs, rew, done, info = {}, {}, {}, {}
-        rew = self._consume(action_dict)
+        # TODO: complete reward loop.
+        for agent_id, agent in enumerate(self.agents):
+            rew = self._consume(action_dict)
 
         # Decrease agent health, compute observations and dones.
         for agent_id, agent in enumerate(self.agents):
