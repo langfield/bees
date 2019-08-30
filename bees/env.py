@@ -282,7 +282,10 @@ class Env(MultiAgentEnv):
 
         # Execute move actions and consume actions, and calculate reward
         action_dict = self._move(action_dict)
-        obs, rew, done, info = {}, {}, {}, {}
+        obs: Dict[int, np.ndarray] = {}
+        rew: Dict[int, float] = {}
+        done: Dict[Any, bool] = {}
+        info: Dict[int, Any] = {}
         # TODO: complete reward loop.
         for agent_id, agent in enumerate(self.agents):
             rew = self._consume(action_dict)
