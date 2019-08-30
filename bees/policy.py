@@ -6,6 +6,7 @@ from constants import *
 # pylint: disable=too-few-public-methods
 class Policy:
     """ Policy class defining random actions. """
+
     @staticmethod
     def get_action(_obs, _agent_health):
         """ Returns a random action. """

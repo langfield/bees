@@ -23,10 +23,10 @@ from agent import Agent
 from utils import convert_obs_to_tuple
 
 # HARDCODE
-dt = datetime.datetime.now()
-dt = str(dt).replace(" ", "_")
-REPR_LOG = "logs/%s_repr_log.txt" % dt
-REW_LOG = "logs/%s_rew_log.txt" % dt
+DT = datetime.datetime.now()
+DT = str(DT).replace(" ", "_")
+REPR_LOG = "logs/%s_repr_log.txt" % DT
+REW_LOG = "logs/%s_rew_log.txt" % DT
 
 
 class Env(MultiAgentEnv):
@@ -107,9 +107,9 @@ class Env(MultiAgentEnv):
         """ Reset the entire environment. """
 
         # Get average rewards for agents from previous episode
-        avg_reward = np.mean([agent.avg_reward for agent in self.agents])
-        with open(REW_LOG, 'a+') as f:
-            f.write('{:.10f}'.format(avg_reward) + '\n')
+        avg_reward = np.mean([agent.total_reward for agent in self.agents])
+        with open(REW_LOG, "a+") as f:
+            f.write("{:.10f}".format(avg_reward) + "\n")
 
         self.iteration = 0
         self.resetted = True
@@ -210,7 +210,7 @@ class Env(MultiAgentEnv):
                 agent.health = min(1, agent.health + food_size)
 
             rew[agent_id] = agent.health - original_health
-            agent.update_average_reward(rew[agent_id])
+            agent.update_total_reward(rew[agent_id])
 
         return rew
 
