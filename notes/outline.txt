@@ -86,6 +86,9 @@ Things to come back to:
     step(). This doesn't seem to cause any problems right now, but we also don't know if
     self.dones is needed for anything external.
 
+    Question: is the old policy being overwritten somehow by ``rllib``? Why is the call
+    to ``self.policy.get_action`` still in ``agent.py``?
+
 #=====================================================================================
 
     Craw has discovered that the agents themselves do not need a step function. Rather, 
