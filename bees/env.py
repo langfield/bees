@@ -79,7 +79,7 @@ class Env(MultiAgentEnv):
         self.observation_space = gym.spaces.Tuple(tuple(outer_list))
 
         # Construct agents
-        self.agents = [Agent() for i in range(self.num_agents)]
+        self.agents = [Agent(env_config) for i in range(self.num_agents)]
 
         # Misc settings
         self.dones: Dict[int, bool] = {}

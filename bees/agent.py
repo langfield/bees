@@ -7,13 +7,15 @@ from policy import Policy
 class Agent:
     """ An agent with position and health attributes. """
 
-    def __init__(self, pos: Tuple[int, int] = None, initial_health: float = 1) -> None:
+    def __init__(
+        self, config: dict, pos: Tuple[int, int] = None, initial_health: float = 1
+    ) -> None:
         """ ``health`` ranges in ``[0, 1]``. """
         self.pos = pos
         self.initial_health = initial_health
         self.health = self.initial_health
 
-        self.policy = Policy()
+        self.policy = Policy(config)
         self.observation = None
         self.total_reward = 0.0
 

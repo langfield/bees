@@ -1,16 +1,24 @@
 """ A dummy policy for bees agents. """
 import random
 
-from constants import *
-
 # pylint: disable=too-few-public-methods
 class Policy:
     """ Policy class defining random actions. """
 
-    @staticmethod
-    def get_action(_obs, _agent_health):
+    def __init__(self, config: dict) -> None:
+        self.consts = config["constants"]
+
+    def get_action(self, _obs, _agent_health):
         """ Returns a random action. """
-        move = random.choice([LEFT, RIGHT, UP, DOWN, STAY])
-        consume = random.choice([EAT, NO_EAT])
+        move = random.choice(
+            [
+                self.consts["LEFT"],
+                self.consts["RIGHT"],
+                self.consts["UP"],
+                self.consts["DOWN"],
+                self.consts["STAY"],
+            ]
+        )
+        consume = random.choice([self.consts["EAT"], self.consts["NO_EAT"]])
 
         return (move, consume)
