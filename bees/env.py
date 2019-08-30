@@ -47,7 +47,7 @@ class Env(MultiAgentEnv):
 
         # Get constants.
         self.consts = env_config["constants"]
-        self.heaven = tuple(self.consts["BEE_HEAVEN"])
+        self.heaven: Tuple[int, int] = (self.consts["BEE_HEAVEN"],)  # type: ignore
 
         # Construct object identifier dictionary
         self.obj_type_id = {"agent": 0, "food": 1}
@@ -137,8 +137,7 @@ class Env(MultiAgentEnv):
             new_pos = pos
         else:
             raise ValueError("'%s' is not a valid action.")
-
-        return new_pos
+        return new_pos  # type: ignore
 
     def _remove(self, obj_type_id: int, pos: Tuple[int, int]) -> None:
 
