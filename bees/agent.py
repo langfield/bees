@@ -15,25 +15,23 @@ class Agent:
 
         self.policy = Policy()
         self.observation = None
-        self.avg_reward = 0.0
-        self.age = 0
+        self.total_reward = 0.0
 
     def get_action(self):
         """ Uses the policy to choose an action based on the observation. """
         return self.policy.get_action(self.observation, self.health)
 
-    def update_average_reward(self, new_reward):
-        self.age += 1
-        self.avg_reward = (self.avg_reward * (self.age - 1) + new_reward) / self.age
+    def update_total_reward(self, new_reward):
+        """ Updates total reward. """
+        self.total_reward += new_reward
 
     def reset(self):
         """ Reset the agent. """
         self.health = self.initial_health
-        self.avg_reward = 0.0
+        self.total_reward = 0.0
         return self.observation
 
     def __repr__(self):
         output = "Health: %f, " % self.health
-        output += "Average reward: %f\n" % self.avg_reward
+        output += "Total reward: %f\n" % self.total_reward
         return output
-        
