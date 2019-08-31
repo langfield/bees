@@ -1,3 +1,4 @@
 Move reward function to agent
 Implement reward function with MLP
 Implement mating
+Test account switching.
