@@ -27,6 +27,10 @@ DT = str(datetime.datetime.now())
 DT = DT.replace(" ", "_")
 REPR_LOG = "logs/%s_repr_log.txt" % DT
 REW_LOG = "logs/%s_rew_log.txt" % DT
+for log in [REPR_LOG, REW_LOG]:
+    logDir = os.path.dirname(log)
+    if not os.path.isdir(logDir):
+        os.makedirs(logDir)
 
 
 class Env(MultiAgentEnv):
@@ -47,7 +51,7 @@ class Env(MultiAgentEnv):
 
         # Get constants.
         self.consts = env_config["constants"]
-        self.heaven: Tuple[int, int] = (self.consts["BEE_HEAVEN"],)  # type: ignore
+        self.heaven: Tuple[int, int] = tuple(self.consts["BEE_HEAVEN"])  # type: ignore
 
         # Construct object identifier dictionary
         self.obj_type_id = {"agent": 0, "food": 1}
@@ -192,7 +196,6 @@ class Env(MultiAgentEnv):
         """ Takes as input a collision-free ``action_dict`` and
             executes the ``consume`` action for all agents.
         """
-        rew = {}
         for agent_id, action in action_dict.items():
             agent = self.agents[agent_id]
             pos = agent.pos
@@ -210,14 +213,8 @@ class Env(MultiAgentEnv):
             ):
                 self._remove(self.obj_type_id["food"], pos)
                 self.num_foods -= 1
-                # FIX: this was dedented.
                 food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
                 agent.health = min(1, agent.health + food_size)
-
-            rew[agent_id] = agent.health - original_health
-            agent.update_total_reward(rew[agent_id])
-
-        return rew
 
     def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
         """ Returns a ``np.ndarray`` of observations given an agent ``pos``. """
@@ -280,14 +277,22 @@ class Env(MultiAgentEnv):
         """
 
         # Execute move actions and consume actions, and calculate reward
-        action_dict = self._move(action_dict)
         obs: Dict[int, np.ndarray] = {}
         rew: Dict[int, float] = {}
         done: Dict[Any, bool] = {}
         info: Dict[int, Any] = {}
         # TODO: complete reward loop.
+
+        # Execute actions
+        orig_health = {agent_id: agent.health for agent_id, agent in enumerate(self.agents)}
+        action_dict = self._move(action_dict)
+        self._consume(action_dict)
+
+        # Compute reward
+        rew = {}
         for agent_id, agent in enumerate(self.agents):
-            rew = self._consume(action_dict)
+            rew[agent_id] = agent.health - orig_health[agent_id]
+            agent.update_total_reward(rew[agent_id])
 
         # Decrease agent health, compute observations and dones.
         for agent_id, agent in enumerate(self.agents):
