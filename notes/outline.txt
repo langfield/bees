@@ -38,8 +38,9 @@ Rough outline of macro details:
     of the speech vector), which determines the actions of the agent. These 3 networks
     are then trained using an undecided RL algorithm to maximize the reward function.
 
-    Reward function is implemented as a (fully connected?) network which takes as
-    input the previous observations (sight, audio, health) and outputs a real number.
+    Reward function is implemented as a (feedforward or recurrent) network which takes
+    as input the previous observations (sight, audio, health before action, health
+    after action), and action, and outputs a real number.
     The reward function is fixed during an agents lifetime, and is initialized for
     each agent as some mixture of the reward functions of that agent's parents. The
     first generation has randomly initialized reward functions.
@@ -89,6 +90,32 @@ Things to come back to:
     Question: is the old policy being overwritten somehow by ``rllib``? Why is the call
     to ``self.policy.get_action`` still in ``agent.py``?
 
+    Initially we were unsure about including the health bar as an input to the reward
+    function, and about whether or not we should include the difference in health over
+    time versus just the health from multiple timesteps. If we chose to only include
+    the health at the current timestep, the reward function would not be able to tell
+    any information about the changes in health if it is not recurrent. We ended up
+    deciding to use give the reward function the health before an action and the health
+    after the action was taken.
+
+        t-1        t
+    |---------|---------|
+     *'  %'  &' *  %   & 
+    ' denotes previous timestep (t-1).
+    '' denotes (t-2).  
+
+    Reward function should take as input an observation, and the action that resulted 
+    from that observation.
+ 
+    *': Policy executes action within timestep t-1 at *' from inputs collected at &''.
+    %': Reward computed using observations from timestep t-2 at &'' and action from 
+        timestep t-1 at *'.
+    &': Inputs recorded, used as input to policy at *.
+
+    *': Policy executes action within timestep t at * from inputs collected at &'.
+    %': Reward computed using observations from timestep t-1 at &' and action from 
+        timestep t at *.
+    &': Inputs recorded, used as input to policy at (t+1).
 #=====================================================================================
 
     Craw has discovered that the agents themselves do not need a step function. Rather, 
