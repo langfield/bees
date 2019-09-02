@@ -34,20 +34,20 @@ for log in [REPR_LOG, REW_LOG]:
 
 
 class Env(MultiAgentEnv):
-    """Environment with bees in it."""
+    """ Environment with bees in it. """
 
     def __init__(self, env_config: dict) -> None:
 
         # Parse ``env_config``.
-        self.height = env_config["height"]
         self.width = env_config["width"]
+        self.height = env_config["height"]
         self.sight_len = env_config["sight_len"]
         self.obj_types = env_config["obj_types"]
         self.num_agents = env_config["num_agents"]
+        self.aging_rate = env_config["aging_rate"]
         self.food_density = env_config["food_density"]
         self.food_size_mean = env_config["food_size_mean"]
         self.food_size_stddev = env_config["food_size_stddev"]
-        self.aging_rate = env_config["aging_rate"]
 
         # Get constants.
         self.consts = env_config["constants"]
@@ -70,7 +70,7 @@ class Env(MultiAgentEnv):
         )
 
         # Each observation is a k * k matrix with values from a discrete
-        # space of size self.obj_types + 1, where k = 2 * self.sight_len + 1
+        # space of size self.obj_types, where k = 2 * self.sight_len + 1
         outer_list = []
         for _x in range(-self.sight_len, self.sight_len + 1):
             inner_list = []
@@ -284,15 +284,13 @@ class Env(MultiAgentEnv):
         # TODO: complete reward loop.
 
         # Execute actions
-        orig_health = {agent_id: agent.health for agent_id, agent in enumerate(self.agents)}
+        prev_health = {agent_id: agent.health for agent_id, agent in enumerate(self.agents)}
         action_dict = self._move(action_dict)
         self._consume(action_dict)
 
-        # Compute reward
-        rew = {}
+        # Compute reward.
         for agent_id, agent in enumerate(self.agents):
-            rew[agent_id] = agent.health - orig_health[agent_id]
-            agent.update_total_reward(rew[agent_id])
+            rew[agent_id] = agent.compute_reward(prev_health[agent_id])
 
         # Decrease agent health, compute observations and dones.
         for agent_id, agent in enumerate(self.agents):
