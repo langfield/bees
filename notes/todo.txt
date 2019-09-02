@@ -1,0 +1,3 @@
+Rework settings parsing
+Implement reward function as MLP
+Mating
