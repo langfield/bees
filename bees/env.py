@@ -36,24 +36,42 @@ for log in [REPR_LOG, REW_LOG]:
 class Env(MultiAgentEnv):
     """ Environment with bees in it. """
 
-    def __init__(self, env_config: dict) -> None:
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        sight_len: int,
+        obj_types: int,
+        num_agents: int,
+        aging_rate: float,
+        food_density: float,
+        food_size_mean: float,
+        food_size_stddev: float,
+        consts: Dict[str, Any],
+    ) -> None:
 
-        # Parse ``env_config``.
-        self.width = env_config["width"]
-        self.height = env_config["height"]
-        self.sight_len = env_config["sight_len"]
-        self.obj_types = env_config["obj_types"]
-        self.num_agents = env_config["num_agents"]
-        self.aging_rate = env_config["aging_rate"]
-        self.food_density = env_config["food_density"]
-        self.food_size_mean = env_config["food_size_mean"]
-        self.food_size_stddev = env_config["food_size_stddev"]
+        self.width = width
+        self.height = height
+        self.sight_len = sight_len
+        self.obj_types = obj_types
+        self.num_agents = num_agents
+        self.aging_rate = aging_rate
+        self.food_density = food_density
+        self.food_size_mean = food_size_mean
+        self.food_size_stddev = food_size_stddev
 
+        # pylint: disable=invalid-name
         # Get constants.
-        self.consts = env_config["constants"]
-        self.heaven: Tuple[int, int] = tuple(self.consts["BEE_HEAVEN"])  # type: ignore
+        self.consts = consts
+        self.LEFT = consts["LEFT"]
+        self.RIGHT = consts["RIGHT"]
+        self.UP = consts["UP"]
+        self.DOWN = consts["DOWN"]
+        self.STAY = consts["STAY"]
+        self.EAT = consts["EAT"]
+        self.HEAVEN: Tuple[int, int] = tuple(consts["BEE_HEAVEN"])  # type: ignore
 
-        # Construct object identifier dictionary
+        # Construct object identifier dictionary.
         self.obj_type_id = {"agent": 0, "food": 1}
 
         # Compute number of foods.
@@ -61,10 +79,10 @@ class Env(MultiAgentEnv):
         self.initial_num_foods = math.floor(self.food_density * num_squares)
         self.num_foods = self.initial_num_foods
 
-        # Construct ``grid``.
+        # Construct ``self.grid``.
         self.grid = np.zeros((self.width, self.height, self.obj_types))
 
-        # Construct observation and action spaces
+        # Construct observation and action spaces.
         self.action_space = gym.spaces.Tuple(
             (gym.spaces.Discrete(5), gym.spaces.Discrete(2))
         )
@@ -82,10 +100,10 @@ class Env(MultiAgentEnv):
             outer_list.append(inner_space)
         self.observation_space = gym.spaces.Tuple(tuple(outer_list))
 
-        # Construct agents
-        self.agents = [Agent(env_config) for i in range(self.num_agents)]
+        # Construct agents.
+        self.agents = [Agent(sight_len, obj_types, consts) for i in range(num_agents)]
 
-        # Misc settings
+        # Misc settings.
         self.dones: Dict[int, bool] = {}
         self.resetted = False
         self.iteration = 0
@@ -129,15 +147,15 @@ class Env(MultiAgentEnv):
     def _update_pos(self, pos: Tuple[int, int], move: int) -> Tuple[int, int]:
         """Compute new position from a given move."""
         new_pos = tuple([0, 0])
-        if move == self.consts["UP"]:
+        if move == self.UP:
             new_pos = tuple([pos[0], pos[1] + 1])
-        elif move == self.consts["DOWN"]:
+        elif move == self.DOWN:
             new_pos = tuple([pos[0], pos[1] - 1])
-        elif move == self.consts["LEFT"]:
+        elif move == self.LEFT:
             new_pos = tuple([pos[0] - 1, pos[1]])
-        elif move == self.consts["RIGHT"]:
+        elif move == self.RIGHT:
             new_pos = tuple([pos[0] + 1, pos[1]])
-        elif move == self.consts["STAY"]:
+        elif move == self.STAY:
             new_pos = pos
         else:
             raise ValueError("'%s' is not a valid action.")
@@ -181,7 +199,7 @@ class Env(MultiAgentEnv):
                 out_of_bounds = True
 
             if out_of_bounds or self._obj_exists(self.obj_type_id["agent"], new_pos):
-                action_dict[agent_id] = (self.consts["STAY"], consume)
+                action_dict[agent_id] = (self.STAY, consume)
             else:
                 self._remove(self.obj_type_id["agent"], pos)
                 self._place(self.obj_type_id["agent"], new_pos)
@@ -206,7 +224,6 @@ class Env(MultiAgentEnv):
 
             # If they try to eat when there's nothing there, do nothing.
             _, consume = action
-            original_health = agent.health
             if (
                 self._obj_exists(self.obj_type_id["food"], pos)
                 and consume == self.consts["EAT"]
@@ -284,13 +301,16 @@ class Env(MultiAgentEnv):
         # TODO: complete reward loop.
 
         # Execute actions
-        prev_health = {agent_id: agent.health for agent_id, agent in enumerate(self.agents)}
+        prev_health = {
+            agent_id: agent.health for agent_id, agent in enumerate(self.agents)
+        }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
 
         # Compute reward.
         for agent_id, agent in enumerate(self.agents):
-            rew[agent_id] = agent.compute_reward(prev_health[agent_id])
+            if agent.health > 0.0:
+                rew[agent_id] = agent.compute_reward(prev_health[agent_id])
 
         # Decrease agent health, compute observations and dones.
         for agent_id, agent in enumerate(self.agents):
@@ -303,7 +323,7 @@ class Env(MultiAgentEnv):
                 # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
                 if done[agent_id]:
                     self._remove(self.obj_type_id["agent"], agent.pos)
-                    agent.pos = self.heaven
+                    agent.pos = self.HEAVEN
 
         done["__all__"] = all(done.values())
         self.dones = dict(done)

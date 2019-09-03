@@ -26,10 +26,48 @@ if __name__ == "__main__":
     with open(settings_file, "r") as f:
         settings = json.load(f)
 
-    # Simple environment with 4 independent cartpole entities.
-    register_env("bee_world", lambda _: Env(settings["env_config"]))
+    # Parse settings
+    env_config = settings["env"]
+    width = env_config["width"]
+    height = env_config["height"]
+    sight_len = env_config["sight_len"]
+    obj_types = env_config["obj_types"]
+    num_agents = env_config["num_agents"]
+    aging_rate = env_config["aging_rate"]
+    food_density = env_config["food_density"]
+    food_size_mean = env_config["food_size_mean"]
+    food_size_stddev = env_config["food_size_stddev"]
+    time_steps = env_config["time_steps"]
+    consts = settings["constants"]
+
+    # Register environment
+    register_env("bee_world", lambda _: Env(
+        width,
+        height,
+        sight_len,
+        obj_types,
+        num_agents,
+        aging_rate,
+        food_density,
+        food_size_mean,
+        food_size_stddev,
+        consts
+    ))
+
+    # Build environment instance to get ``obs_space``
     # TODO: Do we really need to construct twice to get ``obs_space``?
-    env = Env(settings["env_config"])
+    env = Env(
+        width,
+        height,
+        sight_len,
+        obj_types,
+        num_agents,
+        aging_rate,
+        food_density,
+        food_size_mean,
+        food_size_stddev,
+        consts
+    )
     obs_space = env.observation_space
     act_space = env.action_space
 
@@ -63,7 +101,7 @@ if __name__ == "__main__":
     #   policy_reward_mean:
     #     dqn_policy: X
     #     ppo_policy: Y
-    for i in range(settings["time_steps"]):
+    for i in range(time_steps):
         print("== Iteration", i, "==")
 
         # Improve the PPO policy.
