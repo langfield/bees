@@ -10,12 +10,37 @@ from env import Env
 def main(settings):
     """ Main training loop. """
 
-    env = Env(settings["env_config"])
+    env_config = settings["env"]
+    width = env_config["width"]
+    height = env_config["height"]
+    sight_len = env_config["sight_len"]
+    obj_types = env_config["obj_types"]
+    num_agents = env_config["num_agents"]
+    aging_rate = env_config["aging_rate"]
+    food_density = env_config["food_density"]
+    food_size_mean = env_config["food_size_mean"]
+    food_size_stddev = env_config["food_size_stddev"]
+    time_steps = env_config["time_steps"]
+
+    consts = settings["constants"]
+
+    env = Env(
+        width,
+        height,
+        sight_len,
+        obj_types,
+        num_agents,
+        aging_rate,
+        food_density,
+        food_size_mean,
+        food_size_stddev,
+        consts
+    )
     env.reset()
     print(env)
     time.sleep(0.2)
 
-    for _ in range(settings["time_steps"]):
+    for _ in range(time_steps):
 
         action_dict = env.get_action_dict()
         _obs, _rew, done, _info = env.step(action_dict)

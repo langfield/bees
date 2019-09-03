@@ -1,6 +1,6 @@
 """ Agent object for instantiating agents in the environment. """
 
-from typing import Tuple
+from typing import Tuple, Dict, Any
 from policy import Policy
 
 
@@ -8,19 +8,24 @@ class Agent:
     """ An agent with position and health attributes. """
 
     def __init__(
-        self, config: dict, pos: Tuple[int, int] = None, initial_health: float = 1
+        self,
+        sight_len: int,
+        obj_types: int,
+        consts: Dict[str, Any],
+        pos: Tuple[int, int] = None,
+        initial_health: float = 1,
     ) -> None:
         """ ``health`` ranges in ``[0, 1]``. """
-        self.sight_len = config["sight_len"]
-        self.obj_types = config["obj_types"]
-        
+        self.sight_len = sight_len
+        self.obj_types = obj_types
+
         self.pos = pos
         self.initial_health = initial_health
-        self.health = self.initial_health
+        self.health = initial_health
 
-        self.policy = Policy(config)
-        self.obs_width = 2 * self.sight_len + 1
-        self.obs_shape = (self.obs_width, self.obs_width, self.obj_types)
+        self.policy = Policy(consts)
+        self.obs_width = 2 * sight_len + 1
+        self.obs_shape = (self.obs_width, self.obs_width, obj_types)
         self.observation = None
         self.total_reward = 0.0
 
@@ -33,7 +38,7 @@ class Agent:
         agent_rew = self.health - prev_health
         self.total_reward += agent_rew
         return agent_rew
-         
+
     def reset(self):
         """ Reset the agent. """
         self.health = self.initial_health
