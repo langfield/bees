@@ -38,21 +38,35 @@ if __name__ == "__main__":
     food_size_mean = env_config["food_size_mean"]
     food_size_stddev = env_config["food_size_stddev"]
     time_steps = env_config["time_steps"]
+
+    rew_config = settings["rew"]
+    n_layers = rew_config["n_layers"]
+    hidden_dim = rew_config["hidden_dim"]
+    reward_weight_mean = rew_config["weight_mean"]
+    reward_weight_stddev = rew_config["weight_stddev"]
+
     consts = settings["constants"]
 
     # Register environment
-    register_env("bee_world", lambda _: Env(
-        width,
-        height,
-        sight_len,
-        obj_types,
-        num_agents,
-        aging_rate,
-        food_density,
-        food_size_mean,
-        food_size_stddev,
-        consts
-    ))
+    register_env(
+        "bee_world",
+        lambda _: Env(
+            width,
+            height,
+            sight_len,
+            obj_types,
+            num_agents,
+            aging_rate,
+            food_density,
+            food_size_mean,
+            food_size_stddev,
+            n_layers,
+            hidden_dim,
+            reward_weight_mean,
+            reward_weight_stddev,
+            consts,
+        ),
+    )
 
     # Build environment instance to get ``obs_space``
     # TODO: Do we really need to construct twice to get ``obs_space``?
@@ -66,7 +80,11 @@ if __name__ == "__main__":
         food_density,
         food_size_mean,
         food_size_stddev,
-        consts
+        n_layers,
+        hidden_dim,
+        reward_weight_mean,
+        reward_weight_stddev,
+        consts,
     )
     obs_space = env.observation_space
     act_space = env.action_space

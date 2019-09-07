@@ -116,6 +116,14 @@ Things to come back to:
     %': Reward computed using observations from timestep t-1 at &' and action from 
         timestep t at *.
     &': Inputs recorded, used as input to policy at (t+1).
+
+    Should we eventually make it so that reward functions change during an agent lifetime?
+
+    Remove the action constants from the settings file, place them in a constants file
+    which is not passed in or edited by the user, it's just read by the rest of the program.
+    
+    Convert to package with __init__.py's?
+
 #=====================================================================================
 
     Craw has discovered that the agents themselves do not need a step function. Rather, 

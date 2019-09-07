@@ -47,6 +47,10 @@ class Env(MultiAgentEnv):
         food_density: float,
         food_size_mean: float,
         food_size_stddev: float,
+        n_layers: int,
+        hidden_dim: int,
+        reward_weight_mean: float,
+        reward_weight_stddev: float,
         consts: Dict[str, Any],
     ) -> None:
 
@@ -83,9 +87,11 @@ class Env(MultiAgentEnv):
         self.grid = np.zeros((self.width, self.height, self.obj_types))
 
         # Construct observation and action spaces.
+        # HARDCODE
         self.action_space = gym.spaces.Tuple(
             (gym.spaces.Discrete(5), gym.spaces.Discrete(2))
         )
+        num_actions = 5 + 2
 
         # Each observation is a k * k matrix with values from a discrete
         # space of size self.obj_types, where k = 2 * self.sight_len + 1
@@ -101,7 +107,19 @@ class Env(MultiAgentEnv):
         self.observation_space = gym.spaces.Tuple(tuple(outer_list))
 
         # Construct agents.
-        self.agents = [Agent(sight_len, obj_types, consts) for i in range(num_agents)]
+        self.agents = [
+            Agent(
+                sight_len=sight_len,
+                obj_types=obj_types,
+                consts=consts,
+                n_layers=n_layers,
+                hidden_dim=hidden_dim,
+                num_actions=num_actions,
+                reward_weight_mean=reward_weight_mean,
+                reward_weight_stddev=reward_weight_stddev,
+            )
+            for i in range(num_agents)
+        ]
 
         # Misc settings.
         self.dones: Dict[int, bool] = {}
@@ -210,7 +228,7 @@ class Env(MultiAgentEnv):
     def _reward(self, action: Dict[str, str], obs: np.ndarray) -> Dict[int, float]:
         pass
 
-    def _consume(self, action_dict: Dict[int, Tuple[int, int]]) -> Dict[int, float]:
+    def _consume(self, action_dict: Dict[int, Tuple[int, int]]) -> None:
         """ Takes as input a collision-free ``action_dict`` and
             executes the ``consume`` action for all agents.
         """
@@ -310,7 +328,9 @@ class Env(MultiAgentEnv):
         # Compute reward.
         for agent_id, agent in enumerate(self.agents):
             if agent.health > 0.0:
-                rew[agent_id] = agent.compute_reward(prev_health[agent_id])
+                rew[agent_id] = agent.compute_reward(
+                    prev_health[agent_id], action_dict[agent_id]
+                )
 
         # Decrease agent health, compute observations and dones.
         for agent_id, agent in enumerate(self.agents):
