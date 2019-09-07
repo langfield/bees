@@ -11,6 +11,12 @@
         "aging_rate": 0.1,
         "time_steps": 1000
     },
+    "rew": {
+        "n_layers": 3,
+        "hidden_dim": 256,
+        "weight_mean": 0.0,
+        "weight_stddev": 0.4
+    },
     "constants": {
         "STAY":0,
         "LEFT":1,

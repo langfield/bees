@@ -22,6 +22,12 @@ def main(settings):
     food_size_stddev = env_config["food_size_stddev"]
     time_steps = env_config["time_steps"]
 
+    rew_config = settings["rew"]
+    n_layers = rew_config["n_layers"]
+    hidden_dim = rew_config["hidden_dim"]
+    reward_weight_mean = rew_config["weight_mean"]
+    reward_weight_stddev = rew_config["weight_stddev"]
+
     consts = settings["constants"]
 
     env = Env(
@@ -34,7 +40,11 @@ def main(settings):
         food_density,
         food_size_mean,
         food_size_stddev,
-        consts
+        n_layers,
+        hidden_dim,
+        reward_weight_mean,
+        reward_weight_stddev,
+        consts,
     )
     env.reset()
     print(env)
