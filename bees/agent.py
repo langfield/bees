@@ -87,7 +87,7 @@ class Agent:
             self.reward_biases.append(np.zeros((output_dim,)))
             input_dim = output_dim
 
-    def compute_reward(self, prev_health: float, action: Tuple[int, int]) -> float:
+    def compute_reward(self, prev_health: float, action: Tuple[int, int, int]) -> float:
         """ Computes agent reward given health value before consumption. """
 
         flat_obs = np.array(self.observation).flatten()
@@ -106,7 +106,7 @@ class Agent:
         self.total_reward += scalar_reward
         return scalar_reward
 
-    def get_flat_action(self, action: Tuple[int, int]) -> np.ndarray:
+    def get_flat_action(self, action: Tuple[int, int, int]) -> np.ndarray:
         """
         Computes a binary vector (two concatentated one-hot vectors) which
         represents the action.
