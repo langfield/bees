@@ -8,7 +8,7 @@ import os
 import math
 import random
 import itertools
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, List, Set
 import datetime
 
 # Third-party imports.
@@ -31,6 +31,11 @@ for log in [REPR_LOG, REW_LOG]:
     logDir = os.path.dirname(log)
     if not os.path.isdir(logDir):
         os.makedirs(logDir)
+
+# HARDCODE
+# Settings for ``__repr__()``.
+PRINT_AGENT_STATS = True
+PRINT_DONES = True
 
 
 class Env(MultiAgentEnv):
@@ -64,6 +69,11 @@ class Env(MultiAgentEnv):
         self.food_size_mean = food_size_mean
         self.food_size_stddev = food_size_stddev
 
+        self.n_layers = n_layers
+        self.hidden_dim = hidden_dim
+        self.reward_weight_mean = reward_weight_mean
+        self.reward_weight_stddev = reward_weight_stddev
+
         # pylint: disable=invalid-name
         # Get constants.
         self.consts = consts
@@ -73,6 +83,8 @@ class Env(MultiAgentEnv):
         self.DOWN = consts["DOWN"]
         self.STAY = consts["STAY"]
         self.EAT = consts["EAT"]
+        self.MATE = consts["MATE"]
+        self.NO_MATE = consts["NO_MATE"]
         self.HEAVEN: Tuple[int, int] = tuple(consts["BEE_HEAVEN"])  # type: ignore
 
         # Construct object identifier dictionary.
@@ -89,9 +101,10 @@ class Env(MultiAgentEnv):
         # Construct observation and action spaces.
         # HARDCODE
         self.action_space = gym.spaces.Tuple(
-            (gym.spaces.Discrete(5), gym.spaces.Discrete(2))
+            (gym.spaces.Discrete(5), gym.spaces.Discrete(2), gym.spaces.Discrete(2))
         )
-        num_actions = 5 + 2
+        num_actions = 5 + 2 + 2
+        self.num_actions = num_actions
 
         # Each observation is a k * k matrix with values from a discrete
         # space of size self.obj_types, where k = 2 * self.sight_len + 1
@@ -195,8 +208,8 @@ class Env(MultiAgentEnv):
         return self.grid[grid_idx] == 1
 
     def _move(
-        self, action_dict: Dict[int, Tuple[int, int]]
-    ) -> Dict[int, Tuple[int, int]]:
+        self, action_dict: Dict[int, Tuple[int, int, int]]
+    ) -> Dict[int, Tuple[int, int, int]]:
         """ Identify collisions and update ``action_dict``,
             ``self.grid``, and ``agent.pos``.
         """
@@ -206,7 +219,9 @@ class Env(MultiAgentEnv):
         for agent_id, action in shuffled_items:
             agent = self.agents[agent_id]
             pos = agent.pos
-            move, consume = action
+            move, consume, mate = action
+            assert pos is not None
+
             new_pos = self._update_pos(pos, move)
 
             # Validate new position.
@@ -217,7 +232,7 @@ class Env(MultiAgentEnv):
                 out_of_bounds = True
 
             if out_of_bounds or self._obj_exists(self.obj_type_id["agent"], new_pos):
-                action_dict[agent_id] = (self.STAY, consume)
+                action_dict[agent_id] = (self.STAY, consume, mate)
             else:
                 self._remove(self.obj_type_id["agent"], pos)
                 self._place(self.obj_type_id["agent"], new_pos)
@@ -225,10 +240,7 @@ class Env(MultiAgentEnv):
 
         return action_dict
 
-    def _reward(self, action: Dict[str, str], obs: np.ndarray) -> Dict[int, float]:
-        pass
-
-    def _consume(self, action_dict: Dict[int, Tuple[int, int]]) -> None:
+    def _consume(self, action_dict: Dict[int, Tuple[int, int, int]]) -> None:
         """ Takes as input a collision-free ``action_dict`` and
             executes the ``consume`` action for all agents.
         """
@@ -241,15 +253,78 @@ class Env(MultiAgentEnv):
                 continue
 
             # If they try to eat when there's nothing there, do nothing.
-            _, consume = action
-            if (
-                self._obj_exists(self.obj_type_id["food"], pos)
-                and consume == self.consts["EAT"]
-            ):
+            _, consume, _ = action
+            if self._obj_exists(self.obj_type_id["food"], pos) and consume == self.EAT:
                 self._remove(self.obj_type_id["food"], pos)
                 self.num_foods -= 1
                 food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
                 agent.health = min(1, agent.health + food_size)
+
+    def _mate(self, action_dict: Dict[int, Tuple[int, int, int]]) -> Set[int]:
+        """
+        Takes as input a collision-free ``action_dict`` and
+        executes the ``mate`` action for all agents.
+        Returns a set of the ids of the newly created children.
+        """
+        child_ids = set()
+        for agent_id, action in action_dict.items():
+            agent = self.agents[agent_id]
+            pos = agent.pos
+
+            # If the agent is dead, don't do anything
+            if agent.health <= 0.0:
+                continue
+
+            # Grab action, do nothing if the agent chose not to mate.
+            _, _, mate = action
+            if mate == self.NO_MATE:
+                continue
+
+            # Search adjacent positions for possible mates
+            adj_positions = self._get_adj_positions(pos)
+            next_to_agent = False
+            for adj_pos in adj_positions:
+                if self._obj_exists(self.obj_type_id["agent"], adj_pos):
+                    next_to_agent = True
+                    mate_pos = adj_pos
+                    break
+
+            # If there is another agent in an adjacent position, spawn child.
+            if next_to_agent:
+
+                # Choose child location
+                open_positions = self._get_adj_positions(pos)
+                open_positions += self._get_adj_positions(mate_pos)
+                open_positions = list(set(open_positions))
+                open_positions = [
+                    open_pos
+                    for open_pos in open_positions
+                    if not self._obj_exists(self.obj_type_id["agent"], open_pos)
+                ]
+
+                # Only create a new child if there are valid open positions.
+                if open_positions != []:
+                    child_pos = random.choice(open_positions)
+
+                    # Place child and add to ``self.grid``
+                    child = Agent(
+                        sight_len=self.sight_len,
+                        obj_types=self.obj_types,
+                        consts=self.consts,
+                        n_layers=self.n_layers,
+                        hidden_dim=self.hidden_dim,
+                        num_actions=self.num_actions,
+                        pos=child_pos,
+                        reward_weight_mean=self.reward_weight_mean,
+                        reward_weight_stddev=self.reward_weight_stddev,
+                    )
+                    self._place(self.obj_type_id["agent"], child_pos)
+
+                    self.agents.append(child)
+                    child_id = len(self.agents) - 1
+                    child_ids.add(child_id)
+
+        return child_ids
 
     def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
         """ Returns a ``np.ndarray`` of observations given an agent ``pos``. """
@@ -286,7 +361,7 @@ class Env(MultiAgentEnv):
 
         return obs
 
-    def get_action_dict(self) -> Dict[int, Tuple[int, int]]:
+    def get_action_dict(self) -> Dict[int, Tuple[int, int, int]]:
         """
         Constructs ``action_dict`` by querying individual agents for
         their actions based on their observations.
@@ -299,7 +374,7 @@ class Env(MultiAgentEnv):
         return action_dict
 
     def step(
-        self, action_dict: Dict[int, Tuple[int, int]]
+        self, action_dict: Dict[int, Tuple[int, int, int]]
     ) -> Tuple[
         Dict[int, np.ndarray], Dict[int, float], Dict[Any, bool], Dict[int, Any]
     ]:
@@ -311,12 +386,11 @@ class Env(MultiAgentEnv):
             ``consumptions = set(["eat", "noeat"])``.
         """
 
-        # Execute move actions and consume actions, and calculate reward
+        # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
         rew: Dict[int, float] = {}
         done: Dict[Any, bool] = {}
         info: Dict[int, Any] = {}
-        # TODO: complete reward loop.
 
         # Execute actions
         prev_health = {
@@ -324,17 +398,19 @@ class Env(MultiAgentEnv):
         }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
+        child_ids = self._mate(action_dict)
 
+        # TODO: should the following two loops also compute for new children?
         # Compute reward.
         for agent_id, agent in enumerate(self.agents):
-            if agent.health > 0.0:
+            if agent.health > 0.0 and agent_id not in child_ids:
                 rew[agent_id] = agent.compute_reward(
                     prev_health[agent_id], action_dict[agent_id]
                 )
 
         # Decrease agent health, compute observations and dones.
         for agent_id, agent in enumerate(self.agents):
-            if agent.health > 0.0:
+            if agent.health > 0.0 and agent_id not in child_ids:
                 agent.health -= self.aging_rate
                 obs[agent_id] = self._get_obs(agent.pos)
                 agent.observation = obs[agent_id]
@@ -354,12 +430,38 @@ class Env(MultiAgentEnv):
         self.iteration += 1
         return obs, rew, done, info
 
+    def _get_adj_positions(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
+        """
+        Returns the positions adjacent (left, right, up, and down) to a given
+        position.
+        """
+
+        x, y = pos
+        adj_positions = [
+            (x + dX, y + dY) for dX, dY in itertools.product([-1, 1], repeat=2)
+        ]
+        random.shuffle(adj_positions)
+
+        # Validate new positions.
+        validated_adj_positions = []
+        for new_pos in adj_positions:
+            out_of_bounds = False
+            if new_pos[0] < 0 or new_pos[0] >= self.width:
+                out_of_bounds = True
+            if new_pos[1] < 0 or new_pos[1] >= self.height:
+                out_of_bounds = True
+            if not out_of_bounds:
+                validated_adj_positions.append(new_pos)
+
+        return validated_adj_positions
+
     def __repr__(self):
         """
         Returns a representation of the environment state.
         """
+        output = "\n"
 
-        output = ""
+        # Print grid.
         for y in range(self.height):
             for x in range(self.width):
 
@@ -378,13 +480,17 @@ class Env(MultiAgentEnv):
 
             output += "\n"
 
-        for agent_id, agent in enumerate(self.agents):
-            if agent.health > 0.0:
-                output += "Agent %d: " % agent_id
-                output += agent.__repr__()
-        output += "\n"
+        # Print agent stats.
+        if PRINT_AGENT_STATS:
+            for agent_id, agent in enumerate(self.agents):
+                if agent.health > 0.0:
+                    output += "Agent %d: " % agent_id
+                    output += agent.__repr__()
+            output += "\n"
 
-        output += "Dones: " + str(self.dones) + "\n"
+        # Print dones.
+        if PRINT_DONES:
+            output += "Dones: " + str(self.dones) + "\n"
 
         return output
 

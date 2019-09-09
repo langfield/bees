@@ -124,8 +124,16 @@ Things to come back to:
     
     Convert to package with __init__.py's?
 
-#=====================================================================================
+    Mating should be considered an action, so that a reward function should learn to
+    incentivize mating, which reflects real life. Also, we are going to hard code 2 genders
+    for awhile, but whether or not the reproductive process is itself dependent on DNA is
+    an interesting discussion for later (recursive control of DNA).
 
-    Craw has discovered that the agents themselves do not need a step function. Rather, 
-    in RLlib, the agents objects ARE instances of (single-agent) environments, and they are 
-    calling the step function of those environments in a loop.
+    At some point we should consider replacing just the health bar with a more descriptive/
+    complex/granular bodily state, probably comprised of multiple resources (energy, fitness,
+    , ?).
+
+    Mating is currently executed after moving, though that is kind of odd because then
+    agents have to choose to mate before they are in position to mate. This should
+    change eventually.
+

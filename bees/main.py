@@ -58,7 +58,7 @@ def main(settings):
         # Print out environment state
         os.system("clear")
         print(env)
-        time.sleep(1)
+        time.sleep(0.2)
         if all(done.values()):
             print("All agents have died.")
             break
