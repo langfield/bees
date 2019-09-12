@@ -436,6 +436,7 @@ class Env(MultiAgentEnv):
                 rew[agent_id] = 0
 
         # Decrease agent health, compute observations and dones.
+        killed_agent_ids = []
         for agent_id, agent in self.agents.items():
             REPR_LOG.write("Agent '%d' health: '%f'.\n" % (agent_id, agent.health))
             if agent.health > 0.0:
@@ -451,7 +452,11 @@ class Env(MultiAgentEnv):
                     REPR_LOG.write("Killing agent '%d'.\n" % agent_id)
                     self._remove(self.obj_type_id["agent"], agent.pos)
                     agent.pos = self.HEAVEN
-                    # self.agents.pop(agent_id)
+                    killed_agent_ids.append(agent_id)
+
+        # Remove killed agents from self.agents
+        for killed_agent_id in killed_agent_ids:
+            self.agents.pop(killed_agent_id)
 
         done["__all__"] = all(done.values())
         self.dones = dict(done)
