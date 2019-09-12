@@ -69,7 +69,6 @@ if __name__ == "__main__":
     )
 
     # Build environment instance to get ``obs_space``
-    # TODO: Do we really need to construct twice to get ``obs_space``?
     env = Env(
         width,
         height,

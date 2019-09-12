@@ -137,3 +137,6 @@ Things to come back to:
     agents have to choose to mate before they are in position to mate. This should
     change eventually.
 
+    We should consider making ``self.agents`` a dict instead of a list, so that we don't
+    have a list of unbounded size full of dead bees.
+
