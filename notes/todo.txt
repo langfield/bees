@@ -1,1 +1,26 @@
-Mating/DNA
+Figure out why we are trying to remove agents from incorrect positions. 
+    DONE = Environment was getting reset, but state was persisting.
+Fix negative number of foods
+    DONE = Agents are now killed if food <= 0, and ``self.num_foods`` is reset in reset/fill.
+Change self.agents to a dictionary. 
+    DONE.
+Remove dead agents from self.agents.
+
+
+Changed:    Made logging initialization read in a list of the 10000 most frequent words in the english
+            language, and then sort it alphabetically, then read in every filename in the ``logs/`` 
+            directory, then pick the first word from the list which isn't already used in a logname, 
+            then use that as the log filename for that run.
+
+            Added agent reconstruction to the reset function. 
+
+            Made ``self.agents`` a dictionary where the keys are unique (even across dead agents)
+            integer agent ids and the values are the ``Agent`` objects.
+
+            Added several more logging statements, which just use ``f.write()``, which I think is 
+            easier. I also added flush statements of the form ``f.flush()`` which ensure that the 
+            log output is added to the file in a chronologically sensible way.
+
+            Fixed bug where ``num_foods`` would sometimes become negative. We were sometimes
+            trying to remove agents from heaven.
+

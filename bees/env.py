@@ -4,12 +4,10 @@ from __future__ import division
 from __future__ import print_function
 
 # Standard imports.
-import os
 import math
 import random
 import itertools
 from typing import Tuple, Dict, Any, List, Set
-import datetime
 
 # Third-party imports.
 import numpy as np
@@ -20,19 +18,11 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 # Bees imports.
 from agent import Agent
-from utils import convert_obs_to_tuple
+from utils import convert_obs_to_tuple, get_logs
 
-# HARDCODE
-DT = str(datetime.datetime.now())
-DT = DT.replace(" ", "_")
-REPR_LOG = "logs/%s_repr_log.txt" % DT
-REW_LOG = "logs/%s_rew_log.txt" % DT
-for log in [REPR_LOG, REW_LOG]:
-    logDir = os.path.dirname(log)
-    if not os.path.isdir(logDir):
-        os.makedirs(logDir)
+# Set global log file
+REPR_LOG, REW_LOG = get_logs()
 
-# HARDCODE
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
 PRINT_DONES = True
@@ -89,11 +79,12 @@ class Env(MultiAgentEnv):
 
         # Construct object identifier dictionary.
         self.obj_type_id = {"agent": 0, "food": 1}
+        self.obj_type_name = {0: "agent", 1: "food"}
 
         # Compute number of foods.
         num_squares = self.width * self.height
         self.initial_num_foods = math.floor(self.food_density * num_squares)
-        self.num_foods = self.initial_num_foods
+        self.num_foods = 0
 
         # Construct ``self.grid``.
         self.grid = np.zeros((self.width, self.height, self.obj_types))
@@ -119,50 +110,59 @@ class Env(MultiAgentEnv):
             outer_list.append(inner_space)
         self.observation_space = gym.spaces.Tuple(tuple(outer_list))
 
-        # Construct agents.
-        self.agents = [
-            Agent(
-                sight_len=sight_len,
-                obj_types=obj_types,
-                consts=consts,
-                n_layers=n_layers,
-                hidden_dim=hidden_dim,
-                num_actions=num_actions,
-                reward_weight_mean=reward_weight_mean,
-                reward_weight_stddev=reward_weight_stddev,
-            )
-            for i in range(num_agents)
-        ]
+        self.agents: Dict[int, Agent] = {}
 
         # Misc settings.
         self.dones: Dict[int, bool] = {}
         self.resetted = False
         self.iteration = 0
 
-    def fill(self):
+    def fill(self) -> None:
         """Populate the environment with food and agents."""
         # Reset ``self.grid``.
         self.grid = np.zeros((self.width, self.height, self.obj_types))
+        # MOD
+        self.num_foods = 0
 
         # Set unique agent positions.
         grid_positions = list(itertools.product(range(self.height), range(self.width)))
         agent_positions = random.sample(grid_positions, self.num_agents)
-        for agent, agent_pos in zip(self.agents, agent_positions):
+        for i, (j, agent) in enumerate(self.agents.items()):
+            agent_pos = agent_positions[i]
+            REPR_LOG.write("Initializing agent '%d' at '%s'.\n" % (j, str(agent_pos)))
             self._place(self.obj_type_id["agent"], agent_pos)
             agent.pos = agent_pos
 
-        # Set unique food positions
+        # Set unique food positions.
+        assert self.num_foods == 0
         food_positions = random.sample(grid_positions, self.initial_num_foods)
         for food_pos in food_positions:
             self._place(self.obj_type_id["food"], food_pos)
+        self.num_foods = self.initial_num_foods
 
-    def reset(self):
+    def reset(self) -> Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]:
         """ Reset the entire environment. """
 
-        # Get average rewards for agents from previous episode
-        avg_reward = np.mean([agent.total_reward for agent in self.agents])
-        with open(REW_LOG, "a+") as f:
-            f.write("{:.10f}".format(avg_reward) + "\n")
+        # Get average rewards for agents from previous episode.
+        if len(self.agents) > 0:
+            avg_reward = np.mean([agent.total_reward for _, agent in self.agents.items()])
+            REPR_LOG.write("{:.10f}".format(avg_reward) + "\n")
+
+        # MOD
+        # Reconstruct agents.
+        self.agents = {}
+        self.agent_ids_created = 0
+        for _ in range(self.num_agents):
+            self.agents[self._new_agent_id()] = Agent(
+                sight_len=self.sight_len,
+                obj_types=self.obj_types,
+                consts=self.consts,
+                n_layers=self.n_layers,
+                hidden_dim=self.hidden_dim,
+                num_actions=self.num_actions,
+                reward_weight_mean=self.reward_weight_mean,
+                reward_weight_stddev=self.reward_weight_stddev,
+            )
 
         self.iteration = 0
         self.resetted = True
@@ -170,10 +170,10 @@ class Env(MultiAgentEnv):
         self.fill()
 
         # Set initial agent observations
-        for _, agent in enumerate(self.agents):
+        for _, agent in self.agents.items():
             agent.observation = self._get_obs(agent.pos)
 
-        return {i: a.reset() for i, a in enumerate(self.agents)}
+        return {i: agent.reset() for i, agent in self.agents.items()}
 
     def _update_pos(self, pos: Tuple[int, int], move: int) -> Tuple[int, int]:
         """Compute new position from a given move."""
@@ -189,17 +189,30 @@ class Env(MultiAgentEnv):
         elif move == self.STAY:
             new_pos = pos
         else:
+            REPR_LOG.close()
             raise ValueError("'%s' is not a valid action.")
         return new_pos  # type: ignore
 
     def _remove(self, obj_type_id: int, pos: Tuple[int, int]) -> None:
 
         grid_idx = pos + (obj_type_id,)
+        if self.grid[grid_idx] != 1:
+            REPR_LOG.close()
+            raise ValueError(
+                "Object '%s' does not exist at grid position '(%d, %d)'."
+                % (self.obj_type_name[obj_type_id], pos[0], pos[1])
+            )
         self.grid[grid_idx] = 0
 
     def _place(self, obj_type_id: int, pos: Tuple[int, int]) -> None:
 
         grid_idx = pos + (obj_type_id,)
+        if obj_type_id == self.obj_type_id["agent"] and self.grid[grid_idx] == 1:
+            REPR_LOG.close()
+            raise ValueError(
+                "An agent already exists at grid position '(%d, %d)'."
+                % (pos[0], pos[1])
+            )
         self.grid[grid_idx] = 1
 
     def _obj_exists(self, obj_type_id: int, pos: Tuple[int, int]) -> bool:
@@ -245,6 +258,7 @@ class Env(MultiAgentEnv):
             executes the ``consume`` action for all agents.
         """
         for agent_id, action in action_dict.items():
+
             agent = self.agents[agent_id]
             pos = agent.pos
 
@@ -258,6 +272,11 @@ class Env(MultiAgentEnv):
                 self._remove(self.obj_type_id["food"], pos)
                 self.num_foods -= 1
                 food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
+                REPR_LOG.write("Num foods: '%d'.\n" % self.num_foods)
+                REPR_LOG.write(
+                    "Updating agent '%d' health from '%f' to '%f'.\n"
+                    % (agent_id, agent.health, min(1, agent.health + food_size))
+                )
                 agent.health = min(1, agent.health + food_size)
 
     def _mate(self, action_dict: Dict[int, Tuple[int, int, int]]) -> Set[int]:
@@ -318,15 +337,19 @@ class Env(MultiAgentEnv):
                         reward_weight_mean=self.reward_weight_mean,
                         reward_weight_stddev=self.reward_weight_stddev,
                     )
-                    self._place(self.obj_type_id["agent"], child_pos)
-
-                    self.agents.append(child)
-                    child_id = len(self.agents) - 1
+                    child_id = self._new_agent_id()
+                    self.agents[child_id] = child
+                    REPR_LOG.write("Adding child with id '%d'.\n" % child_id)
                     child_ids.add(child_id)
+
+                    REPR_LOG.write(
+                        "Placing child '%d' at '%s'.\n" % (child_id, str(child_pos))
+                    )
+                    self._place(self.obj_type_id["agent"], child_pos)
 
         return child_ids
 
-    def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
+    def _get_obs(self, pos: Tuple[int, int]) -> Tuple[Tuple[Tuple[int, ...]]]:
         """ Returns a ``np.ndarray`` of observations given an agent ``pos``. """
 
         # Calculate bounds of field of vision.
@@ -368,7 +391,7 @@ class Env(MultiAgentEnv):
         """
         action_dict = {}
 
-        for agent_id, agent in enumerate(self.agents):
+        for agent_id, agent in self.agents.items():
             action_dict[agent_id] = agent.get_action()
 
         return action_dict
@@ -385,6 +408,8 @@ class Env(MultiAgentEnv):
             ``movements = set(["up", "down", "left", "right", "stay"])``
             ``consumptions = set(["eat", "noeat"])``.
         """
+        REPR_LOG.write("===STEP===\n")
+        REPR_LOG.flush()
 
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
@@ -394,32 +419,39 @@ class Env(MultiAgentEnv):
 
         # Execute actions
         prev_health = {
-            agent_id: agent.health for agent_id, agent in enumerate(self.agents)
+            agent_id: agent.health for agent_id, agent in self.agents.items()
         }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
         child_ids = self._mate(action_dict)
 
-        # TODO: should the following two loops also compute for new children?
         # Compute reward.
-        for agent_id, agent in enumerate(self.agents):
+        for agent_id, agent in self.agents.items():
             if agent.health > 0.0 and agent_id not in child_ids:
                 rew[agent_id] = agent.compute_reward(
                     prev_health[agent_id], action_dict[agent_id]
                 )
+            # First reward for children is zero.
+            if agent_id in child_ids:
+                rew[agent_id] = 0
 
         # Decrease agent health, compute observations and dones.
-        for agent_id, agent in enumerate(self.agents):
-            if agent.health > 0.0 and agent_id not in child_ids:
+        for agent_id, agent in self.agents.items():
+            REPR_LOG.write("Agent '%d' health: '%f'.\n" % (agent_id, agent.health))
+            if agent.health > 0.0:
                 agent.health -= self.aging_rate
                 obs[agent_id] = self._get_obs(agent.pos)
                 agent.observation = obs[agent_id]
-                done[agent_id] = self.num_foods == 0 or agent.health <= 0.0
+                # MOD: num_foods == 0 -> num_foods <= 0
+                done[agent_id] = self.num_foods <= 0 or agent.health <= 0.0
 
                 # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
                 if done[agent_id]:
+
+                    REPR_LOG.write("Killing agent '%d'.\n" % agent_id)
                     self._remove(self.obj_type_id["agent"], agent.pos)
                     agent.pos = self.HEAVEN
+                    # self.agents.pop(agent_id)
 
         done["__all__"] = all(done.values())
         self.dones = dict(done)
@@ -455,7 +487,7 @@ class Env(MultiAgentEnv):
 
         return validated_adj_positions
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a representation of the environment state.
         """
@@ -482,7 +514,7 @@ class Env(MultiAgentEnv):
 
         # Print agent stats.
         if PRINT_AGENT_STATS:
-            for agent_id, agent in enumerate(self.agents):
+            for agent_id, agent in self.agents.items():
                 if agent.health > 0.0:
                     output += "Agent %d: " % agent_id
                     output += agent.__repr__()
@@ -492,18 +524,20 @@ class Env(MultiAgentEnv):
         if PRINT_DONES:
             output += "Dones: " + str(self.dones) + "\n"
 
+        REPR_LOG.flush()
+
         return output
 
-    def _log_state(self):
+    def _log_state(self) -> None:
         """
         Logs the state of the environment as a string to a
         prespecified log file path.
         """
 
-        log_dir = os.path.dirname(REPR_LOG)
-        if not os.path.isdir(log_dir):
-            os.makedirs(log_dir)
-        with open(REPR_LOG, "a+") as f:
-            f.write("Iteration %d:\n" % self.iteration)
-            f.write(self.__repr__())
-            f.write(",\n")
+        REPR_LOG.write("Iteration %d:\n" % self.iteration)
+        REPR_LOG.write(self.__repr__())
+        REPR_LOG.write(",\n")
+
+    def _new_agent_id(self) -> int:
+        self.agent_ids_created += 1
+        return self.agent_ids_created - 1

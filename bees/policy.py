@@ -1,6 +1,6 @@
 """ A dummy policy for bees agents. """
 import random
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 # pylint: disable=too-few-public-methods
 class Policy:
@@ -20,7 +20,7 @@ class Policy:
         self.MATE = consts["MATE"]
         self.NO_MATE = consts["NO_MATE"]
 
-    def get_action(self, _obs, _agent_health):
+    def get_action(self, _obs, _agent_health) -> Tuple[int, int, int]:
         """ Returns a random action. """
         move = random.choice([self.LEFT, self.RIGHT, self.UP, self.DOWN, self.STAY])
         consume = random.choice([self.EAT, self.NO_EAT])
