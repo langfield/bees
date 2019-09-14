@@ -43,10 +43,13 @@ class Env(MultiAgentEnv):
         food_density: float,
         food_size_mean: float,
         food_size_stddev: float,
+        mating_cooldown_len: int,
         n_layers: int,
         hidden_dim: int,
         reward_weight_mean: float,
         reward_weight_stddev: float,
+        mut_sigma: float,
+        mut_p: float,
         consts: Dict[str, Any],
     ) -> None:
 
@@ -59,11 +62,15 @@ class Env(MultiAgentEnv):
         self.food_density = food_density
         self.food_size_mean = food_size_mean
         self.food_size_stddev = food_size_stddev
+        self.mating_cooldown_len = mating_cooldown_len
 
         self.n_layers = n_layers
         self.hidden_dim = hidden_dim
         self.reward_weight_mean = reward_weight_mean
         self.reward_weight_stddev = reward_weight_stddev
+
+        self.mut_sigma = mut_sigma
+        self.mut_p = mut_p
 
         # pylint: disable=invalid-name
         # Get constants.
@@ -172,6 +179,7 @@ class Env(MultiAgentEnv):
                 num_actions=self.num_actions,
                 reward_weight_mean=self.reward_weight_mean,
                 reward_weight_stddev=self.reward_weight_stddev,
+                mating_cooldown_len=self.mating_cooldown_len,
             )
 
         self.iteration = 0
@@ -404,7 +412,7 @@ class Env(MultiAgentEnv):
 
             # If there is another agent in an adjacent position, spawn child.
             if next_to_agent:
-            
+
                 # Check ``mom`` and ``dad`` cooldown.
                 if mom.mating_cooldown > 0 or dad.mating_cooldown > 0:
                     continue
@@ -428,7 +436,7 @@ class Env(MultiAgentEnv):
                     dad.mating_cooldown = dad.mating_cooldown_len
 
                     # Crossover and mutate parent DNA.
-                    reward_weights, reward_biases = get_child_reward_network(mom, dad)
+                    reward_weights, reward_biases = get_child_reward_network(mom, dad, self.mut_sigma, self.mut_p)
 
                     # Place child and add to ``self.grid``.
                     child = Agent(
@@ -443,6 +451,7 @@ class Env(MultiAgentEnv):
                         reward_weight_stddev=self.reward_weight_stddev,
                         reward_weights=reward_weights,
                         reward_biases=reward_biases,
+                        mating_cooldown_len=self.mating_cooldown_len,
                     )
                     child_id = self._new_agent_id()
                     self.agents[child_id] = child
