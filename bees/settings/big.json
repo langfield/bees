@@ -3,7 +3,7 @@
         "width": 30,
         "height": 30,
         "sight_len": 2,
-        "obj_types": 2,
+        "num_obj_types": 2,
         "num_agents": 15,
         "food_density": 0.125,
         "food_size_mean": 0.25,

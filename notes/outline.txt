@@ -140,3 +140,5 @@ Things to come back to:
     We should consider making ``self.agents`` a dict instead of a list, so that we don't
     have a list of unbounded size full of dead bees.
 
+    Make options for different types of crossover and mutation.
+

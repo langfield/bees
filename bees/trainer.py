@@ -31,7 +31,7 @@ if __name__ == "__main__":
     width = env_config["width"]
     height = env_config["height"]
     sight_len = env_config["sight_len"]
-    obj_types = env_config["obj_types"]
+    num_obj_types = env_config["num_obj_types"]
     num_agents = env_config["num_agents"]
     aging_rate = env_config["aging_rate"]
     food_density = env_config["food_density"]
@@ -54,7 +54,7 @@ if __name__ == "__main__":
             width,
             height,
             sight_len,
-            obj_types,
+            num_obj_types,
             num_agents,
             aging_rate,
             food_density,
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         width,
         height,
         sight_len,
-        obj_types,
+        num_obj_types,
         num_agents,
         aging_rate,
         food_density,

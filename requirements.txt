@@ -5,3 +5,4 @@ lz4
 psutil
 pandas
 opencv-python
+deap
