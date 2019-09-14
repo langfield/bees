@@ -1,0 +1,35 @@
+2019-09-13 21:58:37,830 INFO trainer.py:366 -- Worker crashed during call to train(). To attempt to continue training without the failed worker, set `'ignore_worker_failures': True`.
+
+Traceback (most recent call last):
+  File "trainer.py", line 126, in <module>
+    print(pretty_print(ppo_trainer.train()))
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/agents/trainer.py", line 369, in train
+    raise e
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/agents/trainer.py", line 358, in train
+    result = Trainable.train(self)
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/tune/trainable.py", line 171, in train
+    result = self._train()
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/agents/trainer_template.py", line 126, in _train
+    fetches = self.optimizer.step()
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/optimizers/multi_gpu_optimizer.py", line 140, in step
+    self.num_envs_per_worker, self.train_batch_size)
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/optimizers/rollout.py", line 29, in collect_samples
+    next_sample = ray_get_and_free(fut_sample)
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/utils/memory.py", line 33, in ray_get_and_free
+    result = ray.get(object_ids)
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/worker.py", line 2247, in get
+    raise value
+ray.exceptions.RayTaskError: ray_RolloutWorker:sample() (pid=12727, host=vanadium.cse.ohio-state.edu)
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/evaluation/rollout_worker.py", line 453, in sample
+    batches = [self.input_reader.next()]
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/evaluation/sampler.py", line 56, in next
+    batches = [self.get_data()]
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/evaluation/sampler.py", line 97, in get_data
+    item = next(self.rollout_provider)
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/evaluation/sampler.py", line 313, in _env_runner
+    soft_horizon)
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/evaluation/sampler.py", line 451, in _process_observations
+    episode.batch_builder.check_missing_dones()
+  File "/homes/3/whitaker.213/anaconda3/envs/tf_1.4.1/lib/python3.6/site-packages/ray/rllib/evaluation/sample_batch_builder.py", line 187, in check_missing_dones
+    "Please ensure that you include the last observations "
+ValueError: The environment terminated for all agents, but we still don't have a last observation for agent 7 (policy ppo_policy). Please ensure that you include the last observations of all live agents when setting '__all__' done to True.

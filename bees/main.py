@@ -14,7 +14,7 @@ def main(settings):
     width = env_config["width"]
     height = env_config["height"]
     sight_len = env_config["sight_len"]
-    obj_types = env_config["obj_types"]
+    num_obj_types = env_config["num_obj_types"]
     num_agents = env_config["num_agents"]
     aging_rate = env_config["aging_rate"]
     food_density = env_config["food_density"]
@@ -34,7 +34,7 @@ def main(settings):
         width,
         height,
         sight_len,
-        obj_types,
+        num_obj_types,
         num_agents,
         aging_rate,
         food_density,
@@ -49,6 +49,9 @@ def main(settings):
     env.reset()
     print(env)
     time.sleep(0.2)
+
+    # DEBUG
+    print("Beginning loop.")
 
     for _ in range(time_steps):
 

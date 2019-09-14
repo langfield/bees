@@ -16,7 +16,7 @@ class Agent:
     def __init__(
         self,
         sight_len: int,
-        obj_types: int,
+        num_obj_types: int,
         consts: Dict[str, Any],
         n_layers: int,
         hidden_dim: int,
@@ -30,7 +30,7 @@ class Agent:
     ) -> None:
         """ ``health`` ranges in ``[0, 1]``. """
         self.sight_len = sight_len
-        self.obj_types = obj_types
+        self.num_obj_types = num_obj_types
         self.n_layers = n_layers
         self.hidden_dim = hidden_dim
 
@@ -54,11 +54,11 @@ class Agent:
 
         self.policy = Policy(consts)
         self.obs_width = 2 * sight_len + 1
-        self.obs_shape = (self.obs_width, self.obs_width, obj_types)
+        self.obs_shape = (self.obs_width, self.obs_width, num_obj_types)
         self.observation = convert_obs_to_tuple(np.zeros(self.obs_shape))
 
-        # The 2 is for the dimensions for current health and previous health
-        self.input_dim = (self.obs_width ** 2) * obj_types + self.num_actions + 2
+        # The ``+ 2`` is for the dimensions for current health and previous health.
+        self.input_dim = (self.obs_width ** 2) * num_obj_types + self.num_actions + 2
         self.total_reward = 0.0
         if reward_weights is None:
             self.initialize_reward_weights()
@@ -95,13 +95,11 @@ class Agent:
         """ Initializes the biases of the reward function. """
 
         self.reward_biases = []
-        input_dim = self.input_dim
         output_dim = self.hidden_dim
         for i in range(self.n_layers):
             if i == self.n_layers - 1:
                 output_dim = 1
             self.reward_biases.append(np.zeros((output_dim,)))
-            input_dim = output_dim
 
     def compute_reward(self, prev_health: float, action: Tuple[int, int, int]) -> float:
         """ Computes agent reward given health value before consumption. """
