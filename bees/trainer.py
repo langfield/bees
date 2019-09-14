@@ -37,6 +37,7 @@ if __name__ == "__main__":
     food_density = env_config["food_density"]
     food_size_mean = env_config["food_size_mean"]
     food_size_stddev = env_config["food_size_stddev"]
+    mating_cooldown_len = env_config["mating_cooldown_len"]
     time_steps = env_config["time_steps"]
 
     rew_config = settings["rew"]
@@ -44,6 +45,10 @@ if __name__ == "__main__":
     hidden_dim = rew_config["hidden_dim"]
     reward_weight_mean = rew_config["weight_mean"]
     reward_weight_stddev = rew_config["weight_stddev"]
+
+    genetics_config = settings["genetics"]
+    mut_sigma = genetics_config["mut_sigma"]
+    mut_p = genetics_config["mut_p"]
 
     consts = settings["constants"]
 
@@ -60,10 +65,13 @@ if __name__ == "__main__":
             food_density,
             food_size_mean,
             food_size_stddev,
+            mating_cooldown_len,
             n_layers,
             hidden_dim,
             reward_weight_mean,
             reward_weight_stddev,
+            mut_sigma,
+            mut_p,
             consts,
         ),
     )
@@ -79,10 +87,13 @@ if __name__ == "__main__":
         food_density,
         food_size_mean,
         food_size_stddev,
+        mating_cooldown_len,
         n_layers,
         hidden_dim,
         reward_weight_mean,
         reward_weight_stddev,
+        mut_sigma,
+        mut_p,
         consts,
     )
     obs_space = env.observation_space

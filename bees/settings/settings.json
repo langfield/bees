@@ -9,6 +9,7 @@
         "food_size_mean": 0.05,
         "food_size_stddev": 0.05,
         "aging_rate": 0.03,
+        "mating_cooldown_len": 10,
         "time_steps": 1000
     },
     "rew": {
@@ -16,6 +17,10 @@
         "hidden_dim": 256,
         "weight_mean": 0.0,
         "weight_stddev": 0.4
+    },
+    "genetics": {
+        "mut_sigma": 0.3,
+        "mut_p": 0.05
     },
     "constants": {
         "STAY":0,
