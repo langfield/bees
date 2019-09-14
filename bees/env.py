@@ -401,8 +401,13 @@ class Env(MultiAgentEnv):
                     dad = self.agents[dad_id]
                     break
 
+
             # If there is another agent in an adjacent position, spawn child.
             if next_to_agent:
+            
+                # Check ``mom`` and ``dad`` cooldown.
+                if mom.mating_cooldown > 0 or dad.mating_cooldown > 0:
+                    continue
 
                 # Choose child location.
                 open_positions = self._get_adj_positions(pos)
@@ -417,6 +422,10 @@ class Env(MultiAgentEnv):
                 # Only create a new child if there are valid open positions.
                 if open_positions != []:
                     child_pos = random.choice(open_positions)
+
+                    # Update ``mating_cooldown`` for ``mom`` and ``dad``.
+                    mom.mating_cooldown = mom.mating_cooldown_len
+                    dad.mating_cooldown = dad.mating_cooldown_len
 
                     # Crossover and mutate parent DNA.
                     reward_weights, reward_biases = get_child_reward_network(mom, dad)
@@ -539,9 +548,12 @@ class Env(MultiAgentEnv):
             REPR_LOG.write("Agent '%d' health: '%f'.\n" % (agent_id, agent.health))
             if agent.health > 0.0:
                 agent.health -= self.aging_rate
+
+                # Update mating cooldown.
+                agent.mating_cooldown = max(0, agent.mating_cooldown - 1)
+
                 obs[agent_id] = self._get_obs(agent.pos)
                 agent.observation = obs[agent_id]
-                # MOD: num_foods == 0 -> num_foods <= 0
                 done[agent_id] = self.num_foods <= 0 or agent.health <= 0.0
 
                 # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.

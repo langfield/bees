@@ -8,7 +8,7 @@
         "food_density": 0.125,
         "food_size_mean": 0.05,
         "food_size_stddev": 0.05,
-        "aging_rate": 0.1,
+        "aging_rate": 0.03,
         "time_steps": 1000
     },
     "rew": {
