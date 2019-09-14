@@ -27,6 +27,7 @@ class Agent:
         reward_biases: List[np.ndarray] = None,
         reward_weight_mean: float = 0.0,
         reward_weight_stddev: float = 0.4,
+        mating_cooldown_len: int = 10,
     ) -> None:
         """ ``health`` ranges in ``[0, 1]``. """
         self.sight_len = sight_len
@@ -41,6 +42,10 @@ class Agent:
 
         self.reward_weight_mean = reward_weight_mean
         self.reward_weight_stddev = reward_weight_stddev
+
+        # How many timesteps until they can mate again.
+        self.mating_cooldown = 0
+        self.mating_cooldown_len = mating_cooldown_len
 
         # pylint: disable=invalid-name
         # Get constants.

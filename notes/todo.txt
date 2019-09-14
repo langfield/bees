@@ -25,4 +25,9 @@ Changed:    Made logging initialization read in a list of the 10000 most frequen
             trying to remove agents from heaven.
 
 Bugs:   Reshape issue with size 81,921. This is equal to 62*256 + 256*257 + 257, sum of products of 
-        shapes of each layer matrix (made of weights and biases). Need to split into layers first. 
+        shapes of each layer matrix (made of weights and biases). Need to split into layers first.
+
+Features:   Implementing mating cooldown.
+
+Fixed:  Tuples returned from deap functions. Fully implemented ``id_map``. Changed ``agent`` to
+        ``mom`` in ``_mate()`` function.
