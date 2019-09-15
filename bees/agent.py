@@ -44,18 +44,13 @@ class Agent:
         self.reward_weight_stddev = reward_weight_stddev
 
         # How many timesteps until they can mate again.
-        self.mating_cooldown = 0
+        # MOD: Agents can no longer mate as soon as they are born.
+        self.mating_cooldown = mating_cooldown_len
         self.mating_cooldown_len = mating_cooldown_len
 
         # pylint: disable=invalid-name
         # Get constants.
         self.consts = consts
-        self.LEFT = consts["LEFT"]
-        self.RIGHT = consts["RIGHT"]
-        self.UP = consts["UP"]
-        self.DOWN = consts["DOWN"]
-        self.STAY = consts["STAY"]
-        self.EAT = consts["EAT"]
 
         self.policy = Policy(consts)
         self.obs_width = 2 * sight_len + 1

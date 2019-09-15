@@ -15,7 +15,7 @@ from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
 
-from env import Env
+from main import create_env
 
 # pylint: disable=invalid-name
 if __name__ == "__main__":
@@ -26,78 +26,18 @@ if __name__ == "__main__":
     with open(settings_file, "r") as f:
         settings = json.load(f)
 
-    # Parse settings
     env_config = settings["env"]
-    width = env_config["width"]
-    height = env_config["height"]
-    sight_len = env_config["sight_len"]
-    num_obj_types = env_config["num_obj_types"]
-    num_agents = env_config["num_agents"]
-    aging_rate = env_config["aging_rate"]
-    food_density = env_config["food_density"]
-    food_size_mean = env_config["food_size_mean"]
-    food_size_stddev = env_config["food_size_stddev"]
-    mating_cooldown_len = env_config["mating_cooldown_len"]
     time_steps = env_config["time_steps"]
 
-    rew_config = settings["rew"]
-    n_layers = rew_config["n_layers"]
-    hidden_dim = rew_config["hidden_dim"]
-    reward_weight_mean = rew_config["weight_mean"]
-    reward_weight_stddev = rew_config["weight_stddev"]
-
-    genetics_config = settings["genetics"]
-    mut_sigma = genetics_config["mut_sigma"]
-    mut_p = genetics_config["mut_p"]
-
-    consts = settings["constants"]
+    space_env = create_env(settings)
+    env = create_env(settings)
 
     # Register environment
-    register_env(
-        "bee_world",
-        lambda _: Env(
-            width,
-            height,
-            sight_len,
-            num_obj_types,
-            num_agents,
-            aging_rate,
-            food_density,
-            food_size_mean,
-            food_size_stddev,
-            mating_cooldown_len,
-            n_layers,
-            hidden_dim,
-            reward_weight_mean,
-            reward_weight_stddev,
-            mut_sigma,
-            mut_p,
-            consts,
-        ),
-    )
+    register_env("bee_world", lambda _: env)
 
-    # Build environment instance to get ``obs_space``
-    env = Env(
-        width,
-        height,
-        sight_len,
-        num_obj_types,
-        num_agents,
-        aging_rate,
-        food_density,
-        food_size_mean,
-        food_size_stddev,
-        mating_cooldown_len,
-        n_layers,
-        hidden_dim,
-        reward_weight_mean,
-        reward_weight_stddev,
-        mut_sigma,
-        mut_p,
-        consts,
-    )
-    obs_space = env.observation_space
-    act_space = env.action_space
+    # Build environment instance to get ``obs_space``.
+    obs_space = space_env.observation_space
+    act_space = space_env.action_space
 
     # You can also have multiple policies per trainer, but here we just
     # show one each for PPO and DQN.
@@ -105,7 +45,7 @@ if __name__ == "__main__":
         "ppo_policy": (PPOTFPolicy, obs_space, act_space, {})
     }
 
-    def policy_mapping_fn(_agent_id):
+    def policy_mapping_fn(_agent_id: int) -> str:
         """ Returns the given agent's policy identifier. """
         return "ppo_policy"
 

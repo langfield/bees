@@ -142,3 +142,17 @@ Things to come back to:
 
     Make options for different types of crossover and mutation.
 
+    We want to tune hyperparameters for population stability, which means that we want to
+    optimize the hyperparameters to maximize some objective that is a combination of episode
+    length, average agent lifetime, saturation of environment with agents, any more?
+
+    Instead of having a minimum health threshold for mating, we can implement a mechanism
+    where when mating, parents choose an amount of health to lose/give to the child. So
+    when pating, parents choose x health, they lose that amount, and the kid gains that
+    amount (starting from 0). If other parent didn't choose to mate, then they do not lose
+    any health and the child only gets one parent's worth of health. We could also make
+    the amount of health gaussian, not part of the policy output.
+
+    We should split the single health bar into a health bar and a hunger bar, so that
+    agents can't just live forever if they keep eating, and they will be more incentivized
+    to have kids.

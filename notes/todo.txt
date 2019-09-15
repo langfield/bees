@@ -29,5 +29,40 @@ Bugs:   Reshape issue with size 81,921. This is equal to 62*256 + 256*257 + 257,
 
 Features:   Implementing mating cooldown.
 
+            Agents can no longer mate as soon as they are born.
+    
+            Changed environment printing to put upper bounds on number of agent stats printed.
+
+            Added num agents and num foods to print output.
+
+            Foods now regenerate according to gaussian at each timestep. 
+
+            Environment no longer sets all dones to true when food is gone.
+
+            Agents can only reproduce when both mom and dad have health > 0.5 (hardcoded for now).
+
+Todo:   Add running average agent lifetime statistic.
+
+        Make utility to save a specific agents weights, and run that agent in a sandbox.
+
+        Make a sandbox environment where we can manually place food and see how an agent behaves.
+
+        Add agent lifetime stddev stat.
+
+        Should agents be born with the max health of the mom and dad?
+
+        Total time elapsed in log.
+
+        Log of PPOTrainer output.
+
+        
+
+Observations:   Environment is now very stable with current hyperparameters. Episodes last longer
+                than 1000 timesteps sometimes. Agents do not die very often.
+
+                Environment may have reached equilibrium. Seems to run indefinitely, where when
+                the number of agents grows too high, there isn't enough food to sustain reproduction,
+                and when the number of agents gets too low, the sudden increase in availability of
+
 Fixed:  Tuples returned from deap functions. Fully implemented ``id_map``. Changed ``agent`` to
         ``mom`` in ``_mate()`` function.
