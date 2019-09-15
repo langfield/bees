@@ -43,7 +43,13 @@ class Env(MultiAgentEnv):
         food_density: float,
         food_size_mean: float,
         food_size_stddev: float,
+        plant_foods_mean: float,
+        plant_foods_stddev: float,
+        food_plant_retries: int,
         mating_cooldown_len: int,
+        min_mating_health: float,
+        agent_init_x_upper_bound: int,
+        agent_init_y_upper_bound: int,
         n_layers: int,
         hidden_dim: int,
         reward_weight_mean: float,
@@ -62,7 +68,13 @@ class Env(MultiAgentEnv):
         self.food_density = food_density
         self.food_size_mean = food_size_mean
         self.food_size_stddev = food_size_stddev
+        self.plant_foods_mean = plant_foods_mean
+        self.plant_foods_stddev = plant_foods_stddev
+        self.food_plant_retries = food_plant_retries
         self.mating_cooldown_len = mating_cooldown_len
+        self.min_mating_health = min_mating_health
+        self.agent_init_x_upper_bound = agent_init_x_upper_bound
+        self.agent_init_y_upper_bound = agent_init_y_upper_bound
 
         self.n_layers = n_layers
         self.hidden_dim = hidden_dim
@@ -139,7 +151,13 @@ class Env(MultiAgentEnv):
 
         # Set unique agent positions.
         grid_positions = list(itertools.product(range(self.height), range(self.width)))
-        agent_positions = random.sample(grid_positions, self.num_agents)
+
+        # HARDCODE: agents bounded in bottom left corner upon initialization.
+        x_bound = self.agent_init_x_upper_bound
+        y_bound = self.agent_init_y_upper_bound
+        grid_corner = [(x, y) for x, y in grid_positions if x < x_bound and y < y_bound]
+
+        agent_positions = random.sample(grid_corner, self.num_agents)
         for i, (agent_id, agent) in enumerate(self.agents.items()):
             agent_pos = agent_positions[i]
             REPR_LOG.write(
@@ -314,6 +332,36 @@ class Env(MultiAgentEnv):
 
         return in_grid
 
+    def _plant(self) -> None:
+        """ Plant k new foods in the grid, where k is Gaussian. """
+
+        # Generate and validate the number of foods to plant.
+        num_new_foods = round(
+            np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
+        )
+        num_new_foods = max(0, num_new_foods)
+        num_new_foods = min(self.height * self.width, num_new_foods)
+
+        # Set new food positions.
+        grid_positions = list(itertools.product(range(self.height), range(self.width)))
+        food_positions = random.sample(grid_positions, num_new_foods)
+        for food_pos in food_positions:
+            if self._obj_exists(self.obj_type_ids["food"], food_pos):
+
+                # Retry for an unoccupied position a fixed number of times.
+                # HARDCODE
+                for _ in range(self.food_plant_retries):
+                    food_pos = random.sample(grid_positions, 1)[0]
+                    if not self._obj_exists(self.obj_type_ids["food"], food_pos):
+                        break
+
+            # If unsuccessful, skip.
+            if self._obj_exists(self.obj_type_ids["food"], food_pos):
+                continue
+
+            self._place(self.obj_type_ids["food"], food_pos)
+            self.num_foods += 1
+
     def _move(
         self, action_dict: Dict[int, Tuple[int, int, int]]
     ) -> Dict[int, Tuple[int, int, int]]:
@@ -385,7 +433,8 @@ class Env(MultiAgentEnv):
             pos = mom.pos
 
             # If the agent is dead, don't do anything.
-            if mom.health <= 0.0:
+            # MOD: agents can only reproduce with sufficient health.
+            if mom.health <= self.min_mating_health:
                 continue
 
             # Grab action, do nothing if the agent chose not to mate.
@@ -409,12 +458,15 @@ class Env(MultiAgentEnv):
                     dad = self.agents[dad_id]
                     break
 
-
             # If there is another agent in an adjacent position, spawn child.
             if next_to_agent:
 
                 # Check ``mom`` and ``dad`` cooldown.
                 if mom.mating_cooldown > 0 or dad.mating_cooldown > 0:
+                    continue
+
+                # MOD
+                if dad.health <= self.min_mating_health:
                     continue
 
                 # Choose child location.
@@ -436,7 +488,9 @@ class Env(MultiAgentEnv):
                     dad.mating_cooldown = dad.mating_cooldown_len
 
                     # Crossover and mutate parent DNA.
-                    reward_weights, reward_biases = get_child_reward_network(mom, dad, self.mut_sigma, self.mut_p)
+                    reward_weights, reward_biases = get_child_reward_network(
+                        mom, dad, self.mut_sigma, self.mut_p
+                    )
 
                     # Place child and add to ``self.grid``.
                     child = Agent(
@@ -539,6 +593,7 @@ class Env(MultiAgentEnv):
         }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
+        self._plant()
         child_ids = self._mate(action_dict)
 
         # Compute reward.
@@ -554,7 +609,7 @@ class Env(MultiAgentEnv):
         # Decrease agent health, compute observations and dones.
         killed_agent_ids = []
         for agent_id, agent in self.agents.items():
-            REPR_LOG.write("Agent '%d' health: '%f'.\n" % (agent_id, agent.health))
+            # REPR_LOG.write("Agent '%d' health: '%f'.\n" % (agent_id, agent.health))
             if agent.health > 0.0:
                 agent.health -= self.aging_rate
 
@@ -563,7 +618,9 @@ class Env(MultiAgentEnv):
 
                 obs[agent_id] = self._get_obs(agent.pos)
                 agent.observation = obs[agent_id]
-                done[agent_id] = self.num_foods <= 0 or agent.health <= 0.0
+
+                # MOD: removed ``self.num_foods <= 0`` condition.
+                done[agent_id] = agent.health <= 0.0
 
                 # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
                 if done[agent_id]:
@@ -636,17 +693,34 @@ class Env(MultiAgentEnv):
 
             output += "\n"
 
+        output += "\n"
+        output += "===LOGPLAY_ANCHOR===\n\n"
+
         # Print agent stats.
         if PRINT_AGENT_STATS:
+            # HARDCODE
+            agent_print_bound = 20
+            agents_printed = 0
+            num_living_agents = 0
             for agent_id, agent in self.agents.items():
                 if agent.health > 0.0:
+                    num_living_agents += 1
+                if agent.health > 0.0 and agents_printed < agent_print_bound:
                     output += "Agent %d: " % agent_id
                     output += agent.__repr__()
+                    agents_printed += 1
+            output += "Num living agents: %d.\n" % num_living_agents
+            output += "Num foods: %d.\n" % self.num_foods
             output += "\n"
 
         # Print dones.
         if PRINT_DONES:
             output += "Dones: " + str(self.dones) + "\n"
+       
+        # Push past next window size.
+        # HARDCODE
+        for _ in range(40): 
+            output += "\n"
 
         REPR_LOG.flush()
 

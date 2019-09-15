@@ -1,14 +1,15 @@
 """ Runs the environment and trains the agents for a number of timesteps. """
-import sys
 import os
-import json
+import sys
 import time
+import json
+from typing import Dict, Any
 
 from env import Env
 
 
-def main(settings):
-    """ Main training loop. """
+def create_env(settings: Dict[str, Any]) -> Env:
+    """ Create an instance of ``Env`` and return it. """
 
     env_config = settings["env"]
     width = env_config["width"]
@@ -20,8 +21,13 @@ def main(settings):
     food_density = env_config["food_density"]
     food_size_mean = env_config["food_size_mean"]
     food_size_stddev = env_config["food_size_stddev"]
+    plant_foods_mean = env_config["plant_foods_mean"]
+    plant_foods_stddev = env_config["plant_foods_stddev"]
+    food_plant_retries = env_config["food_plant_retries"]
     mating_cooldown_len = env_config["mating_cooldown_len"]
-    time_steps = env_config["time_steps"]
+    min_mating_health = env_config["min_mating_health"]
+    agent_init_x_upper_bound = env_config["agent_init_x_upper_bound"]
+    agent_init_y_upper_bound = env_config["agent_init_y_upper_bound"]
 
     rew_config = settings["rew"]
     n_layers = rew_config["n_layers"]
@@ -45,7 +51,13 @@ def main(settings):
         food_density,
         food_size_mean,
         food_size_stddev,
+        plant_foods_mean,
+        plant_foods_stddev,
+        food_plant_retries,
         mating_cooldown_len,
+        min_mating_health,
+        agent_init_x_upper_bound,
+        agent_init_y_upper_bound,
         n_layers,
         hidden_dim,
         reward_weight_mean,
@@ -54,6 +66,16 @@ def main(settings):
         mut_p,
         consts,
     )
+    return env
+
+
+def main(settings: Dict[str, Any]) -> None:
+    """ Main training loop. """
+
+    env_config = settings["env"]
+    time_steps = env_config["time_steps"]
+
+    env = create_env(settings)
     env.reset()
     print(env)
     time.sleep(0.2)
@@ -69,7 +91,7 @@ def main(settings):
         # Print out environment state
         os.system("clear")
         print(env)
-        time.sleep(0.2)
+        time.sleep(0)
         if all(done.values()):
             print("All agents have died.")
             break

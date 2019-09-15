@@ -1,16 +1,22 @@
 {
     "env": {
-        "width": 10,
-        "height": 10,
+        "width": 15,
+        "height": 15,
         "sight_len": 2,
         "num_obj_types": 2,
         "num_agents": 5,
         "food_density": 0.125,
-        "food_size_mean": 0.05,
+        "food_size_mean": 0.15,
         "food_size_stddev": 0.05,
-        "aging_rate": 0.03,
-        "mating_cooldown_len": 10,
-        "time_steps": 1000
+        "plant_foods_mean": 0.3,
+        "plant_foods_stddev": 0.5,
+        "food_plant_retries": 3,
+        "aging_rate": 0.01,
+        "mating_cooldown_len": 25,
+        "min_mating_health": 0.2,
+        "agent_init_x_upper_bound": 5,
+        "agent_init_y_upper_bound": 5,
+        "time_steps": 10000
     },
     "rew": {
         "n_layers": 3,

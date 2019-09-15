@@ -1,0 +1,46 @@
+== Iteration 53 ==
+-- PPO --
+custom_metrics: {}
+date: 2019-09-15_08-08-56
+done: false
+episode_len_mean: .nan
+episode_reward_max: .nan
+episode_reward_mean: .nan
+episode_reward_min: .nan
+episodes_this_iter: 0
+episodes_total: 0
+experiment_id: 80afee4adfa1441e9aa2dc183ff3259a
+hostname: vanadium.cse.ohio-state.edu
+info:
+  grad_time_ms: 287350.989
+  learner:
+    ppo_policy:
+      cur_kl_coeff: 0.44999998807907104
+      cur_lr: 4.999999873689376e-05
+      entropy: 1.92753005027771
+      entropy_coeff: 0.0
+      kl: 0.01919511891901493
+      policy_loss: -0.051301781088113785
+      total_loss: 1779487735808.0
+      vf_explained_var: 2.575965822870785e-07
+      vf_loss: 1779487735808.0
+  load_time_ms: 305.065
+  num_steps_sampled: 216000
+  num_steps_trained: 13101952
+  sample_time_ms: 321981.757
+  update_time_ms: 5.101
+iterations_since_restore: 54
+node_ip: 164.107.116.194
+num_healthy_workers: 1
+off_policy_estimator: {}
+pid: 25529
+policy_reward_mean: {}
+sampler_perf: {}
+time_since_restore: 40646.658059597015
+time_this_iter_s: 494.98573064804077
+time_total_s: 40646.658059597015
+timestamp: 1568549336
+timesteps_since_restore: 216000
+timesteps_this_iter: 4000
+timesteps_total: 216000
+training_iteration: 54
