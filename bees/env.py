@@ -653,7 +653,7 @@ class Env(MultiAgentEnv):
 
         x, y = pos
         adj_positions = [
-            (x + dX, y + dY) for dX, dY in itertools.product([-1, 1], repeat=2)
+            (x + dX, y + dY) for dX, dY in [(0, 1), (0, -1), (1, 0), (-1, 0)]
         ]
         random.shuffle(adj_positions)
 
