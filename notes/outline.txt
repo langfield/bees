@@ -169,3 +169,9 @@ Things to come back to:
     3. Combat/groupish behavior (three rules from righteous mind + five other rules?)
     4. Communication
     5. Complexity (try to encourage geographic isolation and other catalysts for evolution)
+
+    Idea for recursive control of DNA:
+    DNA controls the replication process of DNA. So the replication process is
+    defined as a function from two segments of DNA to one segment of DNA, and
+    the function is represented by a fully connected, two layer network whose
+    weights are the DNA values.
