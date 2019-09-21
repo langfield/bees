@@ -175,3 +175,6 @@ Things to come back to:
     defined as a function from two segments of DNA to one segment of DNA, and
     the function is represented by a fully connected, two layer network whose
     weights are the DNA values.
+
+    Should we penalize trying to eat when there's no food there? Probably because
+    otherwise they might as well eat all the time.
