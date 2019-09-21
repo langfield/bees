@@ -156,3 +156,22 @@ Things to come back to:
     We should split the single health bar into a health bar and a hunger bar, so that
     agents can't just live forever if they keep eating, and they will be more incentivized
     to have kids.
+
+    For when we implement identity vectors: Identity should be represented by a randomly
+    initialized vector (for the first generation). Identity DNA is passed along to children
+    in the same way that reward DNA is. Once the agents have some way to negatively impact
+    other agents, this will allow a way for agents to trust agents (those with similar
+    identity DNA) and mistrust other agents (those with different identity DNA).
+
+    Order:
+    1. Zero to food (what we already have)
+    2. Cooperation/social dilemmas (harvest/cleanup)
+    3. Combat/groupish behavior (three rules from righteous mind + five other rules?)
+    4. Communication
+    5. Complexity (try to encourage geographic isolation and other catalysts for evolution)
+
+    Idea for recursive control of DNA:
+    DNA controls the replication process of DNA. So the replication process is
+    defined as a function from two segments of DNA to one segment of DNA, and
+    the function is represented by a fully connected, two layer network whose
+    weights are the DNA values.
