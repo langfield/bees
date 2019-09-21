@@ -593,8 +593,10 @@ class Env(MultiAgentEnv):
         }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
+        child_ids = self._mate(action_dict) 
+        
+        # Plant new food.
         self._plant()
-        child_ids = self._mate(action_dict)
 
         # Compute reward.
         for agent_id, agent in self.agents.items():
