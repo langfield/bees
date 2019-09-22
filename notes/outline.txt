@@ -178,3 +178,6 @@ Things to come back to:
 
     Should we penalize trying to eat when there's no food there? Probably because
     otherwise they might as well eat all the time.
+
+    Agents via reproduction should start with health that is dependent on parents' health 
+    at time of birth, not full health.

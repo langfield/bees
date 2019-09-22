@@ -29,16 +29,15 @@
         "mut_p": 0.05
     },
     "constants": {
-        "STAY":0,
-        "LEFT":1,
-        "RIGHT":2,
-        "UP":3,
-        "DOWN":4,
-        "EAT":0,
-        "NO_EAT":1,
+        "STAY": 0,
+        "LEFT": 1,
+        "RIGHT": 2,
+        "UP": 3,
+        "DOWN": 4,
+        "EAT": 0,
+        "NO_EAT": 1,
         "MATE": 0,
         "NO_MATE": 1,
-        "BEE_HEAVEN":[-1,-1]
+        "BEE_HEAVEN": [-1,-1]
     }
-
 }
