@@ -22,6 +22,9 @@ class Policy:
 
     def get_action(self, _obs, _agent_health) -> Tuple[int, int, int]:
         """ Returns a random action. """
+        # DEBUG
+        print("Using random policy.")
+
         move = random.choice([self.LEFT, self.RIGHT, self.UP, self.DOWN, self.STAY])
         consume = random.choice([self.EAT, self.NO_EAT])
         mate = random.choice([self.MATE, self.NO_MATE])

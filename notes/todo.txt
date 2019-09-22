@@ -27,6 +27,9 @@ Changed:    Made logging initialization read in a list of the 10000 most frequen
 Bugs:   Reshape issue with size 81,921. This is equal to 62*256 + 256*257 + 257, sum of products of 
         shapes of each layer matrix (made of weights and biases). Need to split into layers first.
 
+        Appears to be a massive bug: we are using the same policy for all agents. We need to look
+        at ``test_external_multi_agent_env.py``. I think we need a ``policies`` dict.
+
 Features:   Implementing mating cooldown.
 
             Agents can no longer mate as soon as they are born.
