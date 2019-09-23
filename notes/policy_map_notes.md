@@ -48,9 +48,9 @@ self._build_policy_map(policy_dict, policy_config)
 
 During worker creation, we are constructing ``RolloutWorker`` objects. In the init function of this class, near line 445, we call
 
-    ```python
-    self.input_reader = input_creator(self.io_context)
-    ```
+```python
+self.input_reader = input_creator(self.io_context)
+```
 
 This simply sets ``self.input_reader`` equal to ``self.sampler`` from ``rollout_worker.py``, which in our case, is an instance of ``SyncSampler``. 
 
