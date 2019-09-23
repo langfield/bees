@@ -74,9 +74,9 @@ In addition, ``self.policy_map`` is being passed as the second nonself argument 
 
 Note the following line executes because ``make_policy_optimizer`` is defined as ``choose_policy_optimizer`` in ``ppo.py``. 
 
-    ```python
-    self.optimizer = make_policy_optimizer(self.workers, config)
-    ```
+```python
+self.optimizer = make_policy_optimizer(self.workers, config)
+```
 
 
 ===================
