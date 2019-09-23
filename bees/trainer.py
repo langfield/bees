@@ -4,18 +4,22 @@ from __future__ import division
 from __future__ import print_function
 
 import sys
+import pdb
 import json
+import pprint
 
 from typing import Dict, Tuple, Any
 
 import gym
 import ray
 from ray.rllib.agents.ppo.ppo import PPOTrainer
-from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
 
 from main import create_env
+
+# DEBUG
+pp = pprint.PrettyPrinter(indent=4)
 
 # pylint: disable=invalid-name
 if __name__ == "__main__":
@@ -29,33 +33,33 @@ if __name__ == "__main__":
     env_config = settings["env"]
     time_steps = env_config["time_steps"]
 
-    space_env = create_env(settings)
-    env = create_env(settings)
+    # TODO: We need one policy per agent, don't we?
+    # Keys: strings, should be agent ids.
+    # Values: Policy Class, obs space, act space, config dict for Policy Class init.
+    policies: Dict[str, Tuple[Any, gym.Space, gym.Space, Dict[str, Any]]] = {}
+    
+    # DEBUG
+    print("Memory address of ``policies``:", id(policies))
+
+    # Create environment for training.
+    env = create_env(settings, policies)
 
     # Register environment
     register_env("bee_world", lambda _: env)
 
-    # Build environment instance to get ``obs_space``.
-    obs_space = space_env.observation_space
-    act_space = space_env.action_space
-
-    # You can also have multiple policies per trainer, but here we just
-    # show one each for PPO and DQN.
-    policies: Dict[str, Tuple[Any, gym.Space, gym.Space, Dict[Any, Any]]] = {
-        "ppo_policy": (PPOTFPolicy, obs_space, act_space, {})
-    }
-
     def policy_mapping_fn(_agent_id: int) -> str:
         """ Returns the given agent's policy identifier. """
-        return "ppo_policy"
+        return str(_agent_id)
 
+    # DEBUG
+    pdb.set_trace()
     ppo_trainer = PPOTrainer(
         env="bee_world",
         config={
             "multiagent": {
                 "policies": policies,
                 "policy_mapping_fn": policy_mapping_fn,
-                "policies_to_train": ["ppo_policy"],
+                "policies_to_train": None,
             },
             # Disable filters, otherwise we would need to synchronize those
             # as well to the DQN agent.
@@ -63,6 +67,14 @@ if __name__ == "__main__":
             "num_workers": 1,
         },
     )
+    
+    # DEBUG
+    print("Has the reset occurred yet?")
+    print("ppo_trainer config:", pp.pprint(ppo_trainer.config))
+    trainer_policies = ppo_trainer.config["multiagent"]["policies"]
+    print("trainer_policies memory address:", id(trainer_policies))
+    trainer_policies["0"] = (None, None, None, None)
+    print("ppo_trainer config:", pp.pprint(ppo_trainer.config))
 
     # You should see both the printed X and Y approach 200 as this trains:
     # info:

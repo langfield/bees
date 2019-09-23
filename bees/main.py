@@ -3,12 +3,16 @@ import os
 import sys
 import time
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
+import gym
 from env import Env
 
 
-def create_env(settings: Dict[str, Any]) -> Env:
+def create_env(
+    settings: Dict[str, Any],
+    policies: Dict[str, Tuple[Any, gym.Space, gym.Space, Dict[str, Any]]] = {},
+) -> Env:
     """ Create an instance of ``Env`` and return it. """
 
     env_config = settings["env"]
@@ -41,6 +45,9 @@ def create_env(settings: Dict[str, Any]) -> Env:
 
     consts = settings["constants"]
 
+    # DEBUG
+    print("Memory address of ``policies``:", id(policies))
+
     env = Env(
         width,
         height,
@@ -65,6 +72,7 @@ def create_env(settings: Dict[str, Any]) -> Env:
         mut_sigma,
         mut_p,
         consts,
+        policies,
     )
     return env
 

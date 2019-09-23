@@ -58,6 +58,8 @@ Todo:   Add running average agent lifetime statistic.
 
         Log of PPOTrainer output.
 
+        Should we give agents access to their PPOTFPolicy instance at agent creation?
+
         
 
 Observations:   Environment is now very stable with current hyperparameters. Episodes last longer
@@ -66,6 +68,12 @@ Observations:   Environment is now very stable with current hyperparameters. Epi
                 Environment may have reached equilibrium. Seems to run indefinitely, where when
                 the number of agents grows too high, there isn't enough food to sustain reproduction,
                 and when the number of agents gets too low, the sudden increase in availability of
+                food brings it back to equilibrium.
+
+                We need to have an entry in the ``policies`` dict for each agent. Since we need to
+                create new agents at each time step (potentially) this means that we must pass
+                ``policies`` to the ``Env`` constructor so that it can modify it and add more 
+                policies for the new agents.
 
 Fixed:  Tuples returned from deap functions. Fully implemented ``id_map``. Changed ``agent`` to
         ``mom`` in ``_mate()`` function.
