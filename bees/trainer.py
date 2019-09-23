@@ -52,7 +52,7 @@ if __name__ == "__main__":
         return str(_agent_id)
 
     # DEBUG
-    pdb.set_trace()
+    # pdb.set_trace()
     ppo_trainer = PPOTrainer(
         env="bee_world",
         config={
