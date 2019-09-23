@@ -70,11 +70,19 @@ in  ``self._build_policy_map()``, we finally instantiate the ``Policy`` class we
 
 Note that ``self._build_policy_map()`` returns a state variable called ``self.policy_map``, which is used EVERYWHERE in ``RolloutWorker``, so we definitely need to be updating this. 
 
-In addition, ``self.policy_map`` is being passed as the second nonself argument of ``SyncSampler``, which is called ``policies`` in ``SyncSampler``.
+In addition, ``self.policy_map`` is being passed as the second nonself argument of ``SyncSampler`` when we instantiate it in ``rollout_worker.py``, which is called ``policies`` in ``SyncSampler``.
 
 This ``policies`` variable is passed to ``_env_runner()`` in the init function of ``SyncSampler`` in ``sampler.py``. This is really important, because it means that we don't actually need to update the state of the ``SyncSampler`` objects, we need only make sure that we update the local policies`` variable in ``_env_runner()`` which is passed as an argument. For ``SyncSampler``, the only purpose of ``self.policies`` is just to pass it as an argumet to ``_env_runner()``. 
 
-Current best course of action is to have ``_process_observations()`` return the updated ``policies`` dictionary as well. This would take care of all uses of ``policies`` in the while loop in ``_process_observations()``. 
+Current best course of action is to have ``_process_observations()`` return the updated ``policies`` dictionary as well. This would take care of all uses of ``policies`` in the while loop in ``_process_observations()``.
+
+The variable ``policies`` is also used in ``get_batch_builder()`` and ``new_episode()`` within ``_env_runner()``. Note that ``get_batch_builder()`` is only called by ``new_episode()``, and ``new_episode()`` is passed as the argument to the ``collections.defaultdict`` variable ``active_episodes``. A ``defaultdict`` is a dictionary that will never raise a `KeyError`. It is initialized with a function that takes no arguments (``new_episode()``) and provides the default value for a nonexistant key. So whenver we try to call ``active_episodes[key]`` where ``key`` is not in ``active_episodes``, we just get the return value of ``new_episode()`` instead. 
+
+Every call to ``new_episode()`` instantiates a ``MultiAgentEpisode``, which is defined in ``episode.py``. We pass as an argument to the init function of ``MultiAgentEpisode`` the ``policies`` variable, which recall already contains the instantiated policies. It was returned by ``_build_policy_map()``.
+
+Question: does a new episode reset the policy weights? I am thinking no. I should open an RLLib issue to ask.
+
+Since we don't really care about new episodes, since we only intend to run one at a time, we need not update the ``policies`` variable that is being used in ``new_episode()``. It will remain static as whatever it is first instantiated as in the init function of the Sampler. 
 
 Going back to ``trainer_template.py``:
 
