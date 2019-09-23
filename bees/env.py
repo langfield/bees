@@ -15,6 +15,7 @@ import numpy as np
 # Package imports.
 import gym
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 
 # Bees imports.
 from agent import Agent
@@ -57,6 +58,7 @@ class Env(MultiAgentEnv):
         mut_sigma: float,
         mut_p: float,
         consts: Dict[str, Any],
+        policies: Dict[str, Tuple[Any, gym.Space, gym.Space, Dict[str, Any]]],
     ) -> None:
 
         self.width = width
@@ -83,6 +85,12 @@ class Env(MultiAgentEnv):
 
         self.mut_sigma = mut_sigma
         self.mut_p = mut_p
+
+        self.policies = policies
+        
+        # DEBUG
+        print("Memory address of ``policies``:", id(policies))
+        print("Memory address of ``self.policies``:", id(self.policies))
 
         # pylint: disable=invalid-name
         # Get constants.
@@ -146,7 +154,6 @@ class Env(MultiAgentEnv):
         # Reset ``self.grid``.
         self.grid = np.zeros((self.width, self.height, self.num_obj_types))
         self.id_map = [[{} for y in range(self.height)] for x in range(self.width)]
-        # MOD
         self.num_foods = 0
 
         # Set unique agent positions.
@@ -175,6 +182,9 @@ class Env(MultiAgentEnv):
 
     def reset(self) -> Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]:
         """ Reset the entire environment. """
+        # DEBUG
+        print("========RESETTING_ENVIRONMENT========")
+        print("Memory address of ``self.policies``:", id(self.policies))
 
         # Get average rewards for agents from previous episode.
         if self.agents != []:
@@ -183,12 +193,12 @@ class Env(MultiAgentEnv):
             )
             REPR_LOG.write("{:.10f}".format(avg_reward) + "\n")
 
-        # MOD
         # Reconstruct agents.
         self.agents = {}
         self.agent_ids_created = 0
         for _ in range(self.num_agents):
-            self.agents[self._new_agent_id()] = Agent(
+            agent_id = self._new_agent_id()
+            self.agents[agent_id] = Agent(
                 sight_len=self.sight_len,
                 num_obj_types=self.num_obj_types,
                 consts=self.consts,
@@ -199,6 +209,19 @@ class Env(MultiAgentEnv):
                 reward_weight_stddev=self.reward_weight_stddev,
                 mating_cooldown_len=self.mating_cooldown_len,
             )
+            # MOD
+            """
+            self.policies[str(agent_id)] = (
+                PPOTFPolicy,
+                self.observation_space,
+                self.action_space,
+                {},
+            )
+            """
+
+        # DEBUG
+        print("env.reset(): self.policies:", self.policies)
+        print("Memory address of ``self.policies``:", id(self.policies))
 
         self.iteration = 0
         self.resetted = True
@@ -433,7 +456,6 @@ class Env(MultiAgentEnv):
             pos = mom.pos
 
             # If the agent is dead, don't do anything.
-            # MOD: agents can only reproduce with sufficient health.
             if mom.health <= self.min_mating_health:
                 continue
 
@@ -465,7 +487,6 @@ class Env(MultiAgentEnv):
                 if mom.mating_cooldown > 0 or dad.mating_cooldown > 0:
                     continue
 
-                # MOD
                 if dad.health <= self.min_mating_health:
                     continue
 
@@ -511,6 +532,15 @@ class Env(MultiAgentEnv):
                     self.agents[child_id] = child
                     REPR_LOG.write("Adding child with id '%d'.\n" % child_id)
                     child_ids.add(child_id)
+
+                    # MOD
+                    # Create new policy for child.
+                    self.policies[str(child_id)] = (
+                        PPOTFPolicy,
+                        self.observation_space,
+                        self.action_space,
+                        {},
+                    )
 
                     REPR_LOG.write(
                         "Placing child '%d' at '%s'.\n" % (child_id, str(child_pos))
@@ -593,8 +623,8 @@ class Env(MultiAgentEnv):
         }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
-        child_ids = self._mate(action_dict) 
-        
+        child_ids = self._mate(action_dict)
+
         # Plant new food.
         self._plant()
 
@@ -621,7 +651,6 @@ class Env(MultiAgentEnv):
                 obs[agent_id] = self._get_obs(agent.pos)
                 agent.observation = obs[agent_id]
 
-                # MOD: removed ``self.num_foods <= 0`` condition.
                 done[agent_id] = agent.health <= 0.0
 
                 # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
@@ -718,10 +747,10 @@ class Env(MultiAgentEnv):
         # Print dones.
         if PRINT_DONES:
             output += "Dones: " + str(self.dones) + "\n"
-       
+
         # Push past next window size.
         # HARDCODE
-        for _ in range(40): 
+        for _ in range(40):
             output += "\n"
 
         REPR_LOG.flush()

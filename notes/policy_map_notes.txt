@@ -1,0 +1,43 @@
+Call to ``PPOTrainer()`` constructor in ``bees/trainer.py`` begins on line 89 of ``trainer_template.py``.
+
+In this ``__init__()`` function, we immediately call the init of ``Trainer`` in ``trainer.py``. This init function does nothing of interest until the end, when it calls the ``__init__()`` function of ``Trainable`` in ``ray/tune/trainable.py``.
+
+This does nothing terribly interesting until line 96, where it calls ``self._setup()``.
+
+This function is defined in ``trainer.py`` around line 412 (453 on github for some reason).
+
+This is uninteresting until the line that reads:
+    
+    ``self._init(self.config, self.env_creator)``
+
+around line 483 on github.
+
+This brings us to ``trainer_template.py`` to the line around 92 that reads
+    
+    ``def _init(self, config, env_creator):``
+
+Note that the following line executes because ``get_policy_class`` is None:
+
+    ``policy = default_policy``
+
+Note that ``default_policy`` is set to ``PPOTFPolicy``.
+
+Note that the following lines execute because ``make_workers`` is None:
+
+    ``self.workers = self._make_workers(env_creator, policy, config,
+                                                  self.config["num_workers"])``
+
+This calls ``_make_workers()`` in ``trainer.py``, which calls the ``WorkerSet`` constructor, which we will skip over for now.
+
+Note the following line executes because ``make_policy_optimizer`` is defined as ``choose_policy_optimizer`` in ``ppo.py``. 
+
+    ``self.optimizer = make_policy_optimizer(self.workers, config)``
+
+
+===================
+
+Train call.
+
+The train call basically does a bunch of useless, roundabout inheritance and override calls until it gets to ``_train()`` in ``trainer_template.py`` around line 122. This is basically what is called every time we call ``train()`` in ``bees/trainer.py``.
+
+This does nothing interesting until it calls ``self.optimizer.step()`` around line 129. In this case, our optimizer is ``MultiGPUOptimizer`` which is set in ``choose_policy_optimizer`` as described above.  
