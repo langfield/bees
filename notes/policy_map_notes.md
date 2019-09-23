@@ -8,43 +8,43 @@ This function is defined in ``trainer.py`` around line 412 (453 on github for so
 
 This is uninteresting until the line that reads:
     
-    ```python
-    self._init(self.config, self.env_creator)
-    ```
+```python
+self._init(self.config, self.env_creator)
+```
 
 around line 483 on github.
 
 This brings us to ``trainer_template.py`` to the line around 92 that reads
     
-    ```python
-    def _init(self, config, env_creator):
-    ```
+```python
+def _init(self, config, env_creator):
+```
 
 Note that the following line executes because ``get_policy_class`` is None:
 
-    ```python
-    policy = default_policy
-    ```
+```python
+policy = default_policy
+```
 
 Note that ``default_policy`` is set to ``PPOTFPolicy``.
 
 Note that the following lines execute because ``make_workers`` is None:
 
-    ```python
-    self.workers = self._make_workers(env_creator, policy, config,
-                                                  self.config["num_workers"])
-    ```
+```python
+self.workers = self._make_workers(env_creator, policy, config,
+                                              self.config["num_workers"])
+```
 
 This calls ``_make_workers()`` in ``trainer.py``, which calls the ``WorkerSet`` constructor.
 
 In the RolloutWorker init call, policy_map is built at line 345 ish in
 
-        ```python
-        if seed is not None:
-            tf.set_random_seed(seed)
-        self.policy_map, self.preprocessors = \
-            self._build_policy_map(policy_dict, policy_config)
-        ```
+```python
+if seed is not None:
+tf.set_random_seed(seed)
+self.policy_map, self.preprocessors = \
+self._build_policy_map(policy_dict, policy_config)
+```
 
 During worker creation, we are constructing ``RolloutWorker`` objects. In the init function of this class, near line 445, we call
 
