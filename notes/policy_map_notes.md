@@ -41,9 +41,9 @@ In the RolloutWorker init call, policy_map is built at line 345 ish in
 
 ```python
 if seed is not None:
-tf.set_random_seed(seed)
+    tf.set_random_seed(seed)
 self.policy_map, self.preprocessors = \
-self._build_policy_map(policy_dict, policy_config)
+    self._build_policy_map(policy_dict, policy_config)
 ```
 
 During worker creation, we are constructing ``RolloutWorker`` objects. In the init function of this class, near line 445, we call
