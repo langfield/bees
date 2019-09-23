@@ -60,17 +60,23 @@ But note that the ``sample()`` function from ``RolloutWorker`` is ultimately bei
 
 If we change things, ``_build_policy_map()`` will have to change to be consistent with the way we will pass the policy objects through the policy mapping function during training.
 
-Question: where are the policies actually instatiated? We need to know this because we need to instantiate more on every call to ``_process_observations``.
+Question: where are the policies actually instantiated? We need to know this because we need to instantiate more on every call to ``_process_observations``.
 
 To answer this, note that in the ``RolloutWorker`` init function, we pass in ``policies`` and construct ``policy_dict`` which is a dictionary of policy id strings to (Policy, obs_space, action_space, config) tuples.
 
 We set ``self.policies_to_train`` equal to just a list of the keys in the aforementioned dictionary. We then, somewhere around line 348 in ``rollout_worker.py``, call ``self._build_policy_map()``, which is defined in the same file. 
 
-in  ``self._build_policy_map()``, we finally grab instances of the ``Policy`` class we've been passing around. This is done around line 764.
+in  ``self._build_policy_map()``, we finally instantiate the ``Policy`` class we've been passing around. This is done around line 764.
 
 Note that ``self._build_policy_map()`` returns a state variable called ``self.policy_map``, which is used EVERYWHERE in ``RolloutWorker``, so we definitely need to be updating this. 
 
-In addition, ``self.policy_map`` is being passed as the second nonself argument of ``SyncSampler``, which is called ``policies`` in ``SyncSampler``.  
+In addition, ``self.policy_map`` is being passed as the second nonself argument of ``SyncSampler``, which is called ``policies`` in ``SyncSampler``.
+
+This ``policies`` variable is passed to ``_env_runner()`` in the init function of ``SyncSampler`` in ``sampler.py``. This is really important, because it means that we don't actually need to update the state of the ``SyncSampler`` objects, we need only make sure that we update the local policies`` variable in ``_env_runner()`` which is passed as an argument. For ``SyncSampler``, the only purpose of ``self.policies`` is just to pass it as an argumet to ``_env_runner()``. 
+
+Current best course of action is to have ``_process_observations()`` return the updated ``policies`` dictionary as well. This would take care of all uses of ``policies`` in the while loop in ``_process_observations()``. 
+
+Going back to ``trainer_template.py``:
 
 Note the following line executes because ``make_policy_optimizer`` is defined as ``choose_policy_optimizer`` in ``ppo.py``. 
 
