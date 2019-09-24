@@ -45,9 +45,9 @@ if __name__ == "__main__":
         "ppo_policy": (PPOTFPolicy, obs_space, act_space, {})
     }
 
-    def policy_mapping_fn(_agent_id: int) -> str:
+    def policy_mapping_fn(agent_id: int) -> str:
         """ Returns the given agent's policy identifier. """
-        return "ppo_policy"
+        return (str(agent_id), (PPOTFPolicy, obs_space, act_space, {}))
 
     ppo_trainer = PPOTrainer(
         env="bee_world",
@@ -56,8 +56,8 @@ if __name__ == "__main__":
                 "policies": policies,
                 "policy_mapping_fn": policy_mapping_fn,
                 "policies_to_train": ["ppo_policy"],
-            "simple_optimizer": True,
             },
+            "simple_optimizer": True,
             # Disable filters, otherwise we would need to synchronize those
             # as well to the DQN agent.
             "observation_filter": "NoFilter",
