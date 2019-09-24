@@ -11,7 +11,6 @@ from env import Env
 
 def create_env(
     settings: Dict[str, Any],
-    policies: Dict[str, Tuple[Any, gym.Space, gym.Space, Dict[str, Any]]] = {},
 ) -> Env:
     """ Create an instance of ``Env`` and return it. """
 
@@ -45,9 +44,6 @@ def create_env(
 
     consts = settings["constants"]
 
-    # DEBUG
-    print("Memory address of ``policies``:", id(policies))
-
     env = Env(
         width,
         height,
@@ -72,7 +68,6 @@ def create_env(
         mut_sigma,
         mut_p,
         consts,
-        policies,
     )
     return env
 

@@ -82,6 +82,8 @@ Every call to ``new_episode()`` instantiates a ``MultiAgentEpisode``, which is d
 
 Question: does a new episode reset the policy weights? I am thinking no. I should open an RLLib issue to ask.
 
+Question: What is the difference between ``policies_to_train`` and ``policies``?
+
 Since we don't really care about new episodes, since we only intend to run one at a time, we need not update the ``policies`` variable that is being used in ``new_episode()``. It will remain static as whatever it is first instantiated as in the init function of the Sampler. 
 
 Going back to ``trainer_template.py``:

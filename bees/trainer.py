@@ -56,6 +56,7 @@ if __name__ == "__main__":
                 "policies": policies,
                 "policy_mapping_fn": policy_mapping_fn,
                 "policies_to_train": ["ppo_policy"],
+            "simple_optimizer": True,
             },
             # Disable filters, otherwise we would need to synchronize those
             # as well to the DQN agent.
