@@ -44,6 +44,8 @@ def get_logs() -> Tuple[Any, Any]:
         tokens = [word.rstrip() for word in english.readlines()]
     tokens.sort()
     tokens = [word for word in tokens if len(word) > 5]
+    if not os.path.isdir("logs/"):
+        os.mkdir("logs/")
     dirlist = os.listdir("logs/")
     token_idx = 0
     while 1:
