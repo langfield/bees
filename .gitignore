@@ -1,4 +1,4 @@
 __pycache__
 *.swp
-bees/logs/*
+logs/
 .mypy_cache/
