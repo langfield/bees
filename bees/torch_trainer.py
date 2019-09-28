@@ -101,6 +101,9 @@ def main():
     rollout_map: Dict[str, RolloutStorage] = {}
     episode_rewards: Dict[str, collections.deque] = {}
     minted_agents: Set[str] = set()
+    value_losses: Dict[str, float] = {}
+    action_losses: Dict[str, float] = {}
+    dist_entropies: Dict[str, float] = {}
 
     obs = env.reset()
 
@@ -145,11 +148,6 @@ def main():
             with torch.no_grad():
                 for agent_id, actor_critic in actor_critics.items():
                     rollouts = rollout_map[agent_id]
-                    value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
-                        rollouts.obs[step],
-                        rollouts.recurrent_hidden_states[step],
-                        rollouts.masks[step],
-                    )
                     actor_critic_return_dict[agent_id] = actor_critic.act(
                         rollouts.obs[step],
                         rollouts.recurrent_hidden_states[step],
@@ -240,6 +238,9 @@ def main():
                 )
 
                 value_loss, action_loss, dist_entropy = agent.update(rollouts)
+                value_losses[agent_id] = value_loss
+                action_losses[agent_id] = action_loss
+                dist_entropies[agent_id] = dist_entropy
 
                 rollouts.after_update()
 
@@ -247,51 +248,61 @@ def main():
         if (
             j % args.save_interval == 0 or j == num_updates - 1
         ) and args.save_dir != "":
-            save_path = os.path.join(args.save_dir, args.algo)
-            try:
-                os.makedirs(save_path)
-            except OSError:
-                pass
+            for agent_id, agent in agents.items():
+                if agent_id not in minted_agents:
+                    actor_critic = actor_critics[agent_id]
+                    save_path = os.path.join(args.save_dir, args.algo)
+                    try:
+                        os.makedirs(save_path)
+                    except OSError:
+                        pass
 
-            torch.save(
-                [actor_critic, getattr(utils.get_vec_normalize(env), "ob_rms", None)],
-                os.path.join(save_path, args.env_name + ".pt"),
-            )
+                    # TODO: implement ``ob_rms`` from ``VecNormalize`` in baselines in our env.
+                    # TODO: Add ``agent_id`` in save path.
+                    torch.save(
+                        [actor_critic, getattr(env, "ob_rms", None)],
+                        os.path.join(save_path, args.env_name + ".pt"),
+                    )
 
-        if j % args.log_interval == 0 and len(episode_rewards) > 1:
-            total_num_steps = (j + 1) * args.num_processes * args.num_steps
-            end = time.time()
-            print(
-                "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".format(
-                    j,
-                    total_num_steps,
-                    int(total_num_steps / (end - start)),
-                    len(episode_rewards),
-                    np.mean(episode_rewards),
-                    np.median(episode_rewards),
-                    np.min(episode_rewards),
-                    np.max(episode_rewards),
-                    dist_entropy,
-                    value_loss,
-                    action_loss,
-                )
-            )
+        for agent_id, agent in agents.items():
+            if agent_id not in minted_agents:
+                agent_episode_rewards = episode_rewards[agent_id]
+                if j % args.log_interval == 0 and len(agent_episode_rewards) > 1:
+                    total_num_steps = (j + 1) * args.num_processes * args.num_steps
+                    end = time.time()
+                    print(
+                        "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".format(
+                            j,
+                            total_num_steps,
+                            int(total_num_steps / (end - start)),
+                            len(agent_episode_rewards),
+                            np.mean(agent_episode_rewards),
+                            np.median(agent_episode_rewards),
+                            np.min(agent_episode_rewards),
+                            np.max(agent_episode_rewards),
+                            dist_entropies[agent_id],
+                            value_losses[agent_id],
+                            action_losses[agent_id],
+                        )
+                    )
 
-        if (
-            args.eval_interval is not None
-            and len(episode_rewards) > 1
-            and j % args.eval_interval == 0
-        ):
-            ob_rms = utils.get_vec_normalize(env).ob_rms
-            evaluate(
-                actor_critic,
-                ob_rms,
-                args.env_name,
-                args.seed,
-                args.num_processes,
-                eval_log_dir,
-                device,
-            )
+                """
+                if (
+                    args.eval_interval is not None
+                    and len(agent_episode_rewards) > 1
+                    and j % args.eval_interval == 0
+                ):
+                    ob_rms = utils.get_vec_normalize(env).ob_rms
+                    evaluate(
+                        actor_critic,
+                        ob_rms,
+                        args.env_name,
+                        args.seed,
+                        args.num_processes,
+                        eval_log_dir,
+                        device,
+                    )
+                """
 
 
 if __name__ == "__main__":
