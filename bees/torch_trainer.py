@@ -29,7 +29,7 @@ def main():
 
     # Get settings and create environment.
     # settings_file = sys.argv[1]
-    settings_file = "settings/settings.json"
+    settings_file = "settings/box.json"
     with open(settings_file, "r") as f:
         settings = json.load(f)
     env = create_env(settings)
@@ -102,14 +102,14 @@ def main():
         return agent, actor_critic, rollouts
 
     # Create multiagent maps.
-    actor_critics: Dict[str, Policy] = {}
-    agents: Dict[str, "AgentAlgo"] = {}
-    rollout_map: Dict[str, RolloutStorage] = {}
-    episode_rewards: Dict[str, collections.deque] = {}
-    minted_agents: Set[str] = set()
-    value_losses: Dict[str, float] = {}
-    action_losses: Dict[str, float] = {}
-    dist_entropies: Dict[str, float] = {}
+    actor_critics: Dict[int, Policy] = {}
+    agents: Dict[int, "AgentAlgo"] = {}
+    rollout_map: Dict[int, RolloutStorage] = {}
+    episode_rewards: Dict[int, collections.deque] = {}
+    minted_agents: Set[int] = set()
+    value_losses: Dict[int, float] = {}
+    action_losses: Dict[int, float] = {}
+    dist_entropies: Dict[int, float] = {}
 
     obs = env.reset()
 
@@ -146,10 +146,11 @@ def main():
         for step in range(args.num_steps):
 
             minted_agents = set()
-            value_dict: Dict[str, float] = {}
-            action_dict: Dict[str, np.ndarray] = {}
-            action_log_prob_dict: Dict[str, float] = {}
-            recurrent_hidden_states_dict: Dict[str, float] = {} 
+            value_dict: Dict[int, float] = {}
+            action_dict: Dict[int, np.ndarray] = {}
+            action_tensor_dict: Dict[int, torch.Tensor] = {}
+            action_log_prob_dict: Dict[int, float] = {}
+            recurrent_hidden_states_dict: Dict[int, float] = {} 
 
             # Sample actions
             with torch.no_grad():
@@ -161,9 +162,16 @@ def main():
                         rollouts.masks[step],
                     )
                     value_dict[agent_id] = ac_tuple[agent_id] 
-                    action_dict[agent_id] = ac_tuple[agent_id] 
+                    action_dict[agent_id] = ac_tuple[agent_id].numpy()
+                    action_tensor_dict[agent_id] = ac_tuple[agent_id] 
                     action_log_prob_dict[agent_id] = ac_tuple[agent_id]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[agent_id]
+
+                    action = ac_tuple[agent_id]
+                    print("Type of action:", type(action))
+                    print("Action:", action)
+                    print("Length of action:", len(action))
+                    sys.exit()
 
             # Obser reward and next obs
             obs, rewards, dones, infos = env.step(action_dict)
@@ -214,14 +222,14 @@ def main():
 
                     # Add to rollouts.
                     value = value_dict[agent_id] 
-                    action = action_dict[agent_id] 
+                    action_tensor = action_tensor_dict[agent_id] 
                     action_log_prob = action_log_prob_dict[agent_id] 
                     recurrent_hidden_states = recurrent_hidden_states_dict[agent_id]
 
                     rollout_map[agent_id].insert(
                         obs_tensor,
                         recurrent_hidden_states,
-                        action,
+                        action_tensor,
                         action_log_prob,
                         value,
                         reward_array,
