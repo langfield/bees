@@ -118,12 +118,12 @@ class Env(MultiAgentEnv):
         self.action_space = gym.spaces.Tuple(
             (gym.spaces.Discrete(5), gym.spaces.Discrete(2), gym.spaces.Discrete(2))
         )
-        #===MOD===
+        # ===MOD===
         # Action space is a MultiBinary space, where the toggles are:
         # Stay/Move, Left/Right, Up/Down, Eat/NoEat, Mate,NoMate.
         self.action_space = gym.spaces.MultiBinary(5)
-        #===MOD===
-        
+        # ===MOD===
+
         num_actions = 5 + 2 + 2
         self.num_actions = num_actions
 
@@ -140,12 +140,12 @@ class Env(MultiAgentEnv):
             outer_list.append(inner_space)
         self.observation_space = gym.spaces.Tuple(tuple(outer_list))
 
-        #===MOD===        
+        # ===MOD===
         obs_len = 2 * self.sight_len + 1
-        low_obs = np.zeros((obs_len, obs_len, self.num_obj_types))
-        high_obs = np.ones((obs_len, obs_len, self.num_obj_types))
+        low_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
+        high_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
         self.observation_space = gym.spaces.Box(low_obs, high_obs)
-        #===MOD===        
+        # ===MOD===
 
         self.agents: Dict[int, Agent] = {}
         self.agent_ids_created = 0
@@ -565,9 +565,10 @@ class Env(MultiAgentEnv):
             pad_left : pad_left + pad_x_len, pad_bottom : pad_bottom + pad_y_len
         ] = self.grid[sight_left : sight_right + 1, sight_bottom : sight_top + 1]
 
-        #===MOD===
+        # ===MOD===
+        obs = np.swapaxes(obs, 0, 2)
         # obs = convert_obs_to_tuple(obs)
-        #===MOD===
+        # ===MOD===
 
         return obs
 
@@ -645,8 +646,8 @@ class Env(MultiAgentEnv):
         }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
-        child_ids = self._mate(action_dict) 
-        
+        child_ids = self._mate(action_dict)
+
         # Plant new food.
         self._plant()
 
@@ -688,7 +689,6 @@ class Env(MultiAgentEnv):
         for killed_agent_id in killed_agent_ids:
             self.agents.pop(killed_agent_id)
 
-        done["__all__"] = all(done.values())
         self.dones = dict(done)
 
         # Write environment representation to log
@@ -770,10 +770,10 @@ class Env(MultiAgentEnv):
         # Print dones.
         if PRINT_DONES:
             output += "Dones: " + str(self.dones) + "\n"
-       
+
         # Push past next window size.
         # HARDCODE
-        for _ in range(40): 
+        for _ in range(40):
             output += "\n"
 
         REPR_LOG.flush()
