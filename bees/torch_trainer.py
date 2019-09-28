@@ -1,3 +1,4 @@
+""" PyTorch environment trainer. """
 import os
 import sys
 import json
@@ -22,6 +23,7 @@ from main import create_env
 
 
 def main():
+    " Runs the environment. """
     args = get_args()
 
     # Get ``settings`` file for now.
@@ -55,6 +57,7 @@ def main():
         act_space: gym.Space,
         device: torch.device,
     ) -> Tuple["AgentAlgo", Policy, RolloutStorage]:
+        " Spins up a new agent/policy. """
 
         actor_critic = Policy(
             obs_space.shape, act_space, base_kwargs={"recurrent": args.recurrent_policy}
