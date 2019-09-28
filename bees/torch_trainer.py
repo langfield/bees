@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import time
+import argparse
 import collections
 from collections import deque
 from typing import Dict, Tuple, Set
@@ -15,7 +16,7 @@ from a2c_ppo_acktr import algo, utils
 from a2c_ppo_acktr.arguments import get_args
 from a2c_ppo_acktr.model import Policy
 from a2c_ppo_acktr.storage import RolloutStorage
-from evaluation import evaluate
+# from evaluation import evaluate
 
 from main import create_env
 
@@ -26,15 +27,16 @@ def main():
     " Runs the environment. """
     args = get_args()
 
-    # Get ``settings`` file for now.
-    settings_file = sys.argv[1]
+    # Get settings and create environment.
+    # settings_file = sys.argv[1]
+    settings_file = "settings/settings.json"
     with open(settings_file, "r") as f:
         settings = json.load(f)
-
-    env_config = settings["env"]
-    time_steps = env_config["time_steps"]
-
     env = create_env(settings)
+
+    print("Obs space shape:", env.observation_space.shape)
+    print("Obs space typ:", type(env.observation_space))
+    sys.exit()
 
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -52,7 +54,7 @@ def main():
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
     def get_agent(
-        args: args.Namespace,
+        args: argparse.Namespace,
         obs_space: gym.Space,
         act_space: gym.Space,
         device: torch.device,
