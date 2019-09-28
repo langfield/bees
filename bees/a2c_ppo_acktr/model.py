@@ -175,7 +175,7 @@ class CNNBase(NNBase):
 
         # Kernel size changed to 2.
         #===MOD===
-        kernel_size = 1
+        kernel_size = 2
         self.main = nn.Sequential(
             init_(nn.Conv2d(num_inputs, 32, kernel_size, stride=4)), nn.ReLU(),
             init_(nn.Conv2d(32, 64, kernel_size, stride=2)), nn.ReLU(),
@@ -191,6 +191,9 @@ class CNNBase(NNBase):
         self.train()
 
     def forward(self, inputs, rnn_hxs, masks):
+        #===MOD===
+        print("Shape of input to CNNBase:", inputs.shape)
+        #===MOD===
         x = self.main(inputs / 255.0)
 
         if self.is_recurrent:

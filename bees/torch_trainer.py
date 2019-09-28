@@ -29,7 +29,7 @@ def main():
 
     # Get settings and create environment.
     # settings_file = sys.argv[1]
-    settings_file = "settings/box.json"
+    settings_file = "settings/settings.json"
     with open(settings_file, "r") as f:
         settings = json.load(f)
     env = create_env(settings)
