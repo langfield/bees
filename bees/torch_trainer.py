@@ -1,23 +1,21 @@
-import copy
-import glob
 import os
 import time
+import collections
 from collections import deque
+from typing import Dict, Tuple, Set
 
 import gym
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
 from a2c_ppo_acktr import algo, utils
-from a2c_ppo_acktr.algo import gail
 from a2c_ppo_acktr.arguments import get_args
 from a2c_ppo_acktr.envs import make_vec_envs
 from a2c_ppo_acktr.model import Policy
 from a2c_ppo_acktr.storage import RolloutStorage
 from evaluation import evaluate
+
+# pylint: disable=bad-continuation
 
 
 def main():
@@ -50,8 +48,8 @@ def main():
 
     def get_agent(
         args: args.Namespace,
-        obs_space: gym.space,
-        act_space: gym.space,
+        obs_space: gym.Space,
+        act_space: gym.Space,
         device: torch.device,
     ) -> Tuple["AgentAlgo", Policy, RolloutStorage]:
 
@@ -94,6 +92,7 @@ def main():
             act_space,
             actor_critic.recurrent_hidden_state_size,
         )
+        return agent, actor_critic, rollouts
 
     # Create multiagent maps.
     actor_critics: Dict[str, Policy] = {}
