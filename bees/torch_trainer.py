@@ -1,4 +1,6 @@
 import os
+import sys
+import json
 import time
 import collections
 from collections import deque
@@ -10,16 +12,27 @@ import torch
 
 from a2c_ppo_acktr import algo, utils
 from a2c_ppo_acktr.arguments import get_args
-from a2c_ppo_acktr.envs import make_vec_envs
 from a2c_ppo_acktr.model import Policy
 from a2c_ppo_acktr.storage import RolloutStorage
 from evaluation import evaluate
+
+from main import create_env
 
 # pylint: disable=bad-continuation
 
 
 def main():
     args = get_args()
+
+    # Get ``settings`` file for now.
+    settings_file = sys.argv[1]
+    with open(settings_file, "r") as f:
+        settings = json.load(f)
+
+    env_config = settings["env"]
+    time_steps = env_config["time_steps"]
+
+    env = create_env(settings)
 
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -35,16 +48,6 @@ def main():
 
     torch.set_num_threads(1)
     device = torch.device("cuda:0" if args.cuda else "cpu")
-
-    env = make_vec_envs(
-        args.env_name,
-        args.seed,
-        args.num_processes,
-        args.gamma,
-        args.log_dir,
-        device,
-        False,
-    )
 
     def get_agent(
         args: args.Namespace,
@@ -158,7 +161,7 @@ def main():
 
             # NOTE: we assume ``args.num_processes`` is ``1``.
 
-            for agent_id in obs.keys():
+            for agent_id in obs:
                 agent_obs = obs[agent_id]
                 agent_reward = rewards[agent_id]
                 agent_done = dones[agent_id]
