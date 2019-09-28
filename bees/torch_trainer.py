@@ -38,7 +38,7 @@ def main():
     torch.set_num_threads(1)
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
-    envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
+    env = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, args.log_dir, device, False)
 
 
@@ -84,12 +84,12 @@ def main():
     rollout_map: Dict[str, RolloutStorage] = {}
     episode_rewards: Dict[str, collections.deque] = {}
     
-    obs = envs.reset()
+    obs = env.reset()
 
     # Initialize first policies.
     for agent_id, agent_obs in obs.items():
         if agent_id not in agents:
-            agent, actor_critic, rollouts = get_agent(args, envs.observation_space, envs.action_space, device)
+            agent, actor_critic, rollouts = get_agent(args, env.observation_space, env.action_space, device)
             agents[agent_id] = agent
             actor_critics[agent_id] = actor_critic
             rollout_map[agent_id] = rollouts
@@ -112,46 +112,69 @@ def main():
                 agent.optimizer.lr if args.algo == "acktr" else args.lr)
 
         for step in range(args.num_steps):
+
+            actor_critic_return_dict: Dict[str, Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]] = {}
+
             # Sample actions
             with torch.no_grad():
-                value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
-                    rollouts.obs[step], rollouts.recurrent_hidden_states[step],
-                    rollouts.masks[step])
+                for agent_id, actor_critic in actor_critics.items():
+                    rollouts = rollout_map[agent_id]
+                    value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
+                        rollouts.obs[step], rollouts.recurrent_hidden_states[step],
+                        rollouts.masks[step])
+                    actor_critic_return_dict[agent_id] = actor_critic.act(
+                        rollouts.obs[step], rollouts.recurrent_hidden_states[step],
+                        rollouts.masks[step])
 
             # Obser reward and next obs
-            obs, reward, done, infos = envs.step(action)
+            obs, rewards, dones, infos = env.step(action)
 
-            # Assume ``args.num_processes`` is ``1``.
-            obs_dict = obs[0]
-            rewards_dict = reward[0]
-            dones_dict = done[0]
-            infos_dict = infos[0]
+            # NOTE: we assume ``args.num_processes`` is ``1``.
 
-            # Initialize new policies.
-            for agent_id, agent_obs in obs_dict.items():
+            for agent_id in obs.keys():
+                
+                # Initialize new policies.
                 if agent_id not in agents:
-                    agent, actor_critic, rollouts = get_agent(args, envs.observation_space, envs.action_space, device)
+                    agent, actor_critic, rollouts = get_agent(args, env.observation_space, env.action_space, device)
+                    
+                    # Copy first observations to rollouts, and send to device.
+                    rollouts = rollout_map[agent_id]
+                    rollouts.obs[0].copy_(agent_obs)
+                    rollouts.to(device)
+                   
+                    # Update dicts. 
                     agents[agent_id] = agent
                     actor_critics[agent_id] = actor_critic
                     rollout_map[agent_id] = rollouts
-                 
 
-            for agent_id, agent_info in infos_dict.items():
-                if 'episode' in agent_info.keys():
-                    episode_rewards.append(agent_info['episode']['r'])
+                else:
+                    agent_obs = obs[agent_id]
+                    agent_reward = rewards[agent_id]
+                    agent_done = dones[agent_id]
+                    agent_info = infos[agent_id]
+                    
+                    if 'episode' in agent_info.keys():
+                        episode_rewards[agent_id].append(agent_info['episode']['r'])
 
-            # If done then clean the history of observations.
-            for agent_id in dones_dict.keys():
-                agent_done = dones_dict[agent_id]
-                agent_info = infos_dict[agent_id]
+                    # If done then clean the history of observations.
+                    if agent_done:
+                        masks = torch.FloatTensor([[0.0]])
+                    else:
+                        masks = torch.FloatTensor([[1.0]])
+                    if 'bad_transition' in agent_info.keys():
+                        bad_masks = torch.FloatTensor([[0.0]])
+                    else:
+                        bad_masks = torch.FloatTensor([[1.0]])
 
-                masks = torch.FloatTensor(
-                    [[0.0] if done_ else [1.0] for done_ in env_dones])
-                bad_masks = torch.FloatTensor(
-                    [[0.0] if 'bad_transition' in info.keys() else [1.0]
-                     for info in infos])
-                rollouts.insert(obs, recurrent_hidden_states, action,
-                                action_log_prob, value, reward, masks, bad_masks)
+                    # Shape correction and casting.
+                    obs_tensor = torch.FloatTensor([[obs]])
+                    reward_array = np.array([agent_reward])
+
+                    # Add to rollouts.
+                    value_tuple = actor_critic_return_dict[agent_id]
+                    value, action, action_log_prob, recurrent_hidden_states = value_tuple
+                    rollout_map[agent_id].insert(obs_tensor, recurrent_hidden_states, action,
+                                    action_log_prob, value, reward_array, masks, bad_masks)
 
         with torch.no_grad():
             next_value = actor_critic.get_value(
@@ -176,7 +199,7 @@ def main():
 
             torch.save([
                 actor_critic,
-                getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
+                getattr(utils.get_vec_normalize(env), 'ob_rms', None)
             ], os.path.join(save_path, args.env_name + ".pt"))
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
@@ -193,7 +216,7 @@ def main():
 
         if (args.eval_interval is not None and len(episode_rewards) > 1
                 and j % args.eval_interval == 0):
-            ob_rms = utils.get_vec_normalize(envs).ob_rms
+            ob_rms = utils.get_vec_normalize(env).ob_rms
             evaluate(actor_critic, ob_rms, args.env_name, args.seed,
                      args.num_processes, eval_log_dir, device)
 
