@@ -18,7 +18,7 @@ from a2c_ppo_acktr.model import Policy
 from a2c_ppo_acktr.storage import RolloutStorage
 # from evaluation import evaluate
 
-from main import create_env
+from box_main import create_env
 
 # pylint: disable=bad-continuation
 
@@ -36,7 +36,6 @@ def main():
 
     print("Obs space shape:", env.observation_space.shape)
     print("Obs space typ:", type(env.observation_space))
-    sys.exit()
 
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -127,7 +126,8 @@ def main():
 
         # Copy first observations to rollouts, and send to device.
         rollouts = rollout_map[agent_id]
-        rollouts.obs[0].copy_(agent_obs)
+        obs_tensor = torch.FloatTensor([agent_obs])
+        rollouts.obs[0].copy_(obs_tensor)
         rollouts.to(device)
 
     start = time.time()
@@ -146,23 +146,27 @@ def main():
         for step in range(args.num_steps):
 
             minted_agents = set()
-
-            actor_critic_return_dict: Dict[
-                str, Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
-            ] = {}
+            value_dict: Dict[str, float] = {}
+            action_dict: Dict[str, np.ndarray] = {}
+            action_log_prob_dict: Dict[str, float] = {}
+            recurrent_hidden_states_dict: Dict[str, float] = {} 
 
             # Sample actions
             with torch.no_grad():
                 for agent_id, actor_critic in actor_critics.items():
                     rollouts = rollout_map[agent_id]
-                    actor_critic_return_dict[agent_id] = actor_critic.act(
+                    ac_tuple = actor_critic.act(
                         rollouts.obs[step],
                         rollouts.recurrent_hidden_states[step],
                         rollouts.masks[step],
                     )
+                    value_dict[agent_id] = ac_tuple[agent_id] 
+                    action_dict[agent_id] = ac_tuple[agent_id] 
+                    action_log_prob_dict[agent_id] = ac_tuple[agent_id]
+                    recurrent_hidden_states_dict[agent_id] = ac_tuple[agent_id]
 
             # Obser reward and next obs
-            obs, rewards, dones, infos = env.step(action)
+            obs, rewards, dones, infos = env.step(action_dict)
 
             # NOTE: we assume ``args.num_processes`` is ``1``.
 
@@ -181,7 +185,8 @@ def main():
 
                     # Copy first observations to rollouts, and send to device.
                     rollouts = rollout_map[agent_id]
-                    rollouts.obs[0].copy_(agent_obs)
+                    obs_tensor = torch.FloatTensor([agent_obs])
+                    rollouts.obs[0].copy_(obs_tensor)
                     rollouts.to(device)
 
                     # Update dicts.
@@ -204,14 +209,15 @@ def main():
                         bad_masks = torch.FloatTensor([[1.0]])
 
                     # Shape correction and casting.
-                    obs_tensor = torch.FloatTensor([[obs]])
+                    obs_tensor = torch.FloatTensor([agent_obs])
                     reward_array = np.array([agent_reward])
 
                     # Add to rollouts.
-                    value_tuple = actor_critic_return_dict[agent_id]
-                    value, action, action_log_prob, recurrent_hidden_states = (
-                        value_tuple
-                    )
+                    value = value_dict[agent_id] 
+                    action = action_dict[agent_id] 
+                    action_log_prob = action_log_prob_dict[agent_id] 
+                    recurrent_hidden_states = recurrent_hidden_states_dict[agent_id]
+
                     rollout_map[agent_id].insert(
                         obs_tensor,
                         recurrent_hidden_states,
