@@ -41,45 +41,64 @@ def main():
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, args.log_dir, device, False)
 
-    actor_critic = Policy(
-        envs.observation_space.shape,
-        envs.action_space,
-        base_kwargs={'recurrent': args.recurrent_policy})
-    actor_critic.to(device)
 
-    if args.algo == 'a2c':
-        agent = algo.A2C_ACKTR(
-            actor_critic,
-            args.value_loss_coef,
-            args.entropy_coef,
-            lr=args.lr,
-            eps=args.eps,
-            alpha=args.alpha,
-            max_grad_norm=args.max_grad_norm)
-    elif args.algo == 'ppo':
-        agent = algo.PPO(
-            actor_critic,
-            args.clip_param,
-            args.ppo_epoch,
-            args.num_mini_batch,
-            args.value_loss_coef,
-            args.entropy_coef,
-            lr=args.lr,
-            eps=args.eps,
-            max_grad_norm=args.max_grad_norm)
-    elif args.algo == 'acktr':
-        agent = algo.A2C_ACKTR(
-            actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True)
+    def get_agent(args: args.Namespace, obs_space: gym.space, act_space: gym.space, device: torch.device) -> Tuple["AgentAlgo", Policy, RolloutStorage]:
 
-    rollouts = RolloutStorage(args.num_steps, args.num_processes,
-                              envs.observation_space.shape, envs.action_space,
-                              actor_critic.recurrent_hidden_state_size)
+        actor_critic = Policy(
+            obs_space.shape,
+            act_space,
+            base_kwargs={'recurrent': args.recurrent_policy})
+        actor_critic.to(device)
 
+        if args.algo == 'a2c':
+            agent = algo.A2C_ACKTR(
+                actor_critic,
+                args.value_loss_coef,
+                args.entropy_coef,
+                lr=args.lr,
+                eps=args.eps,
+                alpha=args.alpha,
+                max_grad_norm=args.max_grad_norm)
+        elif args.algo == 'ppo':
+            agent = algo.PPO(
+                actor_critic,
+                args.clip_param,
+                args.ppo_epoch,
+                args.num_mini_batch,
+                args.value_loss_coef,
+                args.entropy_coef,
+                lr=args.lr,
+                eps=args.eps,
+                max_grad_norm=args.max_grad_norm)
+        elif args.algo == 'acktr':
+            agent = algo.A2C_ACKTR(
+                actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True)
+
+        rollouts = RolloutStorage(args.num_steps, args.num_processes,
+                                  obs_space.shape, act_space,
+                                  actor_critic.recurrent_hidden_state_size)
+
+    # Create multiagent maps.
+    actor_critics: Dict[str, Policy] = {}
+    agents: Dict[str, "AgentAlgo"] = {}
+    rollout_map: Dict[str, RolloutStorage] = {}
+    episode_rewards: Dict[str, collections.deque] = {}
+    
     obs = envs.reset()
-    rollouts.obs[0].copy_(obs)
-    rollouts.to(device)
 
-    episode_rewards = deque(maxlen=10)
+    # Initialize first policies.
+    for agent_id, agent_obs in obs.items():
+        if agent_id not in agents:
+            agent, actor_critic, rollouts = get_agent(args, envs.observation_space, envs.action_space, device)
+            agents[agent_id] = agent
+            actor_critics[agent_id] = actor_critic
+            rollout_map[agent_id] = rollouts
+            episode_rewards[agent_id] = deque(maxlen=10)
+
+        # Copy first observations to rollouts, and send to device.
+        rollouts = rollout_map[agent_id]
+        rollouts.obs[0].copy_(agent_obs)
+        rollouts.to(device)
 
     start = time.time()
     num_updates = int(
@@ -102,18 +121,37 @@ def main():
             # Obser reward and next obs
             obs, reward, done, infos = envs.step(action)
 
-            for info in infos:
-                if 'episode' in info.keys():
-                    episode_rewards.append(info['episode']['r'])
+            # Assume ``args.num_processes`` is ``1``.
+            obs_dict = obs[0]
+            rewards_dict = reward[0]
+            dones_dict = done[0]
+            infos_dict = infos[0]
+
+            # Initialize new policies.
+            for agent_id, agent_obs in obs_dict.items():
+                if agent_id not in agents:
+                    agent, actor_critic, rollouts = get_agent(args, envs.observation_space, envs.action_space, device)
+                    agents[agent_id] = agent
+                    actor_critics[agent_id] = actor_critic
+                    rollout_map[agent_id] = rollouts
+                 
+
+            for agent_id, agent_info in infos_dict.items():
+                if 'episode' in agent_info.keys():
+                    episode_rewards.append(agent_info['episode']['r'])
 
             # If done then clean the history of observations.
-            masks = torch.FloatTensor(
-                [[0.0] if done_ else [1.0] for done_ in done])
-            bad_masks = torch.FloatTensor(
-                [[0.0] if 'bad_transition' in info.keys() else [1.0]
-                 for info in infos])
-            rollouts.insert(obs, recurrent_hidden_states, action,
-                            action_log_prob, value, reward, masks, bad_masks)
+            for agent_id in dones_dict.keys():
+                agent_done = dones_dict[agent_id]
+                agent_info = infos_dict[agent_id]
+
+                masks = torch.FloatTensor(
+                    [[0.0] if done_ else [1.0] for done_ in env_dones])
+                bad_masks = torch.FloatTensor(
+                    [[0.0] if 'bad_transition' in info.keys() else [1.0]
+                     for info in infos])
+                rollouts.insert(obs, recurrent_hidden_states, action,
+                                action_log_prob, value, reward, masks, bad_masks)
 
         with torch.no_grad():
             next_value = actor_critic.get_value(
