@@ -1,0 +1,43 @@
+{
+    "env": {
+        "width": 15,
+        "height": 15,
+        "sight_len": 2,
+        "num_obj_types": 2,
+        "num_agents": 5,
+        "food_density": 0.125,
+        "food_size_mean": 0.15,
+        "food_size_stddev": 0.05,
+        "plant_foods_mean": 0.01,
+        "plant_foods_stddev": 0.05,
+        "food_plant_retries": 3,
+        "aging_rate": 0.01,
+        "mating_cooldown_len": 18,
+        "min_mating_health": 0.2,
+        "agent_init_x_upper_bound": 5,
+        "agent_init_y_upper_bound": 5,
+        "time_steps": 10000
+    },
+    "rew": {
+        "n_layers": 3,
+        "hidden_dim": 256,
+        "weight_mean": 0.0,
+        "weight_stddev": 0.4
+    },
+    "genetics": {
+        "mut_sigma": 0.3,
+        "mut_p": 0.05
+    },
+    "constants": {
+        "STAY": 0,
+        "LEFT": 1,
+        "RIGHT": 2,
+        "UP": 3,
+        "DOWN": 4,
+        "EAT": 0,
+        "NO_EAT": 1,
+        "MATE": 0,
+        "NO_MATE": 1,
+        "BEE_HEAVEN": [-1,-1]
+    }
+}
