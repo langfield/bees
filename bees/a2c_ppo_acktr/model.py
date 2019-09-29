@@ -174,13 +174,15 @@ class CNNBase(NNBase):
                                constant_(x, 0), nn.init.calculate_gain('relu'))
 
         # Kernel size changed to 2.
+        # ``num_inputs`` is the number of input channels, the second dimension of
+        # ``inputs``, one of the params of forward call.
         #===MOD===
         kernel_size = 2
         self.main = nn.Sequential(
-            init_(nn.Conv2d(num_inputs, 32, kernel_size, stride=4)), nn.ReLU(),
-            init_(nn.Conv2d(32, 64, kernel_size, stride=2)), nn.ReLU(),
-            init_(nn.Conv2d(64, 32, kernel_size, stride=1)), nn.ReLU(), Flatten(),
-            init_(nn.Linear(32 * 7 * 7, hidden_size)), nn.ReLU())
+            init_(nn.Conv2d(num_inputs, 32, kernel_size, stride=1, padding=1)), nn.ReLU(),
+            init_(nn.Conv2d(32, 64, kernel_size, stride=1, padding=1)), nn.ReLU(),
+            init_(nn.Conv2d(64, 32, kernel_size, stride=1, padding=1)), nn.ReLU(), Flatten(),
+            init_(nn.Linear(32 * 8 * 8, hidden_size)), nn.ReLU())
         #===MOD===
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
@@ -191,9 +193,6 @@ class CNNBase(NNBase):
         self.train()
 
     def forward(self, inputs, rnn_hxs, masks):
-        #===MOD===
-        print("Shape of input to CNNBase:", inputs.shape)
-        #===MOD===
         x = self.main(inputs / 255.0)
 
         if self.is_recurrent:

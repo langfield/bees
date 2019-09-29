@@ -130,6 +130,8 @@ def main():
         rollouts.obs[0].copy_(obs_tensor)
         rollouts.to(device)
 
+    steps_completed = 0
+
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
     for j in range(num_updates):
@@ -144,6 +146,7 @@ def main():
             )
 
         for step in range(args.num_steps):
+            print("Step:", steps_completed)
 
             minted_agents = set()
             value_dict: Dict[int, float] = {}
@@ -161,17 +164,11 @@ def main():
                         rollouts.recurrent_hidden_states[step],
                         rollouts.masks[step],
                     )
-                    value_dict[agent_id] = ac_tuple[agent_id] 
-                    action_dict[agent_id] = ac_tuple[agent_id].numpy()
-                    action_tensor_dict[agent_id] = ac_tuple[agent_id] 
-                    action_log_prob_dict[agent_id] = ac_tuple[agent_id]
-                    recurrent_hidden_states_dict[agent_id] = ac_tuple[agent_id]
-
-                    action = ac_tuple[agent_id]
-                    print("Type of action:", type(action))
-                    print("Action:", action)
-                    print("Length of action:", len(action))
-                    sys.exit()
+                    value_dict[agent_id] = ac_tuple[0] 
+                    action_dict[agent_id] = ac_tuple[1][0].cpu().numpy()
+                    action_tensor_dict[agent_id] = ac_tuple[1] 
+                    action_log_prob_dict[agent_id] = ac_tuple[2]
+                    recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
 
             # Obser reward and next obs
             obs, rewards, dones, infos = env.step(action_dict)
@@ -182,7 +179,8 @@ def main():
                 agent_obs = obs[agent_id]
                 agent_reward = rewards[agent_id]
                 agent_done = dones[agent_id]
-                agent_info = infos[agent_id]
+                # TODO: implement ``infos`` in environment.
+                agent_info = {}
 
                 # Initialize new policies.
                 if agent_id not in agents:
@@ -190,17 +188,17 @@ def main():
                     agent, actor_critic, rollouts = get_agent(
                         args, env.observation_space, env.action_space, device
                     )
+                    # Update dicts.
+                    agents[agent_id] = agent
+                    actor_critics[agent_id] = actor_critic
+                    rollout_map[agent_id] = rollouts
+                    episode_rewards[agent_id] = deque(maxlen=10)
 
                     # Copy first observations to rollouts, and send to device.
                     rollouts = rollout_map[agent_id]
                     obs_tensor = torch.FloatTensor([agent_obs])
                     rollouts.obs[0].copy_(obs_tensor)
                     rollouts.to(device)
-
-                    # Update dicts.
-                    agents[agent_id] = agent
-                    actor_critics[agent_id] = actor_critic
-                    rollout_map[agent_id] = rollouts
 
                 else:
                     if "episode" in agent_info.keys():
@@ -218,7 +216,7 @@ def main():
 
                     # Shape correction and casting.
                     obs_tensor = torch.FloatTensor([agent_obs])
-                    reward_array = np.array([agent_reward])
+                    reward_tensor = torch.FloatTensor([agent_reward])
 
                     # Add to rollouts.
                     value = value_dict[agent_id] 
@@ -232,10 +230,12 @@ def main():
                         action_tensor,
                         action_log_prob,
                         value,
-                        reward_array,
+                        reward_tensor,
                         masks,
                         bad_masks,
                     )
+
+            steps_completed += 1
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
