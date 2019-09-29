@@ -29,7 +29,7 @@ def main():
 
     # Get settings and create environment.
     # settings_file = sys.argv[1]
-    settings_file = "settings/settings.json"
+    settings_file = "settings/torch.json"
     with open(settings_file, "r") as f:
         settings = json.load(f)
     env = create_env(settings)
@@ -146,7 +146,6 @@ def main():
             )
 
         for step in range(args.num_steps):
-            print("Step:", steps_completed)
 
             minted_agents = set()
             value_dict: Dict[int, float] = {}
@@ -243,7 +242,6 @@ def main():
                         bad_masks,
                     )
 
-            steps_completed += 1
             # Print out environment state
             os.system("clear")
             print(env)
@@ -251,6 +249,7 @@ def main():
             if all(dones.values()):
                 print("All agents have died.")
                 sys.exit()
+            steps_completed += 1
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
@@ -306,6 +305,7 @@ def main():
                 if j % args.log_interval == 0 and len(agent_episode_rewards) > 1:
                     total_num_steps = (j + 1) * args.num_processes * args.num_steps
                     end = time.time()
+                    """
                     print(
                         "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".format(
                             j,
@@ -321,6 +321,7 @@ def main():
                             action_losses[agent_id],
                         )
                     )
+                    """
 
                 """
                 if (
