@@ -77,3 +77,13 @@ Observations:   Environment is now very stable with current hyperparameters. Epi
 
 Fixed:  Tuples returned from deap functions. Fully implemented ``id_map``. Changed ``agent`` to
         ``mom`` in ``_mate()`` function.
+
+
+
+
+#====================================================================================================
+
+TORCH VERSION
+
+Todo:   Remove agents and actor_critics when they are ``done``. Delete all references so that GPU
+        memory is freed.
