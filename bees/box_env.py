@@ -350,9 +350,9 @@ class Env(MultiAgentEnv):
         """ Plant k new foods in the grid, where k is Gaussian. """
 
         # Generate and validate the number of foods to plant.
-        num_new_foods = round(
-            np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
-        )
+        food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
+        print("Food expected value:", food_ev)
+        num_new_foods = round(food_ev)
         num_new_foods = max(0, num_new_foods)
         num_new_foods = min(self.height * self.width, num_new_foods)
 
@@ -773,8 +773,10 @@ class Env(MultiAgentEnv):
 
         # Push past next window size.
         # HARDCODE
+        """
         for _ in range(40):
             output += "\n"
+        """
 
         REPR_LOG.flush()
 
