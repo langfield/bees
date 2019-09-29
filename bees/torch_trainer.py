@@ -214,6 +214,14 @@ def main():
                     else:
                         bad_masks = torch.FloatTensor([[1.0]])
 
+                    # If done then remove from environment.
+                    if agent_done:
+                        actor_critic = actor_critics.pop(agent_id)
+                        del actor_critic
+                        # TODO: should we remove from ``rollout_map`` and ``agents``?
+                        agent = agents.pop(agent_id)
+                        del agent
+
                     # Shape correction and casting.
                     obs_tensor = torch.FloatTensor([agent_obs])
                     reward_tensor = torch.FloatTensor([agent_reward])
@@ -236,6 +244,13 @@ def main():
                     )
 
             steps_completed += 1
+            # Print out environment state
+            os.system("clear")
+            print(env)
+            time.sleep(0)
+            if all(dones.values()):
+                print("All agents have died.")
+                sys.exit()
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
