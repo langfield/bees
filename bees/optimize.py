@@ -5,10 +5,11 @@ import time
 import json
 import shutil
 import logging
-import tempfile
 import datetime
 
 import optuna
+
+from torch_trainer import train
 
 
 def main() -> None:
@@ -27,6 +28,43 @@ def main() -> None:
     study.optimize(objective, n_trials=100)
 
 
+def loss(num_env_steps: int, avg_agent_lifetime: float, aging_rate: float, num_agents: int, width: int, height: int) -> float:
+    """
+    Computes the optuna loss function.
+
+    Parameters
+    ----------
+    num_env_steps : ``int``.
+        Number of environment steps completed so far.
+    avg_agent_lifetime : ``float``.
+        Average agent lifetime over all done agents measured in environment steps.
+    aging_rate : ``float``.
+        Health loss for all agents at each environment step.
+    num_agents : ``int``.
+        Number of living agents.
+    width : ``int``.
+        Width of the grid.
+    height : ``int``.
+        Height of the grid.
+
+    Returns
+    -------
+    loss : ``float``.
+        Loss as computed for an optuna trial.
+    """
+    # Constants.
+    # HARDCODE
+    optimal_density = 0.05
+    optimal_lifetime = 5
+
+    agent_density = num_agents / (width * height)
+    lifetime_loss = (avg_agent_lifetime / (1 / aging_rate) - optimal_lifetime) ** 2
+    density_loss = (agent_density - optimal_density) ** 2
+    step_loss = (1 / num_env_steps) ** 2
+    loss = lifetime_loss + density_loss + step_loss
+    return loss 
+
+
 def objective(trial: optuna.Trial) -> float:
     """
     Optuna objective function. Should never be called explicitly.
@@ -41,63 +79,27 @@ def objective(trial: optuna.Trial) -> float:
     loss : ``float``.
         The output from the model call after the timeout value specified in ``snow.sh``.
     """
-    parser = argparse.ArgumentParser()
-    parser = get_args(parser)
-    args = parser.parse_args()
 
-    # Set arguments.
-    args.num_train_epochs = 10000
-    args.stationarize = True
-    args.normalize = False
-    args.seq_norm = True
-    args.seed = 42
-    args.max_grad_norm = 3
-    args.adam_epsilon = 7.400879524874149e-08
+    # Get settings and create environment.
+    # HARDCODE
+    settings_file = "settings/torch.json"
+    with open(settings_file, "r") as f:
+        settings = json.load(f)
 
-    batch_size = 192
-    agg_size = 5
+    settings["env"]["sight_len"] = trial.suggest_int("sight_len", 2, 10)
+    settings["env"]["num_agents"] = trial.suggest_int("num_agents", 2, 30)
+    settings["env"]["food_density"] = trial.suggest_uniform("food_density", 0.05, 0.3)
+    settings["env"]["food_size_mean"] = trial.suggest_uniform("food_size_mean", 0.01, 0.3)
+    settings["env"]["food_size_stddev"] = trial.suggest_uniform("food_size_stddev", 0.01, 0.3)
+    settings["env"]["plant_foods_mean"] = trial.suggest_uniform("plant_foods_mean", -0.2, 1)
+    settings["env"]["plant_foods_stddev"] = trial.suggest_uniform("plant_foods_stddev", 0.0, 1)
+    settings["env"]["mating_cooldown_len"] = trial.suggest_int("mating_cooldown_len", 2, 40)
+    settings["env"]["min_mating_health"] = trial.suggest_uniform("min_mating_health", 0.0, 1)
 
-    # Commented-out trial suggestions should be placed at top of block.
-    # args.stationarize = trial.suggest_categorical("stationarize", [True, False])
-    # batch_size = trial.suggest_discrete_uniform("train_batch_size", 32, 256, 32)
-    # agg_size = trial.suggest_discrete_uniform("agg_size", 1, 40, 5)
-    args.weight_decay = trial.suggest_loguniform("weight_decay", 0.0001, 0.01)
-    args.learning_rate = trial.suggest_loguniform("learning_rate", 8e-7, 5e-4)
-    args.warmup_proportion = trial.suggest_uniform("warmup_proportion", 0.05, 0.4)
-    args.train_batch_size = int(batch_size)
-    args.aggregation_size = int(agg_size)
-    logging.getLogger().info(str(args))
+    settings["trial"] = trial
 
-    # Set config.
-    config = {}
-    config["initializer_range"] = 0.02
-    config["n_head"] = 8
-    config["vocab_size"] = 33
-    n_positions = 30
+    loss = train(settings)
 
-    # Commented-out trial suggestions should be placed at top of block.
-    # n_positions = int(trial.suggest_discrete_uniform("n_ctx", 10, 40, 5))
-    # config["n_head"] = int(trial.suggest_discrete_uniform("n_head", 4, 16, 4))
-    config["layer_norm_epsilon"] = trial.suggest_loguniform("layer_eps", 1e-5, 1e-3)
-    config["resid_pdrop"] = trial.suggest_loguniform("resid_pdrop", 0.01, 0.15)
-    config["attn_pdrop"] = trial.suggest_loguniform("attn_pdrop", 0.1, 0.3)
-    config["n_embd"] = int(trial.suggest_discrete_uniform("n_embd", 32, 768, 64))
-    config["n_layer"] = trial.suggest_int("n_layer", 4, 10)
-    config["n_positions"] = n_positions
-    config["n_ctx"] = n_positions
-
-    dirpath = tempfile.mkdtemp()
-    config_filename = str(time.time()) + ".json"
-    config_filepath = os.path.join(dirpath, config_filename)
-    with open(config_filepath, "w") as path:
-        json.dump(config, path)
-    args.gpst_model = config_filepath
-    args.model_name = "optuna"
-    args.trial = trial
-
-    loss = train(args)
-
-    shutil.rmtree(dirpath)
     return loss
 
 
