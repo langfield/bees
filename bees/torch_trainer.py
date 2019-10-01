@@ -6,7 +6,7 @@ import time
 import argparse
 import collections
 from collections import deque
-from typing import Dict, Tuple, Set
+from typing import Dict, Tuple, Set, Any
 
 import gym
 import numpy as np
@@ -23,19 +23,10 @@ from box_main import create_env
 # pylint: disable=bad-continuation
 
 
-def main():
+def main(settings: Dict[str, Any]):
     " Runs the environment. """
     args = get_args()
-
-    # Get settings and create environment.
-    # settings_file = sys.argv[1]
-    settings_file = "settings/torch.json"
-    with open(settings_file, "r") as f:
-        settings = json.load(f)
     env = create_env(settings)
-
-    print("Obs space shape:", env.observation_space.shape)
-    print("Obs space typ:", type(env.observation_space))
 
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -137,7 +128,7 @@ def main():
     for j in range(num_updates):
 
         if args.use_linear_lr_decay:
-            # decrease learning rate linearly
+            # decrease learning rate linearly.
             utils.update_linear_schedule(
                 agent.optimizer,
                 j,
@@ -343,4 +334,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Get settings and create environment.
+    # HARDCODE
+    settings_file = "settings/torch.json"
+    with open(settings_file, "r") as f:
+        settings = json.load(f)
+    main(settings)
