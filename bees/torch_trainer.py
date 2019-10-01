@@ -23,7 +23,7 @@ from box_main import create_env
 # pylint: disable=bad-continuation
 
 
-def main(settings: Dict[str, Any]):
+def train(settings: Dict[str, Any]):
     " Runs the environment. """
     args = get_args()
     env = create_env(settings)
@@ -233,7 +233,7 @@ def main(settings: Dict[str, Any]):
                         bad_masks,
                     )
 
-            # Print out environment state
+            # Print out environment state.
             os.system("clear")
             print(env)
             time.sleep(0)
@@ -339,4 +339,4 @@ if __name__ == "__main__":
     settings_file = "settings/torch.json"
     with open(settings_file, "r") as f:
         settings = json.load(f)
-    main(settings)
+    train(settings)
