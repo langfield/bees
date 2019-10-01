@@ -14,7 +14,6 @@ import numpy as np
 
 # Package imports.
 import gym
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 # Bees imports.
 from agent import Agent
@@ -29,7 +28,7 @@ PRINT_AGENT_STATS = True
 PRINT_DONES = True
 
 
-class Env(MultiAgentEnv):
+class Env:
     """ Environment with bees in it. """
 
     def __init__(

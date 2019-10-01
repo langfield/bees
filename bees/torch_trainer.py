@@ -16,15 +16,17 @@ from a2c_ppo_acktr import algo, utils
 from a2c_ppo_acktr.arguments import get_args
 from a2c_ppo_acktr.model import Policy
 from a2c_ppo_acktr.storage import RolloutStorage
+
 # from evaluation import evaluate
 
 from box_main import create_env
+from optimize import compute_loss
 
 # pylint: disable=bad-continuation
 
 
 def train(settings: Dict[str, Any]):
-    " Runs the environment. """
+    " Runs the environment. " ""
     args = get_args()
     env = create_env(settings)
 
@@ -49,7 +51,7 @@ def train(settings: Dict[str, Any]):
         act_space: gym.Space,
         device: torch.device,
     ) -> Tuple["AgentAlgo", Policy, RolloutStorage]:
-        " Spins up a new agent/policy. """
+        " Spins up a new agent/policy. " ""
 
         actor_critic = Policy(
             obs_space.shape, act_space, base_kwargs={"recurrent": args.recurrent_policy}
@@ -143,7 +145,7 @@ def train(settings: Dict[str, Any]):
             action_dict: Dict[int, np.ndarray] = {}
             action_tensor_dict: Dict[int, torch.Tensor] = {}
             action_log_prob_dict: Dict[int, float] = {}
-            recurrent_hidden_states_dict: Dict[int, float] = {} 
+            recurrent_hidden_states_dict: Dict[int, float] = {}
 
             # Sample actions
             with torch.no_grad():
@@ -154,9 +156,9 @@ def train(settings: Dict[str, Any]):
                         rollouts.recurrent_hidden_states[step],
                         rollouts.masks[step],
                     )
-                    value_dict[agent_id] = ac_tuple[0] 
+                    value_dict[agent_id] = ac_tuple[0]
                     action_dict[agent_id] = ac_tuple[1][0].cpu().numpy()
-                    action_tensor_dict[agent_id] = ac_tuple[1] 
+                    action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
 
@@ -217,9 +219,9 @@ def train(settings: Dict[str, Any]):
                     reward_tensor = torch.FloatTensor([agent_reward])
 
                     # Add to rollouts.
-                    value = value_dict[agent_id] 
-                    action_tensor = action_tensor_dict[agent_id] 
-                    action_log_prob = action_log_prob_dict[agent_id] 
+                    value = value_dict[agent_id]
+                    action_tensor = action_tensor_dict[agent_id]
+                    action_log_prob = action_log_prob_dict[agent_id]
                     recurrent_hidden_states = recurrent_hidden_states_dict[agent_id]
 
                     rollout_map[agent_id].insert(
@@ -241,6 +243,16 @@ def train(settings: Dict[str, Any]):
                 print("All agents have died.")
                 sys.exit()
             steps_completed += 1
+
+            loss = compute_loss(
+                steps_completed,
+                args.num_env_steps,
+                avg_agent_lifetime,
+                settings["env"]["aging_rate"],
+                len(agents),
+                settings["env"]["width"],
+                settings["env"]["height"],
+            )
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
