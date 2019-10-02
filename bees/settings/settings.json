@@ -16,7 +16,7 @@
         "min_mating_health": 0.2,
         "agent_init_x_upper_bound": 5,
         "agent_init_y_upper_bound": 5,
-        "time_steps": 10000,
+        "time_steps": 100,
         "print": true
     },
     "rew": {

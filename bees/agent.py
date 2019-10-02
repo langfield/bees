@@ -57,6 +57,8 @@ class Agent:
         self.obs_shape = (self.obs_width, self.obs_width, num_obj_types)
         self.observation = convert_obs_to_tuple(np.zeros(self.obs_shape))
 
+        self.age = 0
+
         # The ``+ 2`` is for the dimensions for current health and previous health.
         self.input_dim = (self.obs_width ** 2) * num_obj_types + self.num_actions + 2
         self.total_reward = 0.0
