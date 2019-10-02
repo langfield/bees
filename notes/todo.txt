@@ -89,4 +89,6 @@ Todo:   Remove agents and actor_critics when they are ``done``. Delete all refer
         memory is freed.
 
         Use mean agent lifetime measured in multiples of ``1 / aging_rate`` as an objective, as
-        well as agent density. 
+        well as agent density.
+
+        Compute distributions of each trial variable with loss below some threshold in optimize. 
