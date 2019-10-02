@@ -58,7 +58,7 @@ def objective(trial: optuna.Trial) -> float:
     settings["env"]["mating_cooldown_len"] = trial.suggest_int("mate_cooldown", 2, 40)
     settings["env"]["min_mating_health"] = trial.suggest_uniform("min_mate_hth", 0.0, 1)
 
-    logging.getLogger().info(str(settings))
+    logging.getLogger().info("Settings: " + str(settings))
 
     settings["env"]["print"] = False
     settings["trial"] = trial
