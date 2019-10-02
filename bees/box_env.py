@@ -354,7 +354,6 @@ class Env:
 
         # Generate and validate the number of foods to plant.
         food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
-        print("Food expected value:", food_ev)
         num_new_foods = round(food_ev)
         num_new_foods = max(0, num_new_foods)
         num_new_foods = min(self.height * self.width, num_new_foods)
