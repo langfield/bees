@@ -419,11 +419,11 @@ def compute_loss(
     # HARDCODE
     lifetime_loss = lifetime_loss / (optimal_lifetime ** 2)
     density_loss = density_loss / (4 * optimal_density)
-    step_loss *= 2
+    step_loss = 2 * step_loss / (max_num_env_steps ** 2)
 
     print(
-        "Steps completed: %d\t Lifetime loss: %f\t Density loss: %f\t Step loss: %f\r"
-        % (steps_completed, lifetime_loss, density_loss, step_loss),
+        "Steps completed: %d\t Avg lifetime: %f\t Agent density: %f\r"
+        % (steps_completed, avg_agent_lifetime, agent_density),
         end="",
     )
 
