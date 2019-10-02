@@ -10,8 +10,9 @@ from collections import deque
 from typing import Dict, Tuple, Set, Any
 
 import gym
-import numpy as np
 import torch
+import optuna
+import numpy as np
 
 from a2c_ppo_acktr import algo, utils
 from a2c_ppo_acktr.arguments import get_args
@@ -261,13 +262,19 @@ def train(settings: Dict[str, Any]):
             )
 
             if "trial" in settings:
+                width = settings["env"]["width"]
+                height = settings["env"]["height"]
                 trial = settings["trial"]
                 trial.report(loss, steps_completed)
-                if trial.should_prune():
+                """
+                if steps_completed % 50 == 0 and trial.should_prune():
+                    print("Pruning automatically.")
                     raise optuna.structs.TrialPruned()
-                agent_density = num_agents / (width * height)
+                """
+                agent_density = len(agents) / (width * height)
                 # HARDCODE
                 if agent_density > 0.2:
+                    print("Density too high:", agent_density)
                     raise optuna.structs.TrialPruned()
 
         for agent_id, agent in agents.items():
@@ -419,11 +426,11 @@ def compute_loss(
     # HARDCODE
     lifetime_loss = lifetime_loss / (optimal_lifetime ** 2)
     density_loss = density_loss / (4 * optimal_density)
-    step_loss = 2 * step_loss / (max_num_env_steps ** 2)
+    step_loss = 2 * step_loss
 
     print(
         "Steps completed: %d\t Avg lifetime: %f\t Agent density: %f\r"
-        % (steps_completed, avg_agent_lifetime, agent_density),
+        % (num_env_steps, avg_agent_lifetime, agent_density),
         end="",
     )
 
