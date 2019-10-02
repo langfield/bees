@@ -27,6 +27,8 @@ from box_main import create_env
 def train(settings: Dict[str, Any]):
     " Runs the environment. " ""
     args = get_args()
+    args.num_env_steps = settings["env"]["time_steps"]
+    print("Arguments:", str(args))
     env = create_env(settings)
 
     torch.manual_seed(args.seed)
@@ -237,6 +239,7 @@ def train(settings: Dict[str, Any]):
                     )
 
             # Print out environment state.
+            print("Steps completed: %d\r" % steps_completed, end="")
             if settings["env"]["print"]:
                 os.system("clear")
                 print(env)
@@ -247,6 +250,8 @@ def train(settings: Dict[str, Any]):
             steps_completed += 1
 
             avg_agent_lifetime = np.mean(agent_lifetimes)
+            # DEBUG
+            print("Agent lifetimes:", agent_lifetimes)
             loss = compute_loss(
                 steps_completed,
                 args.num_env_steps,
@@ -392,9 +397,18 @@ def compute_loss(
     optimal_lifetime = 5
 
     agent_density = num_agents / (width * height)
-    lifetime_loss = (avg_agent_lifetime / (1 / aging_rate) - optimal_lifetime) ** 2
+    lifetime_loss = ((avg_agent_lifetime / (1 / aging_rate)) - optimal_lifetime) ** 2
     density_loss = (agent_density - optimal_density) ** 2
     step_loss = (max_num_env_steps - num_env_steps) ** 2
+
+    # Normalize losses.
+    lifetime_loss = lifetime_loss / (optimal_lifetime ** 2)
+    step_loss = step_loss / (max_num_env_steps ** 2)
+
+    print("Lifetime loss:", lifetime_loss)
+    print("Density loss:", density_loss)
+    print("Step loss:", step_loss)
+
     loss = lifetime_loss + density_loss + step_loss
     return loss
 
