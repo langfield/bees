@@ -75,6 +75,10 @@ class Env:
         self.agent_init_x_upper_bound = agent_init_x_upper_bound
         self.agent_init_y_upper_bound = agent_init_y_upper_bound
 
+        # HARDCODE
+        self.agent_init_x_upper_bound = min(math.ceil(2 * math.sqrt(num_agents)), self.width)
+        self.agent_init_x_upper_bound = min(math.ceil(2 * math.sqrt(num_agents)), self.height)
+
         self.n_layers = n_layers
         self.hidden_dim = hidden_dim
         self.reward_weight_mean = reward_weight_mean

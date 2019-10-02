@@ -48,7 +48,7 @@ def objective(trial: optuna.Trial) -> float:
     with open(settings_file, "r") as json_file:
         settings = json.load(json_file)
 
-    settings["env"]["sight_len"] = trial.suggest_int("sight_len", 2, 10)
+    # settings["env"]["sight_len"] = trial.suggest_int("sight_len", 2, 10)
     settings["env"]["num_agents"] = trial.suggest_int("num_agents", 2, 30)
     settings["env"]["food_density"] = trial.suggest_uniform("food_density", 0.05, 0.3)
     settings["env"]["food_size_mean"] = trial.suggest_uniform("foodsz_meann", 0.01, 0.3)
