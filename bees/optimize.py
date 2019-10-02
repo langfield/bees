@@ -27,53 +27,6 @@ def main() -> None:
     study.optimize(objective, n_trials=100)
 
 
-def compute_loss(
-    num_env_steps: int,
-    max_num_env_steps: int,
-    avg_agent_lifetime: float,
-    aging_rate: float,
-    num_agents: int,
-    width: int,
-    height: int,
-) -> float:
-    """
-    Computes the optuna loss function.
-
-    Parameters
-    ----------
-    num_env_steps : ``int``.
-        Number of environment steps completed so far.
-    max_num_env_steps : ``int``.
-        Number of environment steps to attempt.
-    avg_agent_lifetime : ``float``.
-        Average agent lifetime over all done agents measured in environment steps.
-    aging_rate : ``float``.
-        Health loss for all agents at each environment step.
-    num_agents : ``int``.
-        Number of living agents.
-    width : ``int``.
-        Width of the grid.
-    height : ``int``.
-        Height of the grid.
-
-    Returns
-    -------
-    loss : ``float``.
-        Loss as computed for an optuna trial.
-    """
-    # Constants.
-    # HARDCODE
-    optimal_density = 0.05
-    optimal_lifetime = 5
-
-    agent_density = num_agents / (width * height)
-    lifetime_loss = (avg_agent_lifetime / (1 / aging_rate) - optimal_lifetime) ** 2
-    density_loss = (agent_density - optimal_density) ** 2
-    step_loss = (max_num_env_steps - num_env_steps) ** 2
-    loss = lifetime_loss + density_loss + step_loss
-    return loss
-
-
 def objective(trial: optuna.Trial) -> float:
     """
     Optuna objective function. Should never be called explicitly.

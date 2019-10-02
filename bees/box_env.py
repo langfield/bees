@@ -684,6 +684,10 @@ class Env:
                     agent.pos = self.HEAVEN
                     killed_agent_ids.append(agent_id)
 
+                # Update agent ages and update info dictionary
+                agent.age += 1
+                info[agent_id] = {"age": agent.age}
+
         # Remove killed agents from self.agents
         for killed_agent_id in killed_agent_ids:
             self.agents.pop(killed_agent_id)

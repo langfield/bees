@@ -20,7 +20,6 @@ from a2c_ppo_acktr.storage import RolloutStorage
 # from evaluation import evaluate
 
 from box_main import create_env
-from optimize import compute_loss
 
 # pylint: disable=bad-continuation
 
@@ -103,10 +102,12 @@ def train(settings: Dict[str, Any]):
     value_losses: Dict[int, float] = {}
     action_losses: Dict[int, float] = {}
     dist_entropies: Dict[int, float] = {}
+    agent_lifetimes: List[int] = []
 
     obs = env.reset()
 
     # Initialize first policies.
+    env_done = False
     for agent_id, agent_obs in obs.items():
         if agent_id not in agents:
             agent, actor_critic, rollouts = get_agent(
@@ -171,8 +172,7 @@ def train(settings: Dict[str, Any]):
                 agent_obs = obs[agent_id]
                 agent_reward = rewards[agent_id]
                 agent_done = dones[agent_id]
-                # TODO: implement ``infos`` in environment.
-                agent_info = {}
+                agent_info = infos[agent_id]
 
                 # Initialize new policies.
                 if agent_id not in agents:
@@ -211,6 +211,7 @@ def train(settings: Dict[str, Any]):
                         actor_critic = actor_critics.pop(agent_id)
                         del actor_critic
                         # TODO: should we remove from ``rollout_map`` and ``agents``?
+                        agent_lifetimes.append(agent_info["age"])
                         agent = agents.pop(agent_id)
                         del agent
 
@@ -236,14 +237,16 @@ def train(settings: Dict[str, Any]):
                     )
 
             # Print out environment state.
-            os.system("clear")
-            print(env)
-            time.sleep(0)
+            if settings["env"]["print"]:
+                os.system("clear")
+                print(env)
             if all(dones.values()):
-                print("All agents have died.")
-                sys.exit()
+                if settings["env"]["print"]:
+                    print("All agents have died.")
+                env_done = True
             steps_completed += 1
 
+            avg_agent_lifetime = np.mean(agent_lifetimes)
             loss = compute_loss(
                 steps_completed,
                 args.num_env_steps,
@@ -344,11 +347,62 @@ def train(settings: Dict[str, Any]):
                     )
                 """
 
+        if env_done:
+            break
+
+    return loss
+
+def compute_loss(
+    num_env_steps: int,
+    max_num_env_steps: int,
+    avg_agent_lifetime: float,
+    aging_rate: float,
+    num_agents: int,
+    width: int,
+    height: int,
+) -> float:
+    """
+    Computes the optuna loss function.
+
+    Parameters
+    ----------
+    num_env_steps : ``int``.
+        Number of environment steps completed so far.
+    max_num_env_steps : ``int``.
+        Number of environment steps to attempt.
+    avg_agent_lifetime : ``float``.
+        Average agent lifetime over all done agents measured in environment steps.
+    aging_rate : ``float``.
+        Health loss for all agents at each environment step.
+    num_agents : ``int``.
+        Number of living agents.
+    width : ``int``.
+        Width of the grid.
+    height : ``int``.
+        Height of the grid.
+
+    Returns
+    -------
+    loss : ``float``.
+        Loss as computed for an optuna trial.
+    """
+    # Constants.
+    # HARDCODE
+    optimal_density = 0.05
+    optimal_lifetime = 5
+
+    agent_density = num_agents / (width * height)
+    lifetime_loss = (avg_agent_lifetime / (1 / aging_rate) - optimal_lifetime) ** 2
+    density_loss = (agent_density - optimal_density) ** 2
+    step_loss = (max_num_env_steps - num_env_steps) ** 2
+    loss = lifetime_loss + density_loss + step_loss
+    return loss
+
 
 if __name__ == "__main__":
     # Get settings and create environment.
     # HARDCODE
-    settings_file = "settings/torch.json"
+    settings_file = "settings/settings.json"
     with open(settings_file, "r") as f:
         settings = json.load(f)
     train(settings)
