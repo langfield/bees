@@ -181,3 +181,23 @@ Things to come back to:
 
     Agents via reproduction should start with health that is dependent on parents' health 
     at time of birth, not full health.
+
+    Create an object type for grid boundary, so that agents can distinguish between the
+    edge of the grid and just empty space.
+
+    Add agent age as input to reward function.
+
+#===========================================================================================
+
+    Current sprint:
+    - Refactor
+      - Move old stuff into new branch/tag
+    - Fix agent learning rate
+    - Investigate agents not moving
+    - Add food regeneration dependency
+    - Fix observation CNN
+    - Add agent lifetime and other relevant stats to log
+    - Formulate/run long experiment
+    - Refactor
+      - Clean up hardcoding
+      - Docstrings, mypy, blacken
