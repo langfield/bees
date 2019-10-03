@@ -470,6 +470,7 @@ class Env:
             The position of the object being removed.
             
         Returns
+        -------
         in_grid : ``bool``.
             Whether there is an object of that object type at ``pos``.
         """
@@ -510,7 +511,16 @@ class Env:
         return in_grid
 
     def _plant(self) -> None:
-        """ Plant k new foods in the grid, where k is Gaussian. """
+        """ 
+        Plant k new foods in the grid, where k is Gaussian.
+
+        Updates
+        -------
+        self._place() : ``Callable``.
+            Updates all variables updated by this function.
+        self.num_foods : ``int``.
+            Number of foods in the environment.
+        """
 
         # Generate and validate the number of foods to plant.
         food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
@@ -541,8 +551,29 @@ class Env:
     def _move(
         self, action_dict: Dict[int, Tuple[int, int, int]]
     ) -> Dict[int, Tuple[int, int, int]]:
-        """ Identify collisions and update ``action_dict``,
-            ``self.grid``, and ``agent.pos``.
+        """ 
+        Moves agents according to the move subactions in ``action_dict``. Checks for
+        conflicts before moving in order to avoid collisions. Updates ``action_dict``
+        with the actual, conflict-free actions taken by each agent.
+
+        Parameters
+        ----------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
+
+        Updates
+        -------
+        self.agents : ``Dict[int, Agent]``.
+            Map from agent ids to ``Agent`` objects.
+        self._remove() : ``Callable``.
+            All variables updated by this function call.
+        self._place() : ``Callable``.
+            All variables updated by this function call.
+
+        Returns
+        -------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
         """
         # Shuffle the keys.
         shuffled_items = list(action_dict.items())
@@ -572,8 +603,23 @@ class Env:
         return action_dict
 
     def _consume(self, action_dict: Dict[int, Tuple[int, int, int]]) -> None:
-        """ Takes as input a collision-free ``action_dict`` and
-            executes the ``consume`` action for all agents.
+        """ 
+        Takes as input a collision-free ``action_dict`` and
+        executes the ``consume`` action for all agents.
+        
+        Parameters
+        ----------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
+        
+        Updates
+        -------
+        self.agents : ``Dict[int, Agent]``.
+            Map from agent ids to ``Agent`` objects.
+        self._remove() : ``Callable``.
+            All variables updated by this function call.
+        self.num_foods : ``int``.
+            Number of foods in the environment.
         """
         for agent_id, action in action_dict.items():
 
@@ -602,6 +648,23 @@ class Env:
         Takes as input a collision-free ``action_dict`` and
         executes the ``mate`` action for all agents.
         Returns a set of the ids of the newly created children.
+        
+        Parameters
+        ----------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
+        
+        Updates
+        -------
+        self.agents : ``Dict[int, Agent]``.
+            Map from agent ids to ``Agent`` objects.
+        self._place() : ``Callable``.
+            All variables updated by this function call.
+
+        Returns
+        -------
+        child_ids : ``Set[int]``.
+            Ids of the newly created child agents. 
         """
         child_ids = set()
         for mom_id, action in action_dict.items():
@@ -695,8 +758,21 @@ class Env:
 
         return child_ids
 
-    def _get_obs(self, pos: Tuple[int, int]) -> Tuple[Tuple[Tuple[int, ...]]]:
-        """ Returns a ``np.ndarray`` of observations given an agent ``pos``. """
+    def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
+        """ 
+        Returns an observation given an agent ``pos``.
+
+        Parameters
+        ----------
+        pos : ``Tuple[int, int]``.
+            A grid position.
+
+        Returns
+        -------
+        obs : ``np.ndarray``.
+            The observation from the given position.
+            Shape: ``(obs_len, obs_len, num_obj_types)``.
+        """
 
         # Calculate bounds of field of vision.
         x = pos[0]
@@ -736,8 +812,13 @@ class Env:
 
     def get_action_dict(self) -> Dict[int, Tuple[int, int, int]]:
         """
-        Constructs ``action_dict`` by querying individual agents for
-        their actions based on their observations.
+        Constructs ``action_dict`` by querying individual agents for their actions 
+        based on their observations. Used only for dummy training runs.
+
+        Returns
+        -------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
         """
         action_dict = {}
 
@@ -747,7 +828,7 @@ class Env:
         return action_dict
 
     def step(
-        self, action_array_dict: Dict[int, np.array]
+        self, action_array_dict: Dict[int, np.ndarray]
     ) -> Tuple[
         Dict[int, np.ndarray], Dict[int, float], Dict[Any, bool], Dict[int, Any]
     ]:
@@ -757,6 +838,22 @@ class Env:
         are strings from the sets
             ``movements = set(["up", "down", "left", "right", "stay"])``
             ``consumptions = set(["eat", "noeat"])``.
+
+        Parameters
+        ----------
+        action_array_dict : ``Dict[int, np.ndarray]``.
+            Maps agent ids to actions as multibinary numpy arrays.
+
+        Returns
+        -------
+        obs : ``Dict[int, np.ndarray]``.
+            Maps agent ids to observations.
+        rew : ``Dict[int, float]``.
+            Maps agent ids to rewards.
+        done : ``Dict[int, bool]``.
+            Maps agent ids to done status.
+        info : ``Dict[int, Any]``.
+            Maps agent ids to various per-agent info.
         """
         REPR_LOG.write("===STEP===\n")
         REPR_LOG.flush()
