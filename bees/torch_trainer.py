@@ -27,7 +27,7 @@ from box_main import create_env
 
 
 def train(settings: Dict[str, Any]):
-    " Runs the environment. " ""
+    """ Runs the environment. """
     args = get_args()
     args.num_env_steps = settings["env"]["time_steps"]
     print("Arguments:", str(args))
