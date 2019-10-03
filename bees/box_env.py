@@ -29,7 +29,65 @@ PRINT_DONES = True
 
 
 class Env:
-    """ Environment with bees in it. """
+    """ 
+    Environment with bees in it.
+    
+    Parameters
+    ----------
+    width : ``int``.
+        Width of the environment grid.
+    height : ``int``.
+        Height of the environment grid.
+    sight_len : ``int``.
+        How far agents are able to see in each cardinal direction.
+    num_obj_types : ``int``.
+        The number of distinct entity classes in the environment. Note that
+        we currently have only two (agents, food).
+    num_agents : ``int``.
+        Initial number of agents in the environment.
+    aging_rate : ``float``.
+        The amount of health agents lose on each timestep.
+    food_density : ``float``.
+        The initial proportion of food in the grid.
+    food_size_mean : ``float``.
+        The mean of the Gaussian from which food size is sampled.
+    food_size_stddev : ``float``.
+        The standard deviation of the Gaussian from which food size is sampled.
+    plant_foods_mean : ``float``.
+        The mean of the Gaussian from which the number of foods to add to the
+        grid at each timestep is sampled. 
+    plant_foods_stddev : ``float``.
+        The standard deviation of the Gaussian from which the number of foods 
+        to add to the grid at each timestep is sampled.
+    food_plant_retries : ``int``.
+        How many times to attempt to add a food item to the environment given
+        a conflict before giving up.
+    mating_cooldown_len : ``int``.
+        How long agents must wait in between mate actions.
+    min_mating_health : ``float``.
+        The minimum health bar value at which agents can mate.
+    agent_init_x_upper_bound : ``int``.
+        The right bound on the top left grid section in which the first agents
+        are initialized.
+    agent_init_y_upper_bound : ``int``.
+        The bottom bound on the top left grid section in which the first agents
+        are initialized.
+    n_layers : ``int``.
+        Number of layers in the reward network.
+    hidden_dim : ``int``.
+        Hidden dimension of the reward network.
+    reward_weight_mean : ``float``.
+        Mean for weight initialization distribution.
+    reward_weight_stddev : ``float``.
+        Standard deviation for weight initialization distribution.
+    mut_sigma : ``float``.
+        Standard deviation of mutation operation on reward vectors.
+    mut_p : ``float``.
+        Probability of mutation on reward vectors.
+    consts : ``Dict[str, Any]``.
+        Dictionary of various constants.
+    """
+    # TODO: make optional arguments consistent throughout nested init calls.
 
     def __init__(
         self,
@@ -159,7 +217,22 @@ class Env:
         self.iteration = 0
 
     def fill(self) -> None:
-        """Populate the environment with food and agents."""
+        """ 
+        Populate the environment with food and agents.
+
+        Updates
+        -------
+        self.grid : ``np.ndarray``.
+            Grid containing agents and food.
+            Shape: ``(width, height, num_obj_types)``.
+        self.id_map : ``List[List[Dict[int, Set[int]]]]``.
+            List of lists in the shape of the grid which maps object type ids to 
+            a set of object ids of objects of that type at that position in the grid.
+        self.num_foods : ``int``.
+            Number of foods in the environment.
+        """
+        # TODO: Add updates from calls to ``self._place()``.
+
         # Reset ``self.grid``.
         self.grid = np.zeros((self.width, self.height, self.num_obj_types))
         self.id_map = [[{} for y in range(self.height)] for x in range(self.width)]
@@ -191,7 +264,28 @@ class Env:
         self.num_foods = self.initial_num_foods
 
     def reset(self) -> Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]:
-        """ Reset the entire environment. """
+        """ 
+        Reset the entire environment.
+
+        Updates
+        -------
+        self.agents : ``Dict[int, Agent]``.
+            Map from agent ids to ``Agent`` objects.
+        self.iteration : ``int``.
+            The current environment iteration. 
+        self.resetted : ``bool``.
+            Whether the envrionment has been reset.
+        self.dones : ``Dict[int, bool]``.
+            Map from agent ids to death status.
+        self.fill() : ``Callable``.
+            All updates made during calls to this function.
+        
+        Returns
+        -------
+        obs : ``Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]``.
+            Initial agent observations.
+        """
+        # TODO: reconcile ``self.iteration`` and ``steps_completed``.
 
         # Get average rewards for agents from previous episode.
         if self.agents != []:
@@ -225,8 +319,9 @@ class Env:
         # Set initial agent observations
         for _, agent in self.agents.items():
             agent.observation = self._get_obs(agent.pos)
-
-        return {i: agent.reset() for i, agent in self.agents.items()}
+        obs = {i: agent.reset() for i, agent in self.agents.items()}
+        
+        return obs
 
     def _update_pos(self, pos: Tuple[int, int], move: int) -> Tuple[int, int]:
         """Compute new position from a given move."""
