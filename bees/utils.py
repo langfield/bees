@@ -1,20 +1,49 @@
 """ Various functions for use in ``env.py``. """
 import os
 import datetime
-from typing import Tuple, Any
+from typing import Tuple
 
 import numpy as np
 
 
 def one_hot(k: int, dim: int) -> np.ndarray:
-    """ Returns a one-hot vector of length dim with a set bit of k. """
+    """
+    Returns a one-hot vector of length dim with a set bit of k.
+
+    Parameters
+    ----------
+    k : ``int``.
+        Which bit to set in the one-hot vector.
+    dim : ``int``.
+        The dimension of the one-hot vector.
+
+    Returns
+    -------
+    vec : ``np.ndarray``.
+        The resultant vector.
+        Shape: ``(dim,)``.
+    """
     vec = np.zeros([dim])
     vec[k] = 1
     return vec
 
 
 def convert_obs_to_tuple(obs: np.ndarray) -> Tuple[Tuple[Tuple[int, ...], ...], ...]:
-    """ Convert an observation to a tuple. """
+    """
+    Convert an observation to a tuple.
+
+    Parameters
+    ----------
+    obs : ``np.ndarray``.
+        Observation from some grid position.
+        Shape: ``(obs_len, obs_len, num_obj_types)``.
+
+    Returns
+    -------
+    observation_tuple : ``Tuple[Tuple[Tuple[int, ...], ...], ...]``.
+        The converted observation with the same shape.
+    """
+    # TODO: reconcile naming of obs in trainer and obs of a single agent.
 
     outer_list = []
     for x in range(obs.shape[0]):
@@ -26,17 +55,23 @@ def convert_obs_to_tuple(obs: np.ndarray) -> Tuple[Tuple[Tuple[int, ...], ...], 
             point_obs = list(obs[x, y])
             for i, _ in enumerate(point_obs):
                 point_obs[i] = int(point_obs[i])
-
             inner_list.append(tuple(point_obs))
-
         outer_list.append(tuple(inner_list))
+    observation_tuple = tuple(outer_list)
 
-    return tuple(outer_list)
+    return observation_tuple
 
 
-def get_logs() -> Tuple[Any, Any]:
+def get_logs() -> Tuple["TextIOWrapper", "TextIOWrapper"]:
     """
     Creates and returns log objects for repr and reward logs.
+
+    Returns
+    -------
+    repr_log : ``TextIOWrapper``.
+        Environment visualization and stats log.
+    rew_log : ``TextIOWrapper``.
+        Agent rewards log.
     """
 
     # HARDCODE
