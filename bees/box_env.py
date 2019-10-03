@@ -18,7 +18,7 @@ import gym
 # Bees imports.
 from agent import Agent
 from genetics import get_child_reward_network
-from utils import convert_obs_to_tuple, get_logs
+from utils import get_logs
 
 # Set global log file
 REPR_LOG, REW_LOG = get_logs()
@@ -27,11 +27,12 @@ REPR_LOG, REW_LOG = get_logs()
 PRINT_AGENT_STATS = True
 PRINT_DONES = True
 
+# pylint: disable=bad-continuation
 
 class Env:
-    """ 
+    """
     Environment with bees in it.
-    
+
     Parameters
     ----------
     width : ``int``.
@@ -55,9 +56,9 @@ class Env:
         The standard deviation of the Gaussian from which food size is sampled.
     plant_foods_mean : ``float``.
         The mean of the Gaussian from which the number of foods to add to the
-        grid at each timestep is sampled. 
+        grid at each timestep is sampled.
     plant_foods_stddev : ``float``.
-        The standard deviation of the Gaussian from which the number of foods 
+        The standard deviation of the Gaussian from which the number of foods
         to add to the grid at each timestep is sampled.
     food_plant_retries : ``int``.
         How many times to attempt to add a food item to the environment given
@@ -87,6 +88,7 @@ class Env:
     consts : ``Dict[str, Any]``.
         Dictionary of various constants.
     """
+
     # TODO: make optional arguments consistent throughout nested init calls.
 
     def __init__(
@@ -134,8 +136,12 @@ class Env:
         self.agent_init_y_upper_bound = agent_init_y_upper_bound
 
         # HARDCODE
-        self.agent_init_x_upper_bound = min(math.ceil(2 * math.sqrt(num_agents)), self.width)
-        self.agent_init_x_upper_bound = min(math.ceil(2 * math.sqrt(num_agents)), self.height)
+        self.agent_init_x_upper_bound = min(
+            math.ceil(2 * math.sqrt(num_agents)), self.width
+        )
+        self.agent_init_x_upper_bound = min(
+            math.ceil(2 * math.sqrt(num_agents)), self.height
+        )
 
         self.n_layers = n_layers
         self.hidden_dim = hidden_dim
@@ -217,7 +223,7 @@ class Env:
         self.iteration = 0
 
     def fill(self) -> None:
-        """ 
+        """
         Populate the environment with food and agents.
 
         Updates
@@ -226,7 +232,7 @@ class Env:
             Grid containing agents and food.
             Shape: ``(width, height, num_obj_types)``.
         self.id_map : ``List[List[Dict[int, Set[int]]]]``.
-            List of lists in the shape of the grid which maps object type ids to 
+            List of lists in the shape of the grid which maps object type ids to
             a set of object ids of objects of that type at that position in the grid.
         self.num_foods : ``int``.
             Number of foods in the environment.
@@ -264,7 +270,7 @@ class Env:
         self.num_foods = self.initial_num_foods
 
     def reset(self) -> Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]:
-        """ 
+        """
         Reset the entire environment.
 
         Updates
@@ -272,14 +278,14 @@ class Env:
         self.agents : ``Dict[int, Agent]``.
             Map from agent ids to ``Agent`` objects.
         self.iteration : ``int``.
-            The current environment iteration. 
+            The current environment iteration.
         self.resetted : ``bool``.
             Whether the envrionment has been reset.
         self.dones : ``Dict[int, bool]``.
             Map from agent ids to death status.
         self.fill() : ``Callable``.
             All updates made during calls to this function.
-        
+
         Returns
         -------
         obs : ``Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]``.
@@ -320,22 +326,22 @@ class Env:
         for _, agent in self.agents.items():
             agent.observation = self._get_obs(agent.pos)
         obs = {i: agent.reset() for i, agent in self.agents.items()}
-        
+
         return obs
 
     def _update_pos(self, pos: Tuple[int, int], move: int) -> Tuple[int, int]:
         """
         Compute new position from a given move.
-        
+
         Parameters
         ----------
         pos : ``Tuple[int, int]``.
             An agent's current position.
         move : ``int``.
             Selected move action.
-       
+
         Returns
-        ------- 
+        -------
         new_pos : ``Tuple[int, int]``.
             Resultant position after move.
         """
@@ -378,7 +384,7 @@ class Env:
             Grid containing agents and food.
             Shape: ``(width, height, num_obj_types)``.
         self.id_map : ``List[List[Dict[int, Set[int]]]]``.
-            List of lists in the shape of the grid which maps object type ids to 
+            List of lists in the shape of the grid which maps object type ids to
             a set of object ids of objects of that type at that position in the grid.
         """
         x = pos[0]
@@ -412,7 +418,7 @@ class Env:
         """
         Place an object of type ``obj_type_id`` at the grid at ``pos``.
         Optionally place the object in ``self.id_map`` if it has an identifier.
-        
+
         Parameters
         ----------
         obj_type_id : ``int``.
@@ -428,7 +434,7 @@ class Env:
             Grid containing agents and food.
             Shape: ``(width, height, num_obj_types)``.
         self.id_map : ``List[List[Dict[int, Set[int]]]]``.
-            List of lists in the shape of the grid which maps object type ids to 
+            List of lists in the shape of the grid which maps object type ids to
             a set of object ids of objects of that type at that position in the grid.
         """
         x = pos[0]
@@ -468,7 +474,7 @@ class Env:
             The object type of the object being removed.
         pos : ``Tuple[int, int]``.
             The position of the object being removed.
-            
+
         Returns
         -------
         in_grid : ``bool``.
@@ -511,7 +517,7 @@ class Env:
         return in_grid
 
     def _plant(self) -> None:
-        """ 
+        """
         Plant k new foods in the grid, where k is Gaussian.
 
         Updates
@@ -551,7 +557,7 @@ class Env:
     def _move(
         self, action_dict: Dict[int, Tuple[int, int, int]]
     ) -> Dict[int, Tuple[int, int, int]]:
-        """ 
+        """
         Moves agents according to the move subactions in ``action_dict``. Checks for
         conflicts before moving in order to avoid collisions. Updates ``action_dict``
         with the actual, conflict-free actions taken by each agent.
@@ -603,15 +609,15 @@ class Env:
         return action_dict
 
     def _consume(self, action_dict: Dict[int, Tuple[int, int, int]]) -> None:
-        """ 
+        """
         Takes as input a collision-free ``action_dict`` and
         executes the ``consume`` action for all agents.
-        
+
         Parameters
         ----------
         action_dict : ``Dict[int, Tuple[int, int, int]]``.
             Maps agent ids to tuples of integer subactions.
-        
+
         Updates
         -------
         self.agents : ``Dict[int, Agent]``.
@@ -648,12 +654,12 @@ class Env:
         Takes as input a collision-free ``action_dict`` and
         executes the ``mate`` action for all agents.
         Returns a set of the ids of the newly created children.
-        
+
         Parameters
         ----------
         action_dict : ``Dict[int, Tuple[int, int, int]]``.
             Maps agent ids to tuples of integer subactions.
-        
+
         Updates
         -------
         self.agents : ``Dict[int, Agent]``.
@@ -664,7 +670,7 @@ class Env:
         Returns
         -------
         child_ids : ``Set[int]``.
-            Ids of the newly created child agents. 
+            Ids of the newly created child agents.
         """
         child_ids = set()
         for mom_id, action in action_dict.items():
@@ -759,7 +765,7 @@ class Env:
         return child_ids
 
     def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
-        """ 
+        """
         Returns an observation given an agent ``pos``.
 
         Parameters
@@ -812,7 +818,7 @@ class Env:
 
     def get_action_dict(self) -> Dict[int, Tuple[int, int, int]]:
         """
-        Constructs ``action_dict`` by querying individual agents for their actions 
+        Constructs ``action_dict`` by querying individual agents for their actions
         based on their observations. Used only for dummy training runs.
 
         Returns
@@ -962,8 +968,17 @@ class Env:
 
     def _get_adj_positions(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         """
-        Returns the positions adjacent (left, right, up, and down) to a given
-        position.
+        Returns the positions adjacent (left, right, up, and down) to a given position.
+
+        Parameters
+        ----------
+        pos : ``Tuple[int, int]``.
+            A grid position.
+
+        Returns
+        -------
+        validated_adj_positions : ``List[Tuple[int, int]]``.
+            List of the adjacent positions in the grid to ``pos``.
         """
 
         x, y = pos
@@ -988,6 +1003,11 @@ class Env:
     def __repr__(self) -> str:
         """
         Returns a representation of the environment state.
+
+        Returns
+        -------
+        output : ``str``.
+            ASCII image of grid along with various statistics and metrics.
         """
         output = "\n"
 
@@ -1056,5 +1076,20 @@ class Env:
         REPR_LOG.write(",\n")
 
     def _new_agent_id(self) -> int:
+        """
+        Grabs a new unique agent id.
+
+        Updates
+        -------
+        self.agent_ids_created : ``int``.
+            The number of agent ids created so far in this episode.
+
+        Returns
+        -------
+        new_id : ``int``.
+            A new unique agent id.
+        """
+        new_id = self.agent_ids_created
         self.agent_ids_created += 1
-        return self.agent_ids_created - 1
+
+        return new_id

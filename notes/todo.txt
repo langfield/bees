@@ -91,4 +91,15 @@ Todo:   Remove agents and actor_critics when they are ``done``. Delete all refer
         Use mean agent lifetime measured in multiples of ``1 / aging_rate`` as an objective, as
         well as agent density.
 
-        Compute distributions of each trial variable with loss below some threshold in optimize. 
+        Compute distributions of each trial variable with loss below some threshold in optimize.
+
+        Add relevant ``Updates`` docstrings sections.
+
+        Maximize the number of functions which can be made ``staticmethod``.
+
+        Determine whether or not to spin out static environment functions into ``utils.py`` or 
+        another file.
+
+        Fix issues with ``agent.py`` bugs outlined in ``TODO`` annotations.
+
+        Delete rllib versions of files, tag git commits. 

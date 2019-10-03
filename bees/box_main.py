@@ -3,16 +3,25 @@ import os
 import sys
 import time
 import json
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 
-import gym
 from box_env import Env
 
 
-def create_env(
-    settings: Dict[str, Any],
-) -> Env:
-    """ Create an instance of ``Env`` and return it. """
+def create_env(settings: Dict[str, Any],) -> Env:
+    """
+    Create an instance of ``Env`` and return it.
+
+    Parameters
+    ----------
+    settings : ``Dict[str, Any]``.
+        Global settings file.
+
+    Returns
+    -------
+    env : ``Env``.
+        Instance of environment class from ``box_env.py``.
+    """
 
     env_config = settings["env"]
     width = env_config["width"]
@@ -73,7 +82,14 @@ def create_env(
 
 
 def main(settings: Dict[str, Any]) -> None:
-    """ Main training loop. """
+    """
+    Main random-policy dummy training loop.
+
+    Parameters
+    ----------
+    settings : ``Dict[str, Any]``.
+        Global settings file.
+    """
 
     env_config = settings["env"]
     time_steps = env_config["time_steps"]
