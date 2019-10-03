@@ -117,6 +117,7 @@ class Agent:
         action : ``Tuple[int, int, int]``.
             Randomly generated action for dummy training runs.
         """
+        # TODO: Fix bug where ``self.observation`` is never updated.
         return self.policy.get_action(self.observation, self.health)
 
     def initialize_reward_weights(self) -> None:

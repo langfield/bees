@@ -7,7 +7,7 @@ import logging
 import argparse
 import collections
 from collections import deque
-from typing import Dict, Tuple, Set, Any
+from typing import Dict, Tuple, Set, List, Any
 
 import gym
 import torch
@@ -26,8 +26,20 @@ from box_main import create_env
 # pylint: disable=bad-continuation
 
 
-def train(settings: Dict[str, Any]):
-    """ Runs the environment. """
+def train(settings: Dict[str, Any]) -> float:
+    """
+    Runs the environment.
+
+    Parameters
+    ----------
+    settings : ``Dict[str, Any]``.
+        Global settings file.
+
+    Returns
+    -------
+    loss : ``float``.
+        The optuna loss.
+    """
     args = get_args()
     args.num_env_steps = settings["env"]["time_steps"]
     print("Arguments:", str(args))
@@ -47,55 +59,6 @@ def train(settings: Dict[str, Any]):
 
     torch.set_num_threads(1)
     device = torch.device("cuda:0" if args.cuda else "cpu")
-
-    def get_agent(
-        args: argparse.Namespace,
-        obs_space: gym.Space,
-        act_space: gym.Space,
-        device: torch.device,
-    ) -> Tuple["AgentAlgo", Policy, RolloutStorage]:
-        " Spins up a new agent/policy. " ""
-
-        actor_critic = Policy(
-            obs_space.shape, act_space, base_kwargs={"recurrent": args.recurrent_policy}
-        )
-        actor_critic.to(device)
-
-        if args.algo == "a2c":
-            agent = algo.A2C_ACKTR(
-                actor_critic,
-                args.value_loss_coef,
-                args.entropy_coef,
-                lr=args.lr,
-                eps=args.eps,
-                alpha=args.alpha,
-                max_grad_norm=args.max_grad_norm,
-            )
-        elif args.algo == "ppo":
-            agent = algo.PPO(
-                actor_critic,
-                args.clip_param,
-                args.ppo_epoch,
-                args.num_mini_batch,
-                args.value_loss_coef,
-                args.entropy_coef,
-                lr=args.lr,
-                eps=args.eps,
-                max_grad_norm=args.max_grad_norm,
-            )
-        elif args.algo == "acktr":
-            agent = algo.A2C_ACKTR(
-                actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True
-            )
-
-        rollouts = RolloutStorage(
-            args.num_steps,
-            args.num_processes,
-            obs_space.shape,
-            act_space,
-            actor_critic.recurrent_hidden_state_size,
-        )
-        return agent, actor_critic, rollouts
 
     # Create multiagent maps.
     actor_critics: Dict[int, Policy] = {}
@@ -378,6 +341,78 @@ def train(settings: Dict[str, Any]):
     return loss
 
 
+def get_agent(
+    args: argparse.Namespace,
+    obs_space: gym.Space,
+    act_space: gym.Space,
+    device: torch.device,
+) -> Tuple["AgentAlgo", Policy, RolloutStorage]:
+    """
+    Spins up a new agent/policy.
+
+    Parameters
+    ----------
+    args : ``argparse.Namespace``.
+        Command-line arguments from a2c-ppo-acktr.
+    obs_space : ``gym.Space``.
+        Observation space from the environment.
+    act_space : ``gym.Space``.
+        Action space from the environment.
+    device : ``torch.device``.
+        The GPU/TPU/CPU.
+
+    Returns
+    -------
+    agent : ``AgentAlgo``.
+        Agent object from a2c-ppo-acktr.
+    actor_critic : ``Policy``.
+        The policy object.
+    rollouts : ``RolloutStorage``.
+        The rollout object.
+    """
+
+    actor_critic = Policy(
+        obs_space.shape, act_space, base_kwargs={"recurrent": args.recurrent_policy}
+    )
+    actor_critic.to(device)
+
+    if args.algo == "a2c":
+        agent = algo.A2C_ACKTR(
+            actor_critic,
+            args.value_loss_coef,
+            args.entropy_coef,
+            lr=args.lr,
+            eps=args.eps,
+            alpha=args.alpha,
+            max_grad_norm=args.max_grad_norm,
+        )
+    elif args.algo == "ppo":
+        agent = algo.PPO(
+            actor_critic,
+            args.clip_param,
+            args.ppo_epoch,
+            args.num_mini_batch,
+            args.value_loss_coef,
+            args.entropy_coef,
+            lr=args.lr,
+            eps=args.eps,
+            max_grad_norm=args.max_grad_norm,
+        )
+    elif args.algo == "acktr":
+        agent = algo.A2C_ACKTR(
+            actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True
+        )
+
+    rollouts = RolloutStorage(
+        args.num_steps,
+        args.num_processes,
+        obs_space.shape,
+        act_space,
+        actor_critic.recurrent_hidden_state_size,
+    )
+    return agent, actor_critic, rollouts
+
+
 def compute_loss(
     num_env_steps: int,
     max_num_env_steps: int,
@@ -441,7 +476,7 @@ def compute_loss(
 if __name__ == "__main__":
     # Get settings and create environment.
     # HARDCODE
-    settings_file = "settings/settings.json"
-    with open(settings_file, "r") as f:
-        settings = json.load(f)
-    train(settings)
+    SETTINGS_FILE = "settings/settings.json"
+    with open(SETTINGS_FILE, "r") as f:
+        SETTINGS = json.load(f)
+    train(SETTINGS)
