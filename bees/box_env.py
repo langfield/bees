@@ -324,7 +324,21 @@ class Env:
         return obs
 
     def _update_pos(self, pos: Tuple[int, int], move: int) -> Tuple[int, int]:
-        """Compute new position from a given move."""
+        """
+        Compute new position from a given move.
+        
+        Parameters
+        ----------
+        pos : ``Tuple[int, int]``.
+            An agent's current position.
+        move : ``int``.
+            Selected move action.
+       
+        Returns
+        ------- 
+        new_pos : ``Tuple[int, int]``.
+            Resultant position after move.
+        """
         new_pos = tuple([0, 0])
         if move == self.UP:
             new_pos = tuple([pos[0], pos[1] + 1])
@@ -339,6 +353,7 @@ class Env:
         else:
             REPR_LOG.close()
             raise ValueError("'%s' is not a valid action.")
+
         return new_pos  # type: ignore
 
     def _remove(
@@ -347,6 +362,24 @@ class Env:
         """
         Remove an object of type ``obj_type_id`` from the grid at ``pos``.
         Optionally remove the object from ``self.id_map`` if it has an identifier.
+
+        Parameters
+        ----------
+        obj_type_id : ``int``.
+            The object type of the object being removed.
+        pos : ``Tuple[int, int]``.
+            The position of the object being removed.
+        obj_id : ``int``, optional.
+            The id of the object being removed, if its object type supports ids.
+
+        Updates
+        -------
+        self.grid : ``np.ndarray``.
+            Grid containing agents and food.
+            Shape: ``(width, height, num_obj_types)``.
+        self.id_map : ``List[List[Dict[int, Set[int]]]]``.
+            List of lists in the shape of the grid which maps object type ids to 
+            a set of object ids of objects of that type at that position in the grid.
         """
         x = pos[0]
         y = pos[1]
@@ -379,6 +412,24 @@ class Env:
         """
         Place an object of type ``obj_type_id`` at the grid at ``pos``.
         Optionally place the object in ``self.id_map`` if it has an identifier.
+        
+        Parameters
+        ----------
+        obj_type_id : ``int``.
+            The object type of the object being removed.
+        pos : ``Tuple[int, int]``.
+            The position of the object being removed.
+        obj_id : ``int``, optional.
+            The id of the object being removed, if its object type supports ids.
+
+        Updates
+        -------
+        self.grid : ``np.ndarray``.
+            Grid containing agents and food.
+            Shape: ``(width, height, num_obj_types)``.
+        self.id_map : ``List[List[Dict[int, Set[int]]]]``.
+            List of lists in the shape of the grid which maps object type ids to 
+            a set of object ids of objects of that type at that position in the grid.
         """
         x = pos[0]
         y = pos[1]
@@ -408,6 +459,20 @@ class Env:
             self.id_map[x][y][obj_type_id].add(obj_id)
 
     def _obj_exists(self, obj_type_id: int, pos: Tuple[int, int]) -> bool:
+        """
+        Check if an object of object type ``obj_typ_id`` exists at the given position.
+
+        Parameters
+        ----------
+        obj_type_id : ``int``.
+            The object type of the object being removed.
+        pos : ``Tuple[int, int]``.
+            The position of the object being removed.
+            
+        Returns
+        in_grid : ``bool``.
+            Whether there is an object of that object type at ``pos``.
+        """
 
         # Check grid.
         grid_idx = pos + (obj_type_id,)
