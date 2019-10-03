@@ -8,6 +8,7 @@ import numpy as np
 from policy import Policy
 from utils import convert_obs_to_tuple
 
+# pylint: disable=bad-continuation
 
 class Agent:
     """
