@@ -193,8 +193,6 @@ Things to come back to:
 #===========================================================================================
 
     Current sprint:
-    - Refactor
-      - Move old stuff into new branch/tag
     - Fix agent learning rate
     - Investigate agents not moving
     - Add food regeneration dependency
