@@ -1,18 +1,18 @@
 """ PyTorch environment trainer. """
 import os
-import sys
 import json
 import time
 import logging
 import argparse
 import collections
-from collections import deque
+from functools import partial
 from typing import Dict, Tuple, Set, List, Any
 
 import gym
 import torch
 import optuna
 import numpy as np
+import torch.multiprocessing as mp
 
 from a2c_ppo_acktr import algo, utils
 from a2c_ppo_acktr.arguments import get_args
@@ -71,6 +71,9 @@ def train(settings: Dict[str, Any]) -> float:
     dist_entropies: Dict[int, float] = {}
     agent_lifetimes: List[int] = []
 
+    # Create process pool.
+    pool = mp.Pool()
+
     obs = env.reset()
 
     # Initialize first policies.
@@ -83,7 +86,7 @@ def train(settings: Dict[str, Any]) -> float:
             agents[agent_id] = agent
             actor_critics[agent_id] = actor_critic
             rollout_map[agent_id] = rollouts
-            episode_rewards[agent_id] = deque(maxlen=10)
+            episode_rewards[agent_id] = collections.deque(maxlen=10)
 
         # Copy first observations to rollouts, and send to device.
         rollouts = rollout_map[agent_id]
@@ -151,7 +154,7 @@ def train(settings: Dict[str, Any]) -> float:
                     agents[agent_id] = agent
                     actor_critics[agent_id] = actor_critic
                     rollout_map[agent_id] = rollouts
-                    episode_rewards[agent_id] = deque(maxlen=10)
+                    episode_rewards[agent_id] = collections.deque(maxlen=10)
 
                     # Copy first observations to rollouts, and send to device.
                     rollouts = rollout_map[agent_id]
@@ -240,6 +243,28 @@ def train(settings: Dict[str, Any]) -> float:
                     print("Density too high:", agent_density)
                     raise optuna.structs.TrialPruned()
 
+        print("\n\n")
+        t0 = time.time()
+        update_agent_with_maps = partial(
+            update_agent,
+            actor_critics=actor_critics,
+            rollout_map=rollout_map,
+            args=args,
+        )
+        print("t0:", time.time() - t0)
+        t1 = time.time()
+        losses_and_entropies: List[Tuple[int, float, float, float]] = pool.map(
+            update_agent_with_maps, agents.items()
+        )
+
+        for agent_id, value_loss, action_loss, dist_entropy in losses_and_entropies:
+            value_losses[agent_id] = value_loss
+            action_losses[agent_id] = action_loss
+            dist_entropies[agent_id] = dist_entropy
+        print("t1:", time.time() - t1)
+        time.sleep(1)
+
+        """
         # DEBUG
         print("\n\n")
         t0_list = []
@@ -283,9 +308,12 @@ def train(settings: Dict[str, Any]) -> float:
                 dist_entropies[agent_id] = dist_entropy
 
                 rollouts.after_update()
+        """
 
+        """
         print("t0 avg:", np.mean(t0_list))
         print("t1 avg:", np.mean(t1_list))
+        """
 
         """
         # save for every interval-th episode or for the last epoch
@@ -360,6 +388,35 @@ def train(settings: Dict[str, Any]) -> float:
     )
 
     return loss
+
+
+def update_agent(
+    agent_pair: Tuple[int, "AgentAlgo"],
+    actor_critics: Dict[int, Policy],
+    rollout_map: Dict[int, RolloutStorage],
+    args: argparse.Namespace,
+) -> Tuple[float, float, float]:
+    agent_id, agent = agent_pair
+
+    actor_critic = actor_critics[agent_id]
+    rollouts = rollout_map[agent_id]
+
+    with torch.no_grad():
+        next_value = actor_critic.get_value(
+            rollouts.obs[-1], rollouts.recurrent_hidden_states[-1], rollouts.masks[-1]
+        ).detach()
+
+    rollouts.compute_returns(
+        next_value,
+        args.use_gae,
+        args.gamma,
+        args.gae_lambda,
+        args.use_proper_time_limits,
+    )
+
+    value_loss, action_loss, dist_entropy = agent.update(rollouts)
+    rollouts.after_update()
+    return agent_id, value_loss, action_loss, dist_entropy
 
 
 def get_agent(
@@ -495,6 +552,9 @@ def compute_loss(
 
 
 if __name__ == "__main__":
+    # Set multiprocessing start method to be compatible with torch.
+    mp.set_start_method('spawn')
+
     # Get settings and create environment.
     # HARDCODE
     SETTINGS_FILE = "settings/settings.json"
