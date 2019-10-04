@@ -10,6 +10,7 @@ from utils import convert_obs_to_tuple
 
 # pylint: disable=bad-continuation
 
+
 class Agent:
     """
     An agent with position and health attributes.
