@@ -240,8 +240,16 @@ def train(settings: Dict[str, Any]) -> float:
                     print("Density too high:", agent_density)
                     raise optuna.structs.TrialPruned()
 
+        # DEBUG
+        print("\n\n")
+        t0_list = []
+        t1_list = []
+
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
+
+                # DEBUG
+                t0 = time.time()
 
                 actor_critic = actor_critics[agent_id]
                 rollouts = rollout_map[agent_id]
@@ -261,13 +269,25 @@ def train(settings: Dict[str, Any]) -> float:
                     args.use_proper_time_limits,
                 )
 
+                # DEBUG
+                t0_list.append(time.time() - t0)
+                t1 = time.time()
+
                 value_loss, action_loss, dist_entropy = agent.update(rollouts)
+
+                # DEBUG
+                t1_list.append(time.time() - t1)
+
                 value_losses[agent_id] = value_loss
                 action_losses[agent_id] = action_loss
                 dist_entropies[agent_id] = dist_entropy
 
                 rollouts.after_update()
 
+        print("t0 avg:", np.mean(t0_list))
+        print("t1 avg:", np.mean(t1_list))
+
+        """
         # save for every interval-th episode or for the last epoch
         if (
             j % args.save_interval == 0 or j == num_updates - 1
@@ -287,6 +307,7 @@ def train(settings: Dict[str, Any]) -> float:
                         [actor_critic, getattr(env, "ob_rms", None)],
                         os.path.join(save_path, args.env_name + ".pt"),
                     )
+        """
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
