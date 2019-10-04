@@ -28,7 +28,8 @@ class Agent:
     hidden_dim : ``int``.
         Hidden dimension of the reward network.
     num_actions : ``int``.
-        The number of actions with which the input dimension is computed.
+        The number of actions with which the input dimension of the reward
+        network is computed.
     pos : ``Tuple[int, int]``, optional.
         Current grid position of the agent.
     initial_health : ``float``, optional.
@@ -45,10 +46,7 @@ class Agent:
         How long agent must wait in between mate actions.
     """
 
-    # TODO: ``num_actions`` may be broken since actions are now multi-binary.
-    # TODO: Create a PretrainedAgent class which allows passing of the initial
-    #       health, reward weights and biases, and other things so that we can
-    #       make all arguments required in the init function.
+    # TODO: Remove default values from ``__init__`` parameters.
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -117,7 +115,6 @@ class Agent:
         action : ``Tuple[int, int, int]``.
             Randomly generated action for dummy training runs.
         """
-        # TODO: Fix bug where ``self.observation`` is never updated.
         return self.policy.get_action(self.observation, self.health)
 
     def initialize_reward_weights(self) -> None:
@@ -189,7 +186,7 @@ class Agent:
 
     def get_flat_action(self, action: Tuple[int, int, int]) -> np.ndarray:
         """
-        Computes a binary vector (two concatentated one-hot vectors) which
+        Computes a binary vector (three concatentated one-hot vectors) which
         represents the action.
 
         Parameters
@@ -204,13 +201,13 @@ class Agent:
             The action as an array of shape ``(num_actions,)`` with three
             nonzero values (k-hot where k is the number of action types).
         """
-        # TODO: seems broken, we do not treat the mating action.
-
         action_vec = [0.0 for _ in range(self.num_actions)]
         action_vec[action[0]] = 1.0
         # HARDCODE
         # The 5 here represents the length of the move action space.
         action_vec[5 + action[1]] = 1.0
+        # The 2 here represents the length of the eat action space.
+        action_vec[5 + 2 + action[2]] = 1.0
         action_array = np.array(action_vec)
         return action_array
 
