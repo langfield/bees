@@ -6,7 +6,7 @@ import datetime
 
 import optuna
 
-from torch_trainer import train
+from trainer import train
 
 # pylint: disable=bad-continuation
 

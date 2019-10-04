@@ -187,6 +187,9 @@ Things to come back to:
 
     Add agent age as input to reward function.
 
+    Get rid of all of this array conversion for actions. We have three formats right now
+    (5D multi binary, 3-tuple of ints, and torch.Tensor) and we should just have torch.Tensor.
+
 #===========================================================================================
 
     Current sprint:

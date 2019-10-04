@@ -106,14 +106,14 @@ class Agent:
         else:
             self.reward_biases = copy.deepcopy(reward_biases)
 
-    def get_action(self) -> Tuple[int, int, int]:
+    def get_action(self) -> np.ndarray:
         """
         Uses the policy to choose an action based on the observation.
 
         Returns
         -------
-        action : ``Tuple[int, int, int]``.
-            Randomly generated action for dummy training runs.
+        action: ``np.ndarray``.
+            5D Multi-Binary numpy array representing action.
         """
         return self.policy.get_action(self.observation, self.health)
 

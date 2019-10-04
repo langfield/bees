@@ -14,12 +14,11 @@ import numpy as np
 
 # Package imports.
 import gym
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 # Bees imports.
 from agent import Agent
 from genetics import get_child_reward_network
-from utils import convert_obs_to_tuple, get_logs
+from utils import get_logs
 
 # Set global log file
 REPR_LOG, REW_LOG = get_logs()
@@ -28,9 +27,69 @@ REPR_LOG, REW_LOG = get_logs()
 PRINT_AGENT_STATS = True
 PRINT_DONES = True
 
+# pylint: disable=bad-continuation
 
-class Env(MultiAgentEnv):
-    """ Environment with bees in it. """
+class Env:
+    """
+    Environment with bees in it.
+
+    Parameters
+    ----------
+    width : ``int``.
+        Width of the environment grid.
+    height : ``int``.
+        Height of the environment grid.
+    sight_len : ``int``.
+        How far agents are able to see in each cardinal direction.
+    num_obj_types : ``int``.
+        The number of distinct entity classes in the environment. Note that
+        we currently have only two (agents, food).
+    num_agents : ``int``.
+        Initial number of agents in the environment.
+    aging_rate : ``float``.
+        The amount of health agents lose on each timestep.
+    food_density : ``float``.
+        The initial proportion of food in the grid.
+    food_size_mean : ``float``.
+        The mean of the Gaussian from which food size is sampled.
+    food_size_stddev : ``float``.
+        The standard deviation of the Gaussian from which food size is sampled.
+    plant_foods_mean : ``float``.
+        The mean of the Gaussian from which the number of foods to add to the
+        grid at each timestep is sampled.
+    plant_foods_stddev : ``float``.
+        The standard deviation of the Gaussian from which the number of foods
+        to add to the grid at each timestep is sampled.
+    food_plant_retries : ``int``.
+        How many times to attempt to add a food item to the environment given
+        a conflict before giving up.
+    mating_cooldown_len : ``int``.
+        How long agents must wait in between mate actions.
+    min_mating_health : ``float``.
+        The minimum health bar value at which agents can mate.
+    agent_init_x_upper_bound : ``int``.
+        The right bound on the top left grid section in which the first agents
+        are initialized.
+    agent_init_y_upper_bound : ``int``.
+        The bottom bound on the top left grid section in which the first agents
+        are initialized.
+    n_layers : ``int``.
+        Number of layers in the reward network.
+    hidden_dim : ``int``.
+        Hidden dimension of the reward network.
+    reward_weight_mean : ``float``.
+        Mean for weight initialization distribution.
+    reward_weight_stddev : ``float``.
+        Standard deviation for weight initialization distribution.
+    mut_sigma : ``float``.
+        Standard deviation of mutation operation on reward vectors.
+    mut_p : ``float``.
+        Probability of mutation on reward vectors.
+    consts : ``Dict[str, Any]``.
+        Dictionary of various constants.
+    """
+
+    # TODO: make optional arguments consistent throughout nested init calls.
 
     def __init__(
         self,
@@ -76,6 +135,14 @@ class Env(MultiAgentEnv):
         self.agent_init_x_upper_bound = agent_init_x_upper_bound
         self.agent_init_y_upper_bound = agent_init_y_upper_bound
 
+        # HARDCODE
+        self.agent_init_x_upper_bound = min(
+            math.ceil(2 * math.sqrt(num_agents)), self.width
+        )
+        self.agent_init_x_upper_bound = min(
+            math.ceil(2 * math.sqrt(num_agents)), self.height
+        )
+
         self.n_layers = n_layers
         self.hidden_dim = hidden_dim
         self.reward_weight_mean = reward_weight_mean
@@ -93,6 +160,7 @@ class Env(MultiAgentEnv):
         self.DOWN = consts["DOWN"]
         self.STAY = consts["STAY"]
         self.EAT = consts["EAT"]
+        self.NO_EAT = consts["NO_EAT"]
         self.MATE = consts["MATE"]
         self.NO_MATE = consts["NO_MATE"]
         self.HEAVEN: Tuple[int, int] = tuple(consts["BEE_HEAVEN"])  # type: ignore
@@ -117,6 +185,12 @@ class Env(MultiAgentEnv):
         self.action_space = gym.spaces.Tuple(
             (gym.spaces.Discrete(5), gym.spaces.Discrete(2), gym.spaces.Discrete(2))
         )
+        # ===MOD===
+        # Action space is a MultiBinary space, where the toggles are:
+        # Stay/Move, Left/Right, Up/Down, Eat/NoEat, Mate,NoMate.
+        self.action_space = gym.spaces.MultiBinary(5)
+        # ===MOD===
+
         num_actions = 5 + 2 + 2
         self.num_actions = num_actions
 
@@ -133,6 +207,13 @@ class Env(MultiAgentEnv):
             outer_list.append(inner_space)
         self.observation_space = gym.spaces.Tuple(tuple(outer_list))
 
+        # ===MOD===
+        obs_len = 2 * self.sight_len + 1
+        low_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
+        high_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
+        self.observation_space = gym.spaces.Box(low_obs, high_obs)
+        # ===MOD===
+
         self.agents: Dict[int, Agent] = {}
         self.agent_ids_created = 0
 
@@ -142,7 +223,22 @@ class Env(MultiAgentEnv):
         self.iteration = 0
 
     def fill(self) -> None:
-        """Populate the environment with food and agents."""
+        """
+        Populate the environment with food and agents.
+
+        Updates
+        -------
+        self.grid : ``np.ndarray``.
+            Grid containing agents and food.
+            Shape: ``(width, height, num_obj_types)``.
+        self.id_map : ``List[List[Dict[int, Set[int]]]]``.
+            List of lists in the shape of the grid which maps object type ids to
+            a set of object ids of objects of that type at that position in the grid.
+        self.num_foods : ``int``.
+            Number of foods in the environment.
+        """
+        # TODO: Add updates from calls to ``self._place()``.
+
         # Reset ``self.grid``.
         self.grid = np.zeros((self.width, self.height, self.num_obj_types))
         self.id_map = [[{} for y in range(self.height)] for x in range(self.width)]
@@ -174,7 +270,28 @@ class Env(MultiAgentEnv):
         self.num_foods = self.initial_num_foods
 
     def reset(self) -> Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]:
-        """ Reset the entire environment. """
+        """
+        Reset the entire environment.
+
+        Updates
+        -------
+        self.agents : ``Dict[int, Agent]``.
+            Map from agent ids to ``Agent`` objects.
+        self.iteration : ``int``.
+            The current environment iteration.
+        self.resetted : ``bool``.
+            Whether the envrionment has been reset.
+        self.dones : ``Dict[int, bool]``.
+            Map from agent ids to death status.
+        self.fill() : ``Callable``.
+            All updates made during calls to this function.
+
+        Returns
+        -------
+        obs : ``Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]``.
+            Initial agent observations.
+        """
+        # TODO: reconcile ``self.iteration`` and ``steps_completed``.
 
         # Get average rewards for agents from previous episode.
         if self.agents != []:
@@ -208,11 +325,26 @@ class Env(MultiAgentEnv):
         # Set initial agent observations
         for _, agent in self.agents.items():
             agent.observation = self._get_obs(agent.pos)
+        obs = {i: agent.reset() for i, agent in self.agents.items()}
 
-        return {i: agent.reset() for i, agent in self.agents.items()}
+        return obs
 
     def _update_pos(self, pos: Tuple[int, int], move: int) -> Tuple[int, int]:
-        """Compute new position from a given move."""
+        """
+        Compute new position from a given move.
+
+        Parameters
+        ----------
+        pos : ``Tuple[int, int]``.
+            An agent's current position.
+        move : ``int``.
+            Selected move action.
+
+        Returns
+        -------
+        new_pos : ``Tuple[int, int]``.
+            Resultant position after move.
+        """
         new_pos = tuple([0, 0])
         if move == self.UP:
             new_pos = tuple([pos[0], pos[1] + 1])
@@ -227,6 +359,7 @@ class Env(MultiAgentEnv):
         else:
             REPR_LOG.close()
             raise ValueError("'%s' is not a valid action.")
+
         return new_pos  # type: ignore
 
     def _remove(
@@ -235,6 +368,24 @@ class Env(MultiAgentEnv):
         """
         Remove an object of type ``obj_type_id`` from the grid at ``pos``.
         Optionally remove the object from ``self.id_map`` if it has an identifier.
+
+        Parameters
+        ----------
+        obj_type_id : ``int``.
+            The object type of the object being removed.
+        pos : ``Tuple[int, int]``.
+            The position of the object being removed.
+        obj_id : ``int``, optional.
+            The id of the object being removed, if its object type supports ids.
+
+        Updates
+        -------
+        self.grid : ``np.ndarray``.
+            Grid containing agents and food.
+            Shape: ``(width, height, num_obj_types)``.
+        self.id_map : ``List[List[Dict[int, Set[int]]]]``.
+            List of lists in the shape of the grid which maps object type ids to
+            a set of object ids of objects of that type at that position in the grid.
         """
         x = pos[0]
         y = pos[1]
@@ -267,6 +418,24 @@ class Env(MultiAgentEnv):
         """
         Place an object of type ``obj_type_id`` at the grid at ``pos``.
         Optionally place the object in ``self.id_map`` if it has an identifier.
+
+        Parameters
+        ----------
+        obj_type_id : ``int``.
+            The object type of the object being removed.
+        pos : ``Tuple[int, int]``.
+            The position of the object being removed.
+        obj_id : ``int``, optional.
+            The id of the object being removed, if its object type supports ids.
+
+        Updates
+        -------
+        self.grid : ``np.ndarray``.
+            Grid containing agents and food.
+            Shape: ``(width, height, num_obj_types)``.
+        self.id_map : ``List[List[Dict[int, Set[int]]]]``.
+            List of lists in the shape of the grid which maps object type ids to
+            a set of object ids of objects of that type at that position in the grid.
         """
         x = pos[0]
         y = pos[1]
@@ -296,6 +465,21 @@ class Env(MultiAgentEnv):
             self.id_map[x][y][obj_type_id].add(obj_id)
 
     def _obj_exists(self, obj_type_id: int, pos: Tuple[int, int]) -> bool:
+        """
+        Check if an object of object type ``obj_typ_id`` exists at the given position.
+
+        Parameters
+        ----------
+        obj_type_id : ``int``.
+            The object type of the object being removed.
+        pos : ``Tuple[int, int]``.
+            The position of the object being removed.
+
+        Returns
+        -------
+        in_grid : ``bool``.
+            Whether there is an object of that object type at ``pos``.
+        """
 
         # Check grid.
         grid_idx = pos + (obj_type_id,)
@@ -333,12 +517,20 @@ class Env(MultiAgentEnv):
         return in_grid
 
     def _plant(self) -> None:
-        """ Plant k new foods in the grid, where k is Gaussian. """
+        """
+        Plant k new foods in the grid, where k is Gaussian.
+
+        Updates
+        -------
+        self._place() : ``Callable``.
+            Updates all variables updated by this function.
+        self.num_foods : ``int``.
+            Number of foods in the environment.
+        """
 
         # Generate and validate the number of foods to plant.
-        num_new_foods = round(
-            np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
-        )
+        food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
+        num_new_foods = round(food_ev)
         num_new_foods = max(0, num_new_foods)
         num_new_foods = min(self.height * self.width, num_new_foods)
 
@@ -365,8 +557,29 @@ class Env(MultiAgentEnv):
     def _move(
         self, action_dict: Dict[int, Tuple[int, int, int]]
     ) -> Dict[int, Tuple[int, int, int]]:
-        """ Identify collisions and update ``action_dict``,
-            ``self.grid``, and ``agent.pos``.
+        """
+        Moves agents according to the move subactions in ``action_dict``. Checks for
+        conflicts before moving in order to avoid collisions. Updates ``action_dict``
+        with the actual, conflict-free actions taken by each agent.
+
+        Parameters
+        ----------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
+
+        Updates
+        -------
+        self.agents : ``Dict[int, Agent]``.
+            Map from agent ids to ``Agent`` objects.
+        self._remove() : ``Callable``.
+            All variables updated by this function call.
+        self._place() : ``Callable``.
+            All variables updated by this function call.
+
+        Returns
+        -------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
         """
         # Shuffle the keys.
         shuffled_items = list(action_dict.items())
@@ -396,8 +609,23 @@ class Env(MultiAgentEnv):
         return action_dict
 
     def _consume(self, action_dict: Dict[int, Tuple[int, int, int]]) -> None:
-        """ Takes as input a collision-free ``action_dict`` and
-            executes the ``consume`` action for all agents.
+        """
+        Takes as input a collision-free ``action_dict`` and
+        executes the ``consume`` action for all agents.
+
+        Parameters
+        ----------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
+
+        Updates
+        -------
+        self.agents : ``Dict[int, Agent]``.
+            Map from agent ids to ``Agent`` objects.
+        self._remove() : ``Callable``.
+            All variables updated by this function call.
+        self.num_foods : ``int``.
+            Number of foods in the environment.
         """
         for agent_id, action in action_dict.items():
 
@@ -426,6 +654,23 @@ class Env(MultiAgentEnv):
         Takes as input a collision-free ``action_dict`` and
         executes the ``mate`` action for all agents.
         Returns a set of the ids of the newly created children.
+
+        Parameters
+        ----------
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
+            Maps agent ids to tuples of integer subactions.
+
+        Updates
+        -------
+        self.agents : ``Dict[int, Agent]``.
+            Map from agent ids to ``Agent`` objects.
+        self._place() : ``Callable``.
+            All variables updated by this function call.
+
+        Returns
+        -------
+        child_ids : ``Set[int]``.
+            Ids of the newly created child agents.
         """
         child_ids = set()
         for mom_id, action in action_dict.items():
@@ -519,8 +764,21 @@ class Env(MultiAgentEnv):
 
         return child_ids
 
-    def _get_obs(self, pos: Tuple[int, int]) -> Tuple[Tuple[Tuple[int, ...]]]:
-        """ Returns a ``np.ndarray`` of observations given an agent ``pos``. """
+    def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
+        """
+        Returns an observation given an agent ``pos``.
+
+        Parameters
+        ----------
+        pos : ``Tuple[int, int]``.
+            A grid position.
+
+        Returns
+        -------
+        obs : ``np.ndarray``.
+            The observation from the given position.
+            Shape: ``(obs_len, obs_len, num_obj_types)``.
+        """
 
         # Calculate bounds of field of vision.
         x = pos[0]
@@ -550,14 +808,24 @@ class Env(MultiAgentEnv):
         obs[
             pad_left : pad_left + pad_x_len, pad_bottom : pad_bottom + pad_y_len
         ] = self.grid[sight_left : sight_right + 1, sight_bottom : sight_top + 1]
-        obs = convert_obs_to_tuple(obs)
+
+        # ===MOD===
+        obs = np.swapaxes(obs, 0, 2)
+        # obs = convert_obs_to_tuple(obs)
+        # ===MOD===
 
         return obs
 
-    def get_action_dict(self) -> Dict[int, Tuple[int, int, int]]:
+    def get_action_dict(self) -> Dict[int, np.ndarray]:
         """
-        Constructs ``action_dict`` by querying individual agents for
-        their actions based on their observations.
+        Constructs ``action_dict`` by querying individual agents for their actions
+        based on their observations. Used only for dummy training runs.
+
+        Returns
+        -------
+        action_dict: ``Dict[int, np.ndarray]``.
+            A dictionary from ``agent_id`` to the action, represented by a
+            5D Multi-Binary numpy array.
         """
         action_dict = {}
 
@@ -567,7 +835,7 @@ class Env(MultiAgentEnv):
         return action_dict
 
     def step(
-        self, action_dict: Dict[int, Tuple[int, int, int]]
+        self, action_array_dict: Dict[int, np.ndarray]
     ) -> Tuple[
         Dict[int, np.ndarray], Dict[int, float], Dict[Any, bool], Dict[int, Any]
     ]:
@@ -577,14 +845,65 @@ class Env(MultiAgentEnv):
         are strings from the sets
             ``movements = set(["up", "down", "left", "right", "stay"])``
             ``consumptions = set(["eat", "noeat"])``.
+
+        Parameters
+        ----------
+        action_array_dict : ``Dict[int, np.ndarray]``.
+            Maps agent ids to actions as multibinary numpy arrays.
+
+        Returns
+        -------
+        obs : ``Dict[int, np.ndarray]``.
+            Maps agent ids to observations.
+        rew : ``Dict[int, float]``.
+            Maps agent ids to rewards.
+        done : ``Dict[int, bool]``.
+            Maps agent ids to done status.
+        info : ``Dict[int, Any]``.
+            Maps agent ids to various per-agent info.
         """
         REPR_LOG.write("===STEP===\n")
         REPR_LOG.flush()
 
+        # Action dict conversion.
+        action_dict: Dict[int, Tuple[int, int, int]] = {}
+        for agent_id, action_array in action_array_dict.items():
+            integer_action_array = action_array.astype(int)
+            stay_bit = integer_action_array[0]
+            axis_bit = integer_action_array[1]
+            direction_bit = integer_action_array[2]
+            consume_bit = integer_action_array[3]
+            mate_bit = integer_action_array[4]
+
+            if stay_bit == 0:
+                move = self.STAY
+            elif axis_bit == 0:
+                if direction_bit == 0:
+                    move = self.LEFT
+                else:
+                    move = self.RIGHT
+            else:
+                if direction_bit == 0:
+                    move = self.DOWN
+                else:
+                    move = self.UP
+
+            if consume_bit == 0:
+                consume = self.EAT
+            else:
+                consume = self.NO_EAT
+
+            if mate_bit == 0:
+                mate = self.MATE
+            else:
+                mate = self.NO_MATE
+
+            action_dict[agent_id] = (move, consume, mate)
+
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
         rew: Dict[int, float] = {}
-        done: Dict[Any, bool] = {}
+        done: Dict[int, bool] = {}
         info: Dict[int, Any] = {}
 
         # Execute actions (move, consume, and mate).
@@ -593,8 +912,8 @@ class Env(MultiAgentEnv):
         }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
-        child_ids = self._mate(action_dict) 
-        
+        child_ids = self._mate(action_dict)
+
         # Plant new food.
         self._plant()
 
@@ -632,11 +951,14 @@ class Env(MultiAgentEnv):
                     agent.pos = self.HEAVEN
                     killed_agent_ids.append(agent_id)
 
+                # Update agent ages and update info dictionary
+                agent.age += 1
+                info[agent_id] = {"age": agent.age}
+
         # Remove killed agents from self.agents
         for killed_agent_id in killed_agent_ids:
             self.agents.pop(killed_agent_id)
 
-        done["__all__"] = all(done.values())
         self.dones = dict(done)
 
         # Write environment representation to log
@@ -647,8 +969,17 @@ class Env(MultiAgentEnv):
 
     def _get_adj_positions(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         """
-        Returns the positions adjacent (left, right, up, and down) to a given
-        position.
+        Returns the positions adjacent (left, right, up, and down) to a given position.
+
+        Parameters
+        ----------
+        pos : ``Tuple[int, int]``.
+            A grid position.
+
+        Returns
+        -------
+        validated_adj_positions : ``List[Tuple[int, int]]``.
+            List of the adjacent positions in the grid to ``pos``.
         """
 
         x, y = pos
@@ -673,6 +1004,11 @@ class Env(MultiAgentEnv):
     def __repr__(self) -> str:
         """
         Returns a representation of the environment state.
+
+        Returns
+        -------
+        output : ``str``.
+            ASCII image of grid along with various statistics and metrics.
         """
         output = "\n"
 
@@ -718,11 +1054,13 @@ class Env(MultiAgentEnv):
         # Print dones.
         if PRINT_DONES:
             output += "Dones: " + str(self.dones) + "\n"
-       
+
         # Push past next window size.
         # HARDCODE
-        for _ in range(40): 
+        """
+        for _ in range(40):
             output += "\n"
+        """
 
         REPR_LOG.flush()
 
@@ -739,5 +1077,20 @@ class Env(MultiAgentEnv):
         REPR_LOG.write(",\n")
 
     def _new_agent_id(self) -> int:
+        """
+        Grabs a new unique agent id.
+
+        Updates
+        -------
+        self.agent_ids_created : ``int``.
+            The number of agent ids created so far in this episode.
+
+        Returns
+        -------
+        new_id : ``int``.
+            A new unique agent id.
+        """
+        new_id = self.agent_ids_created
         self.agent_ids_created += 1
-        return self.agent_ids_created - 1
+
+        return new_id
