@@ -193,11 +193,12 @@ Things to come back to:
 #===========================================================================================
 
     Current sprint:
-    - Fix agent learning rate
-    - Investigate agents not moving
+    - Add docstrings and move rllib stuff into new branch (DONE)
+    - Fix agent learning rate (DONE)
+    - Fix observation CNN (DONE)
     - Add food regeneration dependency
-    - Fix observation CNN
     - Add agent lifetime and other relevant stats to log
+    - Investigate agents not moving
     - Formulate/run long experiment
     - Refactor
       - Clean up hardcoding

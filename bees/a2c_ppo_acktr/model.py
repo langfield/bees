@@ -22,10 +22,11 @@ class Policy(nn.Module):
                 base = CNNBase
             elif len(obs_shape) == 1:
                 base = MLPBase
+                obs_shape = obs_shape[0]
             else:
                 raise NotImplementedError
 
-        self.base = base(obs_shape[0], **base_kwargs)
+        self.base = base(obs_shape, **base_kwargs)
 
         if action_space.__class__.__name__ == "Discrete":
             num_outputs = action_space.n
@@ -166,23 +167,26 @@ class NNBase(nn.Module):
         return x, hxs
 
 
+#===MOD===
 class CNNBase(NNBase):
-    def __init__(self, num_inputs, recurrent=False, hidden_size=512):
+    def __init__(self, input_shape, recurrent=False, hidden_size=512):
         super(CNNBase, self).__init__(recurrent, hidden_size, hidden_size)
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
                                constant_(x, 0), nn.init.calculate_gain('relu'))
 
-        # Kernel size changed to 2.
-        # ``num_inputs`` is the number of input channels, the second dimension of
-        # ``inputs``, one of the params of forward call.
         #===MOD===
-        kernel_size = 2
+        # Kernel size changed to 2.
+        # ``input_shape`` is the shape of the input in CWH format.
+        # ``inputs``, one of the params of forward call.
+        kernel_size = 3
+        channels = 32
+        input_channels, input_width, input_height = input_shape
         self.main = nn.Sequential(
-            init_(nn.Conv2d(num_inputs, 32, kernel_size, stride=1, padding=1)), nn.ReLU(),
-            init_(nn.Conv2d(32, 64, kernel_size, stride=1, padding=1)), nn.ReLU(),
-            init_(nn.Conv2d(64, 32, kernel_size, stride=1, padding=1)), nn.ReLU(), Flatten(),
-            init_(nn.Linear(32 * 8 * 8, hidden_size)), nn.ReLU())
+            init_(nn.Conv2d(input_channels, channels, kernel_size, stride=1, padding=1)), nn.ReLU(),
+            init_(nn.Conv2d(channels, 2 * channels, kernel_size, stride=1, padding=1)), nn.ReLU(),
+            init_(nn.Conv2d(2 * channels, 4 * channels, kernel_size, stride=1, padding=1)), nn.ReLU(), Flatten(),
+            init_(nn.Linear(input_width * input_height * 4 * channels, hidden_size)), nn.ReLU())
         #===MOD===
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
@@ -202,7 +206,8 @@ class CNNBase(NNBase):
 
 
 class MLPBase(NNBase):
-    def __init__(self, num_inputs, recurrent=False, hidden_size=64):
+    def __init__(self, input_shape, recurrent=False, hidden_size=64):
+        num_inputs = input_shape[0]
         super(MLPBase, self).__init__(recurrent, num_inputs, hidden_size)
 
         if recurrent:
