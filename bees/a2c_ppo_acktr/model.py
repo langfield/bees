@@ -37,6 +37,14 @@ class Policy(nn.Module):
         elif action_space.__class__.__name__ == "MultiBinary":
             num_outputs = action_space.shape[0]
             self.dist = Bernoulli(self.base.output_size, num_outputs)
+        elif action_space.__class__.__name__ == "Tuple":
+            # Only support ``Tuple`` of ``Discrete`` spaces now.
+            for subspace in action_space:
+                if subspace.__class__.__name__ != "Discrete":
+                    raise NotImplementedError
+
+            subspace_num_outputs = [subspace.n for subspace in action_space]
+            self.dist = 
         else:
             raise NotImplementedError
 

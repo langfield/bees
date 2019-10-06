@@ -542,7 +542,6 @@ class Env:
             if self._obj_exists(self.obj_type_ids["food"], food_pos):
 
                 # Retry for an unoccupied position a fixed number of times.
-                # HARDCODE
                 for _ in range(self.food_plant_retries):
                     food_pos = random.sample(grid_positions, 1)[0]
                     if not self._obj_exists(self.obj_type_ids["food"], food_pos):

@@ -190,6 +190,9 @@ Things to come back to:
     Get rid of all of this array conversion for actions. We have three formats right now
     (5D multi binary, 3-tuple of ints, and torch.Tensor) and we should just have torch.Tensor.
 
+    Should we consider initializing the first members of the population with DNA representing
+    a naive reward function to avoid the population all dying immediately?
+
 #===========================================================================================
 
     Current sprint:
