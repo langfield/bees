@@ -102,3 +102,47 @@ class Bernoulli(nn.Module):
     def forward(self, x):
         x = self.linear(x)
         return FixedBernoulli(logits=x)
+
+class CategoricalProduct(nn.Module):
+    def __init__(self, num_inputs, num_outputs_list):
+
+        super(CategoricalProduct, self).__init__()
+        self.num_inputs = num_inputs
+        self.num_outputs_list = num_outputs_list
+        self.distributions = [Categorical(num_inputs, outputs) for outputs in
+            num_outputs_list]
+
+        init_ = lambda m: init(
+            m,
+            nn.init.orthogonal_,
+            lambda x: nn.init.constant_(x, 0),
+            gain=0.01)
+
+        self.linears = [init_(nn.Linear(inputs, outputs)) for inputs, outputs
+            in zip(num_inputs, num_outputs)]
+
+    def forward(self, x):
+        logits_list = [linear(x) for linear in self.linears]
+        return FixedCategoricalProduct(logits_list=logits_list)
+
+class FixedCategoricalProduct:
+    def __init__(self, logits_list=None):
+        self.logits_list = logits_list
+        self.fixedCategoricals = [FixedCategorical(logits=logits) for logits
+            in logits_list]
+
+    def mode(self):
+        return tuple([categorical.mode() for categorical in
+            self.fixedCategoricals])
+
+    def sample(self):
+        return tuple([categorical.sample() for categorical in
+            self.fixedCategoricals])
+
+    def log_probs(self):
+        return tuple([categorical.log_probs() for categorical in
+            self.fixedCategoricals])
+
+    def entropy(self):
+        return sum([categorical.log_probs() for categorical in
+            self.fixedCategoricals])
