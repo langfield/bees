@@ -189,7 +189,7 @@ class Env:
         # ===MOD===
         # Action space is a MultiBinary space, where the toggles are:
         # Stay/Move, Left/Right, Up/Down, Eat/NoEat, Mate,NoMate.
-        self.action_space = gym.spaces.MultiBinary(5)
+        # self.action_space = gym.spaces.MultiBinary(5)
         # ===MOD===
 
         num_actions = 5 + 2 + 2
@@ -301,7 +301,6 @@ class Env:
             )
             REPR_LOG.write("{:.10f}".format(avg_reward) + "\n")
 
-        # MOD
         # Reconstruct agents.
         self.agents = {}
         self.agent_ids_created = 0
@@ -678,7 +677,6 @@ class Env:
             pos = mom.pos
 
             # If the agent is dead, don't do anything.
-            # MOD: agents can only reproduce with sufficient health.
             if mom.health <= self.min_mating_health:
                 continue
 
@@ -710,7 +708,6 @@ class Env:
                 if mom.mating_cooldown > 0 or dad.mating_cooldown > 0:
                     continue
 
-                # MOD
                 if dad.health <= self.min_mating_health:
                     continue
 
@@ -940,7 +937,6 @@ class Env:
                 obs[agent_id] = self._get_obs(agent.pos)
                 agent.observation = obs[agent_id]
 
-                # MOD: removed ``self.num_foods <= 0`` condition.
                 done[agent_id] = agent.health <= 0.0
 
                 # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.

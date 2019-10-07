@@ -110,7 +110,7 @@ def train(settings: Dict[str, Any]) -> float:
 
             minted_agents = set()
             value_dict: Dict[int, float] = {}
-            action_dict: Dict[int, np.ndarray] = {}
+            action_dict: Dict[int, Tuple[int, int, int]] = {}
             action_tensor_dict: Dict[int, torch.Tensor] = {}
             action_log_prob_dict: Dict[int, float] = {}
             recurrent_hidden_states_dict: Dict[int, float] = {}
@@ -119,6 +119,10 @@ def train(settings: Dict[str, Any]) -> float:
             with torch.no_grad():
                 for agent_id, actor_critic in actor_critics.items():
                     rollouts = rollout_map[agent_id]
+                    # Right now our new distribution object returns a
+                    # tuple of tensors instead of a tensor as the action.
+                    # This is where we should start tomorrow, then continue
+                    # reverting changes to MultiBinary action space. 
                     ac_tuple = actor_critic.act(
                         rollouts.obs[step],
                         rollouts.recurrent_hidden_states[step],

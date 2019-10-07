@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from a2c_ppo_acktr.distributions import Bernoulli, Categorical, DiagGaussian
+from a2c_ppo_acktr.distributions import Bernoulli, Categorical, DiagGaussian, CategoricalProduct
 from a2c_ppo_acktr.utils import init
 
 
@@ -44,7 +44,10 @@ class Policy(nn.Module):
                     raise NotImplementedError
 
             subspace_num_outputs = [subspace.n for subspace in action_space]
-            self.dist = 
+            self.dist = CategoricalProduct(
+                self.base.output_size,
+                subspace_num_outputs,
+            )
         else:
             raise NotImplementedError
 

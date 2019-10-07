@@ -118,8 +118,8 @@ class CategoricalProduct(nn.Module):
             lambda x: nn.init.constant_(x, 0),
             gain=0.01)
 
-        self.linears = [init_(nn.Linear(inputs, outputs)) for inputs, outputs
-            in zip(num_inputs, num_outputs)]
+        self.linears = [init_(nn.Linear(num_inputs, outputs)) for outputs in
+            num_outputs_list]
 
     def forward(self, x):
         logits_list = [linear(x) for linear in self.linears]
@@ -144,5 +144,5 @@ class FixedCategoricalProduct:
             self.fixedCategoricals])
 
     def entropy(self):
-        return sum([categorical.log_probs() for categorical in
+        return sum([categorical.entropy() for categorical in
             self.fixedCategoricals])
