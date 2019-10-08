@@ -832,7 +832,7 @@ class Env:
         return action_dict
 
     def step(
-        self, action_array_dict: Dict[int, np.ndarray]
+        self, action_dict: Dict[int, Tuple[int, int, int]]
     ) -> Tuple[
         Dict[int, np.ndarray], Dict[int, float], Dict[Any, bool], Dict[int, Any]
     ]:
@@ -863,6 +863,7 @@ class Env:
         REPR_LOG.flush()
 
         # Action dict conversion.
+        """
         action_dict: Dict[int, Tuple[int, int, int]] = {}
         for agent_id, action_array in action_array_dict.items():
             integer_action_array = action_array.astype(int)
@@ -896,6 +897,7 @@ class Env:
                 mate = self.NO_MATE
 
             action_dict[agent_id] = (move, consume, mate)
+        """
 
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}

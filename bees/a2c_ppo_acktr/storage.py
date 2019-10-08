@@ -5,6 +5,15 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 def _flatten_helper(T, N, _tensor):
     return _tensor.view(T * N, *_tensor.size()[2:])
 
+def get_action_shape(action_space):
+    if action_space.__class__.__name__ == 'Discrete':
+        action_shape = 1
+    elif action_space.__class__.__name__ == 'Tuple':
+        action_shape = sum([get_action_shape(subspace) for subspace in action_space])
+    else:
+        action_shape = action_space.shape[0]
+
+    return action_shape
 
 class RolloutStorage(object):
     def __init__(self, num_steps, num_processes, obs_shape, action_space,
@@ -16,10 +25,7 @@ class RolloutStorage(object):
         self.value_preds = torch.zeros(num_steps + 1, num_processes, 1)
         self.returns = torch.zeros(num_steps + 1, num_processes, 1)
         self.action_log_probs = torch.zeros(num_steps, num_processes, 1)
-        if action_space.__class__.__name__ == 'Discrete':
-            action_shape = 1
-        else:
-            action_shape = action_space.shape[0]
+        action_shape = get_action_shape(action_space)
         self.actions = torch.zeros(num_steps, num_processes, action_shape)
         if action_space.__class__.__name__ == 'Discrete':
             self.actions = self.actions.long()
