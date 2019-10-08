@@ -119,17 +119,16 @@ def train(settings: Dict[str, Any]) -> float:
             with torch.no_grad():
                 for agent_id, actor_critic in actor_critics.items():
                     rollouts = rollout_map[agent_id]
-                    # Right now our new distribution object returns a
-                    # tuple of tensors instead of a tensor as the action.
-                    # This is where we should start tomorrow, then continue
-                    # reverting changes to MultiBinary action space. 
                     ac_tuple = actor_critic.act(
                         rollouts.obs[step],
                         rollouts.recurrent_hidden_states[step],
                         rollouts.masks[step],
                     )
                     value_dict[agent_id] = ac_tuple[0]
-                    action_dict[agent_id] = ac_tuple[1][0].cpu().numpy()
+                    # TOMORROW:
+                    # This line gives a CUDA error for a 'device-side assert'.
+                    # ???
+                    action_dict[agent_id] = tuple(ac_tuple[1][0].tolist())
                     action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
