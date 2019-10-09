@@ -128,7 +128,7 @@ def train(settings: Dict[str, Any]) -> float:
                     # TOMORROW:
                     # This line gives a CUDA error for a 'device-side assert'.
                     # ???
-                    action_dict[agent_id] = tuple(ac_tuple[1][0].tolist())
+                    action_dict[agent_id] = tuple(ac_tuple[1].tolist())
                     action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
