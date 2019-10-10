@@ -143,18 +143,16 @@ class FixedCategoricalProduct:
         ]
 
     def mode(self):
-        return torch.cat(
-            [categorical.mode().view((1,)) for categorical in self.fixedCategoricals]
-        )
+        return [categorical.mode().view((1,)) for categorical in
+            self.fixedCategoricals]
 
     def sample(self):
-        return torch.cat(
-            [categorical.sample().view((1,)) for categorical in self.fixedCategoricals]
-        )
+        return [categorical.sample().view((1,)) for categorical in
+            self.fixedCategoricals]
 
-    def log_probs(self, actions):
+    def log_probs(self, action):
         return tuple(
-            [categorical.log_probs(actions) for categorical in self.fixedCategoricals]
+            [categorical.log_probs(action) for categorical in self.fixedCategoricals]
         )
 
     def entropy(self):
@@ -162,7 +160,7 @@ class FixedCategoricalProduct:
             [categorical.entropy() for categorical in self.fixedCategoricals]
         )
         print("Entropies")
-        print(entropies)
+        print(entropies.detach().cpu())
         ent = torch.sum(entropies)
         print("Entropy: ", end="")
         print(ent)
