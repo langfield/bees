@@ -81,6 +81,9 @@ class Policy(nn.Module):
         print(action_log_probs)
         print(rnn_hxs)
 
+        if isinstance(self.dist, CategoricalProduct):
+            action = torch.cat(action)
+
         return value, action, action_log_probs, rnn_hxs
 
     def get_value(self, inputs, rnn_hxs, masks):
