@@ -358,7 +358,7 @@ class Env:
             new_pos = pos
         else:
             REPR_LOG.close()
-            raise ValueError("'%s' is not a valid action.")
+            raise ValueError("'%s' is not a valid action." % move)
 
         return new_pos  # type: ignore
 
