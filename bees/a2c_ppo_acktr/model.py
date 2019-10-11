@@ -75,14 +75,10 @@ class Policy(nn.Module):
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
 
-        print("FLAG")
-        print(value)
-        print(action)
-        print(action_log_probs)
-        print(rnn_hxs)
-
+        """
         if isinstance(self.dist, CategoricalProduct):
             action = torch.cat(action)
+        """
 
         return value, action, action_log_probs, rnn_hxs
 

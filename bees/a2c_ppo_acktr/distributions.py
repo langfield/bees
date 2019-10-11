@@ -21,12 +21,18 @@ old_sample = FixedCategorical.sample
 FixedCategorical.sample = lambda self: old_sample(self).unsqueeze(-1)
 
 log_prob_cat = FixedCategorical.log_prob
-FixedCategorical.log_probs = (
-    lambda self, actions: log_prob_cat(self, actions.squeeze(-1))
-    .view(actions.size(0), -1)
-    .sum(-1)
-    .unsqueeze(-1)
-)
+def temp_log_probs(self, actions):
+    print("Shape of actions: %s." % str(actions.shape))
+    print("Actions: %s." % str(actions))
+    print("Logits of FixedCategorical: %s." % str(self.logits))
+    temp = log_prob_cat(self, actions.squeeze(-1))
+    temp = temp.view(actions.size(0), -1)
+    temp = temp.sum(-1)
+    temp = temp.unsqueeze(-1)
+    
+    return temp
+    
+FixedCategorical.log_probs = temp_log_probs
 
 FixedCategorical.mode = lambda self: self.probs.argmax(dim=-1, keepdim=True)
 
@@ -143,25 +149,27 @@ class FixedCategoricalProduct:
         ]
 
     def mode(self):
-        return [categorical.mode().view((1,)) for categorical in
-            self.fixedCategoricals]
+        return torch.stack([categorical.mode().view((1,)) for categorical in
+            self.fixedCategoricals])
 
     def sample(self):
-        return [categorical.sample().view((1,)) for categorical in
-            self.fixedCategoricals]
+        return torch.stack([categorical.sample().view((1,)) for categorical in
+            self.fixedCategoricals])
 
-    def log_probs(self, action):
-        return tuple(
-            [categorical.log_probs(action) for categorical in self.fixedCategoricals]
+    def log_probs(self, actions):
+        print("Entire actions: %s." % str(actions))
+        print("Type of actions: %s." % str(type(actions)))
+        print("Shape of actions: %s" % str(actions.shape))
+
+        subaction_log_probs = torch.cat(
+            [categorical.log_probs(action) for categorical, action in zip(self.fixedCategoricals, actions)],
+            dim=-1
         )
+        return torch.sum(subaction_log_probs, dim=-1)
 
     def entropy(self):
         entropies = torch.stack(
             [categorical.entropy() for categorical in self.fixedCategoricals]
         )
-        print("Entropies")
-        print(entropies.detach().cpu())
         ent = torch.sum(entropies)
-        print("Entropy: ", end="")
-        print(ent)
         return ent
