@@ -22,9 +22,6 @@ FixedCategorical.sample = lambda self: old_sample(self).unsqueeze(-1)
 
 log_prob_cat = FixedCategorical.log_prob
 def temp_log_probs(self, actions):
-    print("Shape of actions: %s." % str(actions.shape))
-    print("Actions: %s." % str(actions))
-    print("Logits of FixedCategorical: %s." % str(self.logits))
     temp = log_prob_cat(self, actions.squeeze(-1))
     temp = temp.view(actions.size(0), -1)
     temp = temp.sum(-1)
@@ -150,22 +147,30 @@ class FixedCategoricalProduct:
 
     def mode(self):
         return torch.stack([categorical.mode().view((1,)) for categorical in
-            self.fixedCategoricals])
+            self.fixedCategoricals], dim=1)
 
     def sample(self):
         return torch.stack([categorical.sample().view((1,)) for categorical in
-            self.fixedCategoricals])
+            self.fixedCategoricals], dim=1)
 
     def log_probs(self, actions):
-        print("Entire actions: %s." % str(actions))
-        print("Type of actions: %s." % str(type(actions)))
-        print("Shape of actions: %s" % str(actions.shape))
+        """
+        Parameters
+        ----------
+        actions : ``torch.Tensor``.
+            The actions from ``action_tensor_dict``.
+            Shape: ``(num_processes, num_subactions)``.
+        """
+        num_subactions = actions.shape[1]
+        subaction_log_probs_list = []
+        for categorical, subaction_index in zip(self.fixedCategoricals, range(num_subactions)):
+            action = actions[:, subaction_index]
+            subaction_log_probs_list.append(categorical.log_probs(action))
+        subaction_log_probs = torch.cat(subaction_log_probs_list, dim=-1)
 
-        subaction_log_probs = torch.cat(
-            [categorical.log_probs(action) for categorical, action in zip(self.fixedCategoricals, actions)],
-            dim=-1
-        )
-        return torch.sum(subaction_log_probs, dim=-1)
+        # Shape: ``(num_subactions,)``.
+        log_probabilities = torch.sum(subaction_log_probs, dim=-1)
+        return log_probabilities
 
     def entropy(self):
         entropies = torch.stack(
