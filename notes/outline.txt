@@ -187,6 +187,12 @@ Things to come back to:
 
     Add agent age as input to reward function.
 
+    Running policy initializers in one sess.run call for each agent gave significant speedup
+    over running sess.run for each trainable variable in an agent's policy. Giving Ray more
+    memory does not seem to speed up initialization of new agents, we should try using
+    reuse_actors. Still getting KeyError on agent id. Just discovered that there is little/no
+    GPU usage during training? We should check this next time.
+
 #===========================================================================================
 
     Current sprint:
