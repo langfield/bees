@@ -62,6 +62,7 @@ if __name__ == "__main__":
             # as well to the DQN agent.
             "observation_filter": "NoFilter",
             "num_workers": 4,
+            "num_gpus": 1,
         },
     )
 
