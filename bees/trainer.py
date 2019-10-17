@@ -61,7 +61,7 @@ if __name__ == "__main__":
             # Disable filters, otherwise we would need to synchronize those
             # as well to the DQN agent.
             "observation_filter": "NoFilter",
-            "num_workers": 1,
+            "num_workers": 4,
         },
     )
 

@@ -193,6 +193,9 @@ Things to come back to:
     reuse_actors. Still getting KeyError on agent id. Just discovered that there is little/no
     GPU usage during training? We should check this next time.
 
+    If we get a tuple is unhashable error, then remember to switch to the appropriate conda
+    environment.
+
 #===========================================================================================
 
     Current sprint:
