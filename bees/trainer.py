@@ -57,12 +57,15 @@ if __name__ == "__main__":
                 "policy_mapping_fn": policy_mapping_fn,
                 "policies_to_train": ["ppo_policy"],
             },
-            "simple_optimizer": False,
+            "simple_optimizer": True,
             # Disable filters, otherwise we would need to synchronize those
             # as well to the DQN agent.
             "observation_filter": "NoFilter",
-            "num_workers": 4,
+            "num_workers": 2,
             "num_gpus": 1,
+            "train_batch_size": 2,
+            "sample_batch_size": 1,
+            "sgd_minibatch_size": 2,
         },
     )
 
