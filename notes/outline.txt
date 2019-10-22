@@ -196,6 +196,15 @@ Things to come back to:
     If we get a tuple is unhashable error, then remember to switch to the appropriate conda
     environment.
 
+    Found some strange stuff with initialization. In rllib/policy/dynamic_tf_policy.py, when
+    initializing policies, they run tf.global_variables_initializer, which will definitely
+    initialize all variables in the graph every time, creating huge overhead. The other weird
+    thing about this method is that they run the same initialization line at the end of the
+    method, which doubles the initialization cost. We need to figure this out.
+
+    We run out of GPU memory very easily. With batch sizes <= 2 for sample and SGD, we
+    couldn't run PPO with 10 agents on a Tesla K80 (~11.5 GB). Why?
+
 #===========================================================================================
 
     Current sprint:
