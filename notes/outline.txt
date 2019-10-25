@@ -205,6 +205,10 @@ Things to come back to:
     We run out of GPU memory very easily. With batch sizes <= 2 for sample and SGD, we
     couldn't run PPO with 10 agents on a Tesla K80 (~11.5 GB). Why?
 
+    Key error occurences:
+    - rllib/evaluation/sampler.py line 577
+    - rllib/evaluation/sample_batch_builder.py line 138
+
 #===========================================================================================
 
     Current sprint:
