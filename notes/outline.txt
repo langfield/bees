@@ -209,6 +209,9 @@ Things to come back to:
     - rllib/evaluation/sampler.py line 577
     - rllib/evaluation/sample_batch_builder.py line 138
 
+    Fix our uninitialization problem, see how much initialization time still
+    scales. Also try variable scope to get rid of all scaling.
+
 #===========================================================================================
 
     Current sprint:
