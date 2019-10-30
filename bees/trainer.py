@@ -42,35 +42,41 @@ if __name__ == "__main__":
     # You can also have multiple policies per trainer, but here we just
     # show one each for PPO and DQN.
     policies: Dict[str, Tuple[Any, gym.Space, gym.Space, Dict[Any, Any]]] = {
-        "ppo_policy": (PPOTFPolicy, obs_space, act_space, {})
+        "0": (PPOTFPolicy, obs_space, act_space, {}),
+        "1": (PPOTFPolicy, obs_space, act_space, {}),
+        "2": (PPOTFPolicy, obs_space, act_space, {}),
+        "3": (PPOTFPolicy, obs_space, act_space, {}),
+        "4": (PPOTFPolicy, obs_space, act_space, {}),
+        "5": (PPOTFPolicy, obs_space, act_space, {}),
+        "6": (PPOTFPolicy, obs_space, act_space, {}),
+        "7": (PPOTFPolicy, obs_space, act_space, {}),
+        "8": (PPOTFPolicy, obs_space, act_space, {}),
+        "9": (PPOTFPolicy, obs_space, act_space, {}),
     }
-
+    
     def policy_mapping_fn(agent_id: int) -> str:
         """ Returns the given agent's policy identifier. """
-        return (str(agent_id), (PPOTFPolicy, obs_space, act_space, {}))
-
+        return str(agent_id)
+    
     ppo_trainer = PPOTrainer(
         env="bee_world",
         config={
             "multiagent": {
                 "policies": policies,
                 "policy_mapping_fn": policy_mapping_fn,
-                "policies_to_train": ["ppo_policy"],
+                "policies_to_train": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
             },
             "simple_optimizer": True,
             # Disable filters, otherwise we would need to synchronize those
             # as well to the DQN agent.
             "observation_filter": "NoFilter",
-            "num_workers": 1,
+            "num_workers": 2,
             "num_gpus": 1,
-        },
-    )
-    """
             "train_batch_size": 2,
             "sample_batch_size": 1,
             "sgd_minibatch_size": 2,
-    """
-
+        },
+    )
     # You should see both the printed X and Y approach 200 as this trains:
     # info:
     #   policy_reward_mean:
