@@ -212,6 +212,9 @@ Things to come back to:
     Fix our uninitialization problem, see how much initialization time still
     scales. Also try variable scope to get rid of all scaling.
 
+    Found out that session graph seems to change from initialization of one new agent to the
+    next, this does not happen in vanilla rllib.
+
 #===========================================================================================
 
     Current sprint:
