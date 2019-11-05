@@ -59,11 +59,12 @@ if __name__ == "__main__":
             # Disable filters, otherwise we would need to synchronize those
             # as well to the DQN agent.
             "observation_filter": "NoFilter",
-            "num_workers": 1,
+            "num_workers": 10,
             "num_gpus": 1,
-            "eager": True,
+            "eager": False,
         },
     )
+
     """
             "train_batch_size": 2,
             "sample_batch_size": 1,
