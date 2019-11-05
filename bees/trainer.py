@@ -59,13 +59,16 @@ if __name__ == "__main__":
             # Disable filters, otherwise we would need to synchronize those
             # as well to the DQN agent.
             "observation_filter": "NoFilter",
-            "num_workers": 2,
+            "num_workers": 1,
             "num_gpus": 1,
+            "eager": True,
+        },
+    )
+    """
             "train_batch_size": 2,
             "sample_batch_size": 1,
             "sgd_minibatch_size": 2,
-        },
-    )
+    """
     # You should see both the printed X and Y approach 200 as this trains:
     # info:
     #   policy_reward_mean:
