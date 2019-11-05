@@ -6,7 +6,9 @@ import time
 import logging
 import argparse
 import collections
+import multiprocessing as mp
 from collections import deque
+import functools
 from typing import Dict, Tuple, Set, List, Any
 
 import gym
@@ -24,6 +26,40 @@ from a2c_ppo_acktr.storage import RolloutStorage
 from main import create_env
 
 # pylint: disable=bad-continuation
+
+
+def critic_act(
+    agent_id: int,
+    actor_critic: "AgentAlgo",
+    rollout_map: Dict[int, RolloutStorage],
+    step: int,
+) -> Tuple[Any, ...]:
+    """
+    Run the act function in parallel over all agents.
+
+    Parameters
+    ----------
+    agent_id : ``int``.
+        Unique identifier of an agent.
+    actor_critic : ``AgentAlgo``.
+        Policy module object.
+
+    Returns
+    -------
+    agent_id : ``int``.
+        Unique identifier of an agent.
+    ac_tuple : ``Tuple[Any, ...``.
+        Tuple of various important return values.
+    """
+    # TODO: Fix docs above for ``ac_tuple``.
+
+    rollouts = rollout_map[agent_id]
+    ac_tuple = actor_critic.act(
+        rollouts.obs[step],
+        rollouts.recurrent_hidden_states[step],
+        rollouts.masks[step],
+    )
+    return agent_id, ac_tuple
 
 
 def train(settings: Dict[str, Any]) -> float:
@@ -91,6 +127,9 @@ def train(settings: Dict[str, Any]) -> float:
         rollouts.obs[0].copy_(obs_tensor)
         rollouts.to(device)
 
+    # Create multiprocessing pool for act loop.
+    pool = mp.Pool()
+
     steps_completed = 0
 
     start = time.time()
@@ -117,13 +156,13 @@ def train(settings: Dict[str, Any]) -> float:
 
             # Sample actions
             with torch.no_grad():
-                for agent_id, actor_critic in actor_critics.items():
-                    rollouts = rollout_map[agent_id]
-                    ac_tuple = actor_critic.act(
-                        rollouts.obs[step],
-                        rollouts.recurrent_hidden_states[step],
-                        rollouts.masks[step],
-                    )
+                partial_critic_act = functools.partial(
+                    critic_act, rollout_map=rollout_map, step=step
+                )
+                ac_tuples: List[Tuple[int, "ac_tuple"]] = pool.map(
+                    partial_critic_act, actor_critics.items()
+                )
+                for agent_id, ac_tuple in ac_tuples:
                     value_dict[agent_id] = ac_tuple[0]
                     action_dict[agent_id] = tuple(ac_tuple[1][0].tolist())
                     action_tensor_dict[agent_id] = ac_tuple[1]

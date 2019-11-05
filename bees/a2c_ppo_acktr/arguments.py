@@ -6,7 +6,7 @@ import torch
 def get_args():
     parser = argparse.ArgumentParser(description='RL')
     parser.add_argument(
-        '--algo', default='a2c', help='algorithm to use: a2c | ppo | acktr')
+        '--algo', default='ppo', help='algorithm to use: a2c | ppo | acktr')
     parser.add_argument(
         '--lr', type=float, default=1e-2, help='learning rate (default: 1e-2)')
     parser.add_argument(
@@ -74,8 +74,8 @@ def get_args():
     parser.add_argument(
         '--num-mini-batch',
         type=int,
-        default=32,
-        help='number of batches for ppo (default: 32)')
+        default=1,
+        help='number of batches for ppo (default: 1)')
     parser.add_argument(
         '--clip-param',
         type=float,
