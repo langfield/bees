@@ -8,7 +8,7 @@ def get_args():
     parser.add_argument(
         '--algo', default='ppo', help='algorithm to use: a2c | ppo | acktr')
     parser.add_argument(
-        '--lr', type=float, default=1e-2, help='learning rate (default: 1e-2)')
+        '--lr', type=float, default=5e-5, help='learning rate (default: 5e-5)')
     parser.add_argument(
         '--eps',
         type=float,
@@ -18,7 +18,7 @@ def get_args():
         '--alpha',
         type=float,
         default=0.99,
-        help='RMSprop optimizer apha (default: 0.99)')
+        help='RMSprop optimizer alpha (default: 0.99)')
     parser.add_argument(
         '--gamma',
         type=float,
@@ -32,18 +32,18 @@ def get_args():
     parser.add_argument(
         '--gae-lambda',
         type=float,
-        default=0.95,
-        help='gae lambda parameter (default: 0.95)')
+        default=1.0,
+        help='gae lambda parameter (default: 1.0)')
     parser.add_argument(
         '--entropy-coef',
         type=float,
-        default=0.01,
-        help='entropy term coefficient (default: 0.01)')
+        default=0.0,
+        help='entropy term coefficient (default: 0.0)')
     parser.add_argument(
         '--value-loss-coef',
         type=float,
-        default=0.5,
-        help='value loss coefficient (default: 0.5)')
+        default=1.0,
+        help='value loss coefficient (default: 1.0)')
     parser.add_argument(
         '--max-grad-norm',
         type=float,
@@ -79,8 +79,8 @@ def get_args():
     parser.add_argument(
         '--clip-param',
         type=float,
-        default=0.2,
-        help='ppo clip parameter (default: 0.2)')
+        default=0.3,
+        help='ppo clip parameter (default: 0.3)')
     parser.add_argument(
         '--log-interval',
         type=int,
