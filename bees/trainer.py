@@ -57,7 +57,7 @@ def train(settings: Dict[str, Any]) -> float:
     utils.cleanup_log_dir(log_dir)
     utils.cleanup_log_dir(eval_log_dir)
 
-    torch.set_num_threads(1)
+    torch.set_num_threads(2)
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
     # Create multiagent maps.
