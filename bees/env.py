@@ -21,7 +21,7 @@ from genetics import get_child_reward_network
 from utils import get_logs
 
 # Set global log file
-REPR_LOG, REW_LOG = get_logs()
+REPR_LOG = get_logs()
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True

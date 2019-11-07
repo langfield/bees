@@ -70,8 +70,6 @@ def get_logs() -> Tuple["TextIOWrapper", "TextIOWrapper"]:
     -------
     repr_log : ``TextIOWrapper``.
         Environment visualization and stats log.
-    rew_log : ``TextIOWrapper``.
-        Agent rewards log.
     """
 
     # HARDCODE
@@ -103,6 +101,6 @@ def get_logs() -> Tuple["TextIOWrapper", "TextIOWrapper"]:
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
     repr_log = open(repr_log_path, "a+")
-    rew_log = open(rew_log_path, "a+")
+    # rew_log = open(rew_log_path, "a+")
 
-    return repr_log, rew_log
+    return repr_log
