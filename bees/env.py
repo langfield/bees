@@ -186,11 +186,6 @@ class Env:
         self.action_space = gym.spaces.Tuple(
             (gym.spaces.Discrete(5), gym.spaces.Discrete(2), gym.spaces.Discrete(2))
         )
-        # ===MOD===
-        # Action space is a MultiBinary space, where the toggles are:
-        # Stay/Move, Left/Right, Up/Down, Eat/NoEat, Mate,NoMate.
-        # self.action_space = gym.spaces.MultiBinary(5)
-        # ===MOD===
 
         num_actions = 5 + 2 + 2
         self.num_actions = num_actions
@@ -208,12 +203,10 @@ class Env:
             outer_list.append(inner_space)
         self.observation_space = gym.spaces.Tuple(tuple(outer_list))
 
-        # ===MOD===
         obs_len = 2 * self.sight_len + 1
         low_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
         high_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
         self.observation_space = gym.spaces.Box(low_obs, high_obs)
-        # ===MOD===
 
         self.agents: Dict[int, Agent] = {}
         self.agent_ids_created = 0
@@ -243,7 +236,6 @@ class Env:
         # Reset ``self.grid``.
         self.grid = np.zeros((self.width, self.height, self.num_obj_types))
         self.id_map = [[{} for y in range(self.height)] for x in range(self.width)]
-        # MOD
         self.num_foods = 0
 
         # Set unique agent positions.
@@ -529,6 +521,9 @@ class Env:
         """
 
         # Generate and validate the number of foods to plant.
+        target_density = 0.1
+        agent_density = len(self.agents) / (self.width * self.height)
+        self.plant_foods_mean = self.plant_foods_mean * (1.0 + target_density - agent_density)
         food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
         num_new_foods = round(food_ev)
         num_new_foods = max(0, num_new_foods)
@@ -806,10 +801,8 @@ class Env:
             pad_left : pad_left + pad_x_len, pad_bottom : pad_bottom + pad_y_len
         ] = self.grid[sight_left : sight_right + 1, sight_bottom : sight_top + 1]
 
-        # ===MOD===
+        # Policy network expects number of channels in first dimension.
         obs = np.swapaxes(obs, 0, 2)
-        # obs = convert_obs_to_tuple(obs)
-        # ===MOD===
 
         return obs
 
@@ -861,43 +854,6 @@ class Env:
         """
         REPR_LOG.write("===STEP===\n")
         REPR_LOG.flush()
-
-        # Action dict conversion.
-        """
-        action_dict: Dict[int, Tuple[int, int, int]] = {}
-        for agent_id, action_array in action_array_dict.items():
-            integer_action_array = action_array.astype(int)
-            stay_bit = integer_action_array[0]
-            axis_bit = integer_action_array[1]
-            direction_bit = integer_action_array[2]
-            consume_bit = integer_action_array[3]
-            mate_bit = integer_action_array[4]
-
-            if stay_bit == 0:
-                move = self.STAY
-            elif axis_bit == 0:
-                if direction_bit == 0:
-                    move = self.LEFT
-                else:
-                    move = self.RIGHT
-            else:
-                if direction_bit == 0:
-                    move = self.DOWN
-                else:
-                    move = self.UP
-
-            if consume_bit == 0:
-                consume = self.EAT
-            else:
-                consume = self.NO_EAT
-
-            if mate_bit == 0:
-                mate = self.MATE
-            else:
-                mate = self.NO_MATE
-
-            action_dict[agent_id] = (move, consume, mate)
-        """
 
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}

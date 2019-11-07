@@ -207,14 +207,24 @@ Things to come back to:
 
 #===========================================================================================
 
-    Current sprint:
+    October sprint:
     - Add docstrings and move rllib stuff into new branch (DONE)
     - Fix agent learning rate (DONE)
     - Fix observation CNN (DONE)
-    - Add food regeneration dependency
-    - Add agent lifetime and other relevant stats to log
-    - Investigate agents not moving
-    - Formulate/run long experiment
+    - Add food regeneration dependency (DONE)
+    - Add agent lifetime and other relevant stats to log (DONE)
+    - Investigate agents not moving (DONE)
+    - Formulate/run long experiment (DONE)
     - Refactor
       - Clean up hardcoding
       - Docstrings, mypy, blacken
+
+   November sprint:
+   - Add health bottleneck for mating
+   - Implement adaptive food regrowth rate to keep population stable
+   - Logs
+     - Fix log formatting (JSON or pickle)
+     - Add intrinsic rewards, position, other data?
+   - Formulate/run long experiment
+   - Refactor
+
