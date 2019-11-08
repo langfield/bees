@@ -220,11 +220,12 @@ Things to come back to:
       - Docstrings, mypy, blacken
 
    November sprint:
+   - Bug with number of agents (DONE?)
    - Add health bottleneck for mating
    - Implement adaptive food regrowth rate to keep population stable
    - Logs
      - Fix log formatting (JSON or pickle)
      - Add intrinsic rewards, position, other data?
-   - Formulate/run long experiment
+   - Implement saving and loading runs
    - Refactor
 

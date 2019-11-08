@@ -855,6 +855,21 @@ class Env:
         REPR_LOG.write("===STEP===\n")
         REPR_LOG.flush()
 
+        #===DEBUG===
+        self_agent_len = len(self.agents)
+        healthy_agents = len([agent for agent in self.agents.values() if agent.health > 0.0])
+        num_grid_agents = 0
+        num_id_map_agents = 0
+        for i, row in enumerate(self.grid):
+            for j, coord in enumerate(row):
+                if coord[self.obj_type_ids["agent"]] == 1:
+                    num_grid_agents += 1
+                pos_id_map = self.id_map[i][j]
+                if self.obj_type_ids["agent"] in pos_id_map:
+                    num_id_map_agents += len(pos_id_map[self.obj_type_ids["agent"]])
+        assert self_agent_len == num_grid_agents == num_id_map_agents == healthy_agents
+        #===DEBUG===
+
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
         rew: Dict[int, float] = {}
@@ -874,40 +889,45 @@ class Env:
 
         # Compute reward.
         for agent_id, agent in self.agents.items():
-            if agent.health > 0.0 and agent_id not in child_ids:
+            if agent_id not in child_ids:
                 rew[agent_id] = agent.compute_reward(
                     prev_health[agent_id], action_dict[agent_id]
                 )
             # First reward for children is zero.
-            if agent_id in child_ids:
+            elif agent_id in child_ids:
                 rew[agent_id] = 0
 
         # Decrease agent health, compute observations and dones.
         killed_agent_ids = []
         for agent_id, agent in self.agents.items():
             # REPR_LOG.write("Agent '%d' health: '%f'.\n" % (agent_id, agent.health))
-            if agent.health > 0.0:
-                agent.health -= self.aging_rate
+            agent.health -= self.aging_rate
 
-                # Update mating cooldown.
-                agent.mating_cooldown = max(0, agent.mating_cooldown - 1)
+            # Update mating cooldown.
+            agent.mating_cooldown = max(0, agent.mating_cooldown - 1)
 
-                obs[agent_id] = self._get_obs(agent.pos)
-                agent.observation = obs[agent_id]
+            obs[agent_id] = self._get_obs(agent.pos)
+            agent.observation = obs[agent_id]
 
-                done[agent_id] = agent.health <= 0.0
+            done[agent_id] = agent.health <= 0.0
 
-                # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
-                if done[agent_id]:
+            # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
+            if done[agent_id]:
 
-                    REPR_LOG.write("Killing agent '%d'.\n" % agent_id)
-                    self._remove(self.obj_type_ids["agent"], agent.pos, agent_id)
-                    agent.pos = self.HEAVEN
-                    killed_agent_ids.append(agent_id)
+                REPR_LOG.write("Killing agent '%d'.\n" % agent_id)
+                self._remove(self.obj_type_ids["agent"], agent.pos, agent_id)
+                agent.pos = self.HEAVEN
+                killed_agent_ids.append(agent_id)
 
-                # Update agent ages and update info dictionary
-                agent.age += 1
-                info[agent_id] = {"age": agent.age}
+            # Update agent ages and update info dictionary
+            agent.age += 1
+            info[agent_id] = {"age": agent.age}
+
+        print("\n\n")
+        print("Length of self.agents:", len(self.agents))
+        print("Number of true dones/total dones: %d/%d" % (len([val for val in done.values() if val]), len(done)))
+        print("Number of killed agent ids:", len(killed_agent_ids))
+        print("Number of agents with 0 health:", len([a for a in self.agents.values() if a.health <= 0]))
 
         # Remove killed agents from self.agents
         for killed_agent_id in killed_agent_ids:
