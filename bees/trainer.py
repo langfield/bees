@@ -72,7 +72,7 @@ def train(settings: Dict[str, Any]) -> float:
     action_losses: Dict[int, float] = {}
     dist_entropies: Dict[int, float] = {}
     agent_lifetimes: List[int] = []
-    avg_agent_lifetime: float = 0.0
+    avg_agent_lifetime: float = 100.0
 
     obs = env.reset()
 
