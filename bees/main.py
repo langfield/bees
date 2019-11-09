@@ -8,7 +8,7 @@ from typing import Dict, Any
 from env import Env
 
 
-def create_env(settings: Dict[str, Any],) -> Env:
+def create_env(settings: Dict[str, Any]) -> Env:
     """
     Create an instance of ``Env`` and return it.
 
@@ -40,6 +40,7 @@ def create_env(settings: Dict[str, Any],) -> Env:
     min_mating_health = env_config["min_mating_health"]
     agent_init_x_upper_bound = env_config["agent_init_x_upper_bound"]
     agent_init_y_upper_bound = env_config["agent_init_y_upper_bound"]
+    target_agent_density = env_config["target_agent_density"]
 
     rew_config = settings["rew"]
     n_layers = rew_config["n_layers"]
@@ -70,6 +71,7 @@ def create_env(settings: Dict[str, Any],) -> Env:
         min_mating_health,
         agent_init_x_upper_bound,
         agent_init_y_upper_bound,
+        target_agent_density,
         n_layers,
         hidden_dim,
         reward_weight_mean,

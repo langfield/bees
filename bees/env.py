@@ -110,6 +110,7 @@ class Env:
         min_mating_health: float,
         agent_init_x_upper_bound: int,
         agent_init_y_upper_bound: int,
+        target_agent_density: float,
         n_layers: int,
         hidden_dim: int,
         reward_weight_mean: float,
@@ -135,6 +136,7 @@ class Env:
         self.min_mating_health = min_mating_health
         self.agent_init_x_upper_bound = agent_init_x_upper_bound
         self.agent_init_y_upper_bound = agent_init_y_upper_bound
+        self.target_agent_density = target_agent_density
 
         # HARDCODE
         self.agent_init_x_upper_bound = min(
@@ -521,9 +523,10 @@ class Env:
         """
 
         # Generate and validate the number of foods to plant.
-        target_density = 0.1
         agent_density = len(self.agents) / (self.width * self.height)
-        self.plant_foods_mean = self.plant_foods_mean * (1.0 + target_density - agent_density)
+        self.plant_foods_mean = self.plant_foods_mean * (
+            1.0 + self.target_agent_density - agent_density
+        )
         food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
         num_new_foods = round(food_ev)
         num_new_foods = max(0, num_new_foods)
@@ -855,9 +858,11 @@ class Env:
         REPR_LOG.write("===STEP===\n")
         REPR_LOG.flush()
 
-        #===DEBUG===
+        # ===DEBUG===
         self_agent_len = len(self.agents)
-        healthy_agents = len([agent for agent in self.agents.values() if agent.health > 0.0])
+        healthy_agents = len(
+            [agent for agent in self.agents.values() if agent.health > 0.0]
+        )
         num_grid_agents = 0
         num_id_map_agents = 0
         for i, row in enumerate(self.grid):
@@ -868,7 +873,7 @@ class Env:
                 if self.obj_type_ids["agent"] in pos_id_map:
                     num_id_map_agents += len(pos_id_map[self.obj_type_ids["agent"]])
         assert self_agent_len == num_grid_agents == num_id_map_agents == healthy_agents
-        #===DEBUG===
+        # ===DEBUG===
 
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
@@ -922,12 +927,6 @@ class Env:
             # Update agent ages and update info dictionary
             agent.age += 1
             info[agent_id] = {"age": agent.age}
-
-        print("\n\n")
-        print("Length of self.agents:", len(self.agents))
-        print("Number of true dones/total dones: %d/%d" % (len([val for val in done.values() if val]), len(done)))
-        print("Number of killed agent ids:", len(killed_agent_ids))
-        print("Number of agents with 0 health:", len([a for a in self.agents.values() if a.health <= 0]))
 
         # Remove killed agents from self.agents
         for killed_agent_id in killed_agent_ids:
