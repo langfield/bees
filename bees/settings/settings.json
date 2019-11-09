@@ -17,7 +17,7 @@
         "agent_init_x_upper_bound": 5,
         "agent_init_y_upper_bound": 5,
         "target_agent_density": 0.05,
-        "time_steps": 100000,
+        "time_steps": 1000000,
         "print": true
     },
     "rew": {
