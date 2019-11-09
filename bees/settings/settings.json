@@ -4,11 +4,11 @@
         "height": 15,
         "sight_len": 6,
         "num_obj_types": 2,
-        "num_agents": 15,
+        "num_agents": 8,
         "food_density": 0.1625,
         "food_size_mean": 0.29,
         "food_size_stddev": 0.247,
-        "plant_foods_mean": 0.95,
+        "plant_foods_mean": 0.8,
         "plant_foods_stddev": 0.9,
         "food_plant_retries": 3,
         "aging_rate": 0.01,
@@ -21,7 +21,7 @@
         "print": true
     },
     "rew": {
-        "n_layers": 3,
+        "n_layers": 2,
         "hidden_dim": 256,
         "weight_mean": 0.0,
         "weight_stddev": 0.4
