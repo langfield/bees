@@ -524,9 +524,18 @@ class Env:
 
         # Generate and validate the number of foods to plant.
         agent_density = len(self.agents) / (self.width * self.height)
+        delta_density = self.target_agent_density - agent_density
+        sign = lambda x: (1, -1)[x < 0]
         self.plant_foods_mean = self.plant_foods_mean * (
-            1.0 + self.target_agent_density - agent_density
+            1.0 + (sign(delta_density) * math.sqrt(abs(delta_density)))
         )
+        grid_size = self.width * self.height
+        MAX_FOOD_DENSITY = 0.15
+        self.plant_foods_mean = min(self.plant_foods_mean, 0.02 * grid_size)
+        self.plant_foods_mean = max(self.plant_foods_mean, 0.01)
+        if (self.num_foods / grid_size) > MAX_FOOD_DENSITY:
+            self.plant_foods_mean = 0.5
+        print("\n\nplant mean:", self.plant_foods_mean)
         food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
         num_new_foods = round(food_ev)
         num_new_foods = max(0, num_new_foods)
