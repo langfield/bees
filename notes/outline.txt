@@ -222,7 +222,7 @@ Things to come back to:
    November sprint:
    - Bug with number of agents (DONE?)
    - Add health bottleneck for mating
-   - Implement adaptive food regrowth rate to keep population stable
+   - Implement adaptive food regrowth rate to keep population stable (DONE?)
    - Logs
      - Fix log formatting (JSON or pickle)
      - Add intrinsic rewards, position, other data?
