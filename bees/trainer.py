@@ -25,6 +25,8 @@ from main import create_env
 
 # pylint: disable=bad-continuation
 
+ALPHA = 0.9
+
 
 def train(settings: Dict[str, Any]) -> float:
     """
@@ -70,6 +72,7 @@ def train(settings: Dict[str, Any]) -> float:
     action_losses: Dict[int, float] = {}
     dist_entropies: Dict[int, float] = {}
     agent_lifetimes: List[int] = []
+    avg_agent_lifetime: float = 0.0
 
     obs = env.reset()
 
@@ -179,6 +182,7 @@ def train(settings: Dict[str, Any]) -> float:
                         del actor_critic
                         # TODO: should we remove from ``rollout_map`` and ``agents``?
                         agent_lifetimes.append(agent_info["age"])
+                        avg_agent_lifetime = ALPHA * avg_agent_lifetime + (1 - ALPHA) * agent_info["age"]
                         agent = agents.pop(agent_id)
                         del agent
 
@@ -213,7 +217,6 @@ def train(settings: Dict[str, Any]) -> float:
                 env_done = True
             steps_completed += 1
 
-            avg_agent_lifetime = np.mean(agent_lifetimes)
             loss = compute_loss(
                 steps_completed,
                 args.num_env_steps,
