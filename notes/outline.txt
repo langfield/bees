@@ -205,6 +205,12 @@ Things to come back to:
     Shape of ``actions`` (input to FixedCategorical.log_probs) is [num_processes, len(action_space)]
     where action_space is an instance of gym.spaces.Discrete.
 
+    Reaching out to Joel/declaring paper as finished should be conditional on
+    the system working on a fundamental level. It doesn't necessarily need to
+    have great results, but each of the individual components need to at least
+    do their job, e.g. agents should be able to learn policies which maximize
+    their intrinsic reward functions.
+
 #===========================================================================================
 
     October sprint:
@@ -222,10 +228,17 @@ Things to come back to:
    November sprint:
    - Bug with number of agents (DONE?)
    - Add health bottleneck for mating
+   - Lose more health for moving
+   - Lose more health the longer they're alive
    - Implement adaptive food regrowth rate to keep population stable (DONE?)
    - Logs
      - Fix log formatting (JSON or pickle)
      - Add intrinsic rewards, position, other data?
    - Implement saving and loading runs
+   - Build agent sandbox
+   - Build log analysis script
+   - Run experiments
    - Refactor
-
+     - Fix mixture of arguments
+     - Make arguments not positional
+   - Merge
