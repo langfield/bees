@@ -41,6 +41,7 @@ def create_env(settings: Dict[str, Any]) -> Env:
     agent_init_x_upper_bound = env_config["agent_init_x_upper_bound"]
     agent_init_y_upper_bound = env_config["agent_init_y_upper_bound"]
     target_agent_density = env_config["target_agent_density"]
+    print_repr = env_config["print"]
 
     rew_config = settings["rew"]
     n_layers = rew_config["n_layers"]
@@ -72,6 +73,7 @@ def create_env(settings: Dict[str, Any]) -> Env:
         agent_init_x_upper_bound,
         agent_init_y_upper_bound,
         target_agent_density,
+        print_repr,
         n_layers,
         hidden_dim,
         reward_weight_mean,
