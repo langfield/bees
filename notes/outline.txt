@@ -231,6 +231,7 @@ Things to come back to:
    - Lose more health for moving
    - Lose more health the longer they're alive
    - Implement adaptive food regrowth rate to keep population stable (DONE?)
+   - Change computation of avg agent lifetime
    - Logs
      - Fix log formatting (JSON or pickle)
      - Add intrinsic rewards, position, other data?
@@ -241,4 +242,5 @@ Things to come back to:
    - Refactor
      - Fix mixture of arguments
      - Make arguments not positional
+     - Minimize hardcoding
    - Merge

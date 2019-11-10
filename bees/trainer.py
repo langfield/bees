@@ -25,10 +25,8 @@ from main import create_env
 
 # pylint: disable=bad-continuation
 
-ALPHA = 0.9
 
-
-def train(settings: Dict[str, Any]) -> float:
+def train(settings: Dict[str, Any]) -> None:
     """
     Runs the environment.
 
@@ -36,11 +34,6 @@ def train(settings: Dict[str, Any]) -> float:
     ----------
     settings : ``Dict[str, Any]``.
         Global settings file.
-
-    Returns
-    -------
-    loss : ``float``.
-        The optuna loss.
     """
     args = get_args()
     args.num_env_steps = settings["env"]["time_steps"]
@@ -71,8 +64,6 @@ def train(settings: Dict[str, Any]) -> float:
     value_losses: Dict[int, float] = {}
     action_losses: Dict[int, float] = {}
     dist_entropies: Dict[int, float] = {}
-    agent_lifetimes: List[int] = []
-    avg_agent_lifetime: float = 100.0
 
     obs = env.reset()
 
@@ -181,8 +172,6 @@ def train(settings: Dict[str, Any]) -> float:
                         actor_critic = actor_critics.pop(agent_id)
                         del actor_critic
                         # TODO: should we remove from ``rollout_map`` and ``agents``?
-                        agent_lifetimes.append(agent_info["age"])
-                        avg_agent_lifetime = ALPHA * avg_agent_lifetime + (1 - ALPHA) * agent_info["age"]
                         agent = agents.pop(agent_id)
                         del agent
 
@@ -208,40 +197,11 @@ def train(settings: Dict[str, Any]) -> float:
                     )
 
             # Print out environment state.
-            if settings["env"]["print"]:
-                os.system("clear")
-                print(env)
             if all(dones.values()):
                 if settings["env"]["print"]:
                     print("All agents have died.")
                 env_done = True
             steps_completed += 1
-
-            loss = compute_loss(
-                steps_completed,
-                args.num_env_steps,
-                avg_agent_lifetime,
-                settings["env"]["aging_rate"],
-                len(agents),
-                settings["env"]["width"],
-                settings["env"]["height"],
-            )
-
-            if "trial" in settings:
-                width = settings["env"]["width"]
-                height = settings["env"]["height"]
-                trial = settings["trial"]
-                trial.report(loss, steps_completed)
-                """
-                if steps_completed % 50 == 0 and trial.should_prune():
-                    print("Pruning automatically.")
-                    raise optuna.structs.TrialPruned()
-                """
-                agent_density = len(agents) / (width * height)
-                # HARDCODE
-                if agent_density > 0.2:
-                    print("Density too high:", agent_density)
-                    raise optuna.structs.TrialPruned()
 
         # DEBUG
         print("\n\n")
@@ -362,8 +322,6 @@ def train(settings: Dict[str, Any]) -> float:
         % (steps_completed, args.num_env_steps)
     )
 
-    return loss
-
 
 def get_agent(
     args: argparse.Namespace,
@@ -435,66 +393,6 @@ def get_agent(
         actor_critic.recurrent_hidden_state_size,
     )
     return agent, actor_critic, rollouts
-
-
-def compute_loss(
-    num_env_steps: int,
-    max_num_env_steps: int,
-    avg_agent_lifetime: float,
-    aging_rate: float,
-    num_agents: int,
-    width: int,
-    height: int,
-) -> float:
-    """
-    Computes the optuna loss function.
-
-    Parameters
-    ----------
-    num_env_steps : ``int``.
-        Number of environment steps completed so far.
-    max_num_env_steps : ``int``.
-        Number of environment steps to attempt.
-    avg_agent_lifetime : ``float``.
-        Average agent lifetime over all done agents measured in environment steps.
-    aging_rate : ``float``.
-        Health loss for all agents at each environment step.
-    num_agents : ``int``.
-        Number of living agents.
-    width : ``int``.
-        Width of the grid.
-    height : ``int``.
-        Height of the grid.
-
-    Returns
-    -------
-    loss : ``float``.
-        Loss as computed for an optuna trial.
-    """
-    # Constants.
-    # HARDCODE
-    optimal_density = 0.05
-    optimal_lifetime = 5
-
-    agent_density = num_agents / (width * height)
-    lifetime_loss = ((avg_agent_lifetime / (1 / aging_rate)) - optimal_lifetime) ** 2
-    density_loss = (agent_density - optimal_density) ** 2
-    step_loss = (max_num_env_steps - num_env_steps) ** 2
-
-    # Normalize losses.
-    # HARDCODE
-    lifetime_loss = lifetime_loss / (optimal_lifetime ** 2)
-    density_loss = density_loss / (4 * optimal_density)
-    step_loss = 2 * step_loss
-
-    print(
-        "Steps completed: %d\t Avg lifetime: %f\t Agent density: %f\r"
-        % (num_env_steps, avg_agent_lifetime, agent_density),
-        end="",
-    )
-
-    loss = lifetime_loss + density_loss + step_loss
-    return loss
 
 
 if __name__ == "__main__":

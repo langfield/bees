@@ -98,6 +98,7 @@ class Agent:
         # The ``+ 2`` is for the dimensions for current health and previous health.
         self.input_dim = (self.obs_width ** 2) * num_obj_types + self.num_actions + 2
         self.total_reward = 0.0
+        self.last_reward = 0.0
         if reward_weights is None:
             self.initialize_reward_weights()
         else:
@@ -183,6 +184,7 @@ class Agent:
 
         scalar_reward = np.asscalar(reward)
         self.total_reward += scalar_reward
+        self.last_reward = scalar_reward
         return scalar_reward
 
     def get_flat_action(self, action: Tuple[int, int, int]) -> np.ndarray:
@@ -238,3 +240,16 @@ class Agent:
         output = "Health: %f, " % self.health
         output += "Total reward: %f\n" % self.total_reward
         return output
+
+    def _agent_state(self) -> None:
+        """
+        Returns a state of the agent as a json-style dictionary.
+        """
+
+        state = {}
+        state_attributes = ['pos', 'health', 'last_reward', 'age']
+        for state_attribute in state_attributes:
+            state[state_attribute] = getattr(self, state_attribute)
+
+        return state
+

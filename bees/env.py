@@ -4,10 +4,12 @@ from __future__ import division
 from __future__ import print_function
 
 # Standard imports.
+import os
 import math
 import random
 import itertools
 from typing import Tuple, Dict, Any, List, Set
+import json
 
 # Third-party imports.
 import numpy as np
@@ -21,11 +23,14 @@ from genetics import get_child_reward_network
 from utils import get_logs
 
 # Set global log file
-REPR_LOG = get_logs()
+ENV_LOG, VISUAL_LOG = get_logs()
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
 PRINT_DONES = True
+
+# Parameter for exponential moving average
+ALPHA = 0.9
 
 # pylint: disable=bad-continuation
 
@@ -74,6 +79,10 @@ class Env:
     agent_init_y_upper_bound : ``int``.
         The bottom bound on the top left grid section in which the first agents
         are initialized.
+    target_agent_density: ``float``.
+        The target agent density for adaptive food regeneration rate.
+    print_repr: ``bool``.
+        Whether or not to print environment repr at each iteration.
     n_layers : ``int``.
         Number of layers in the reward network.
     hidden_dim : ``int``.
@@ -111,6 +120,7 @@ class Env:
         agent_init_x_upper_bound: int,
         agent_init_y_upper_bound: int,
         target_agent_density: float,
+        print_repr: bool,
         n_layers: int,
         hidden_dim: int,
         reward_weight_mean: float,
@@ -137,6 +147,7 @@ class Env:
         self.agent_init_x_upper_bound = agent_init_x_upper_bound
         self.agent_init_y_upper_bound = agent_init_y_upper_bound
         self.target_agent_density = target_agent_density
+        self.print_repr = print_repr
 
         # HARDCODE
         self.agent_init_x_upper_bound = min(
@@ -213,6 +224,8 @@ class Env:
         self.agents: Dict[int, Agent] = {}
         self.agent_ids_created = 0
 
+        self.avg_agent_lifetime: float = -1.0
+
         # Misc settings.
         self.dones: Dict[int, bool] = {}
         self.resetted = False
@@ -251,9 +264,6 @@ class Env:
         agent_positions = random.sample(grid_corner, self.num_agents)
         for i, (agent_id, agent) in enumerate(self.agents.items()):
             agent_pos = agent_positions[i]
-            REPR_LOG.write(
-                "Initializing agent '%d' at '%s'.\n" % (agent_id, str(agent_pos))
-            )
             self._place(self.obj_type_ids["agent"], agent_pos, agent_id)
             agent.pos = agent_pos
 
@@ -287,13 +297,6 @@ class Env:
             Initial agent observations.
         """
         # TODO: reconcile ``self.iteration`` and ``steps_completed``.
-
-        # Get average rewards for agents from previous episode.
-        if self.agents != []:
-            avg_reward = np.mean(
-                [agent.total_reward for _, agent in self.agents.items()]
-            )
-            REPR_LOG.write("{:.10f}".format(avg_reward) + "\n")
 
         # Reconstruct agents.
         self.agents = {}
@@ -351,7 +354,8 @@ class Env:
         elif move == self.STAY:
             new_pos = pos
         else:
-            REPR_LOG.close()
+            ENV_LOG.close()
+            VISUAL_LOG.close()
             raise ValueError("'%s' is not a valid action." % move)
 
         return new_pos  # type: ignore
@@ -387,7 +391,8 @@ class Env:
         # Remove from ``self.grid``.
         grid_idx = pos + (obj_type_id,)
         if self.grid[grid_idx] != 1:
-            REPR_LOG.close()
+            ENV_LOG.close()
+            VISUAL_LOG.close()
             raise ValueError(
                 "Object '%s' does not exist at grid position '(%d, %d)'."
                 % (self.obj_type_name[obj_type_id], x, y)
@@ -437,7 +442,8 @@ class Env:
         # Add to ``self.grid``.
         grid_idx = pos + (obj_type_id,)
         if obj_type_id == self.obj_type_ids["agent"] and self.grid[grid_idx] == 1:
-            REPR_LOG.close()
+            ENV_LOG.close()
+            VISUAL_LOG.close()
             raise ValueError(
                 "An agent already exists at grid position '(%d, %d)'." % (x, y)
             )
@@ -648,11 +654,6 @@ class Env:
                 self._remove(self.obj_type_ids["food"], pos)
                 self.num_foods -= 1
                 food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
-                REPR_LOG.write("Num foods: '%d'.\n" % self.num_foods)
-                REPR_LOG.write(
-                    "Updating agent '%d' health from '%f' to '%f'.\n"
-                    % (agent_id, agent.health, min(1, agent.health + food_size))
-                )
                 agent.health = min(1, agent.health + food_size)
 
     def _mate(self, action_dict: Dict[int, Tuple[int, int, int]]) -> Set[int]:
@@ -758,12 +759,8 @@ class Env:
                     )
                     child_id = self._new_agent_id()
                     self.agents[child_id] = child
-                    REPR_LOG.write("Adding child with id '%d'.\n" % child_id)
                     child_ids.add(child_id)
 
-                    REPR_LOG.write(
-                        "Placing child '%d' at '%s'.\n" % (child_id, str(child_pos))
-                    )
                     self._place(self.obj_type_ids["agent"], child_pos, child_id)
 
         return child_ids
@@ -864,8 +861,6 @@ class Env:
         info : ``Dict[int, Any]``.
             Maps agent ids to various per-agent info.
         """
-        REPR_LOG.write("===STEP===\n")
-        REPR_LOG.flush()
 
         # ===DEBUG===
         self_agent_len = len(self.agents)
@@ -914,7 +909,6 @@ class Env:
         # Decrease agent health, compute observations and dones.
         killed_agent_ids = []
         for agent_id, agent in self.agents.items():
-            # REPR_LOG.write("Agent '%d' health: '%f'.\n" % (agent_id, agent.health))
             agent.health -= self.aging_rate
 
             # Update mating cooldown.
@@ -928,10 +922,18 @@ class Env:
             # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
             if done[agent_id]:
 
-                REPR_LOG.write("Killing agent '%d'.\n" % agent_id)
                 self._remove(self.obj_type_ids["agent"], agent.pos, agent_id)
                 agent.pos = self.HEAVEN
                 killed_agent_ids.append(agent_id)
+
+                # Update average agent lifetime
+                if self.avg_agent_lifetime < -1.0:
+                    self.avg_agent_lifetime = agent.age
+                else:
+                    self.avg_agent_lifetime = (
+                        ALPHA * self.avg_agent_lifetime
+                        + (1 - ALPHA) * agent.age
+                    )
 
             # Update agent ages and update info dictionary
             agent.age += 1
@@ -1037,15 +1039,6 @@ class Env:
         if PRINT_DONES:
             output += "Dones: " + str(self.dones) + "\n"
 
-        # Push past next window size.
-        # HARDCODE
-        """
-        for _ in range(40):
-            output += "\n"
-        """
-
-        REPR_LOG.flush()
-
         return output
 
     def _log_state(self) -> None:
@@ -1054,9 +1047,16 @@ class Env:
         prespecified log file path.
         """
 
-        REPR_LOG.write("Iteration %d:\n" % self.iteration)
-        REPR_LOG.write(self.__repr__())
-        REPR_LOG.write(",\n")
+        # Write to json log for environment state.
+        env_state = self._env_state()
+        json.dump(env_state, ENV_LOG, indent=4)
+
+        # Write to visual log, and print visualization if settings["env"]["print"].
+        visual = self.__repr__()
+        if self.print_repr:
+            os.system('clear')
+            print(visual)
+        VISUAL_LOG.write(visual + 40 * "\n")
 
     def _new_agent_id(self) -> int:
         """
@@ -1076,3 +1076,16 @@ class Env:
         self.agent_ids_created += 1
 
         return new_id
+
+    def _env_state(self) -> None:
+        """
+        Returns a state of the environment as a json-style dictionary.
+        """
+
+        state = {}
+        state["iteration"] = self.iteration
+        state["agents"] = {
+            agent_id: agent._agent_state() for agent_id, agent in self.agents.items()
+        }
+        state["num_foods"] = self.num_foods
+        state["avg_agent_lifetime"] = self.avg_agent_lifetime

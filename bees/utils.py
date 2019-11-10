@@ -68,8 +68,10 @@ def get_logs() -> Tuple["TextIOWrapper", "TextIOWrapper"]:
 
     Returns
     -------
-    repr_log : ``TextIOWrapper``.
-        Environment visualization and stats log.
+    env_log : ``TextIOWrapper``.
+        Environment json log.
+    visual_log : ``TextIOWrapper``.
+        Environment visualization.
     """
 
     # HARDCODE
@@ -94,13 +96,13 @@ def get_logs() -> Tuple["TextIOWrapper", "TextIOWrapper"]:
         break
     date = str(datetime.datetime.now())
     date = date.replace(" ", "_")
-    repr_log_path = "logs/%s_%s_repr_log.txt" % (token, date)
-    rew_log_path = "logs/%s_%s_rew_log.txt" % (token, date)
-    for log in [repr_log_path, rew_log_path]:
+    env_log_path = "logs/%s_%s_env_log.txt" % (token, date)
+    visual_log_path = "logs/%s_%s_visual_log.txt" % (token, date)
+    for log in [env_log_path, visual_log_path]:
         log_dir = os.path.dirname(log)
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
-    repr_log = open(repr_log_path, "a+")
-    # rew_log = open(rew_log_path, "a+")
+    env_log = open(env_log_path, "a+")
+    visual_log = open(visual_log_path, "a+")
 
-    return repr_log
+    return env_log, visual_log
