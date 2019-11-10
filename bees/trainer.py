@@ -109,7 +109,8 @@ def train(settings: Dict[str, Any]) -> None:
             action_log_prob_dict: Dict[int, float] = {}
             recurrent_hidden_states_dict: Dict[int, float] = {}
 
-            # Sample actions
+            t_actions = time.time()
+            # Sample actions.
             with torch.no_grad():
                 for agent_id, actor_critic in actor_critics.items():
                     rollouts = rollout_map[agent_id]
@@ -123,12 +124,19 @@ def train(settings: Dict[str, Any]) -> None:
                     action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
+            print("Sample actions: %ss" % str(time.time() - t_actions))
+            # time.sleep(1)
 
-            # Observe reward and next obs
+            t_step = time.time()
+            # Observe reward and next obs.
             obs, rewards, dones, infos = env.step(action_dict)
+            print("Env step: %ss" % str(time.time() - t_step))
+            # time.sleep(1)
 
             # NOTE: we assume ``args.num_processes`` is ``1``.
 
+            t_creation = time.time()
+            # Agent creation and termination, rollout stacking.
             for agent_id in obs:
                 agent_obs = obs[agent_id]
                 agent_reward = rewards[agent_id]
@@ -195,6 +203,8 @@ def train(settings: Dict[str, Any]) -> None:
                         masks,
                         bad_masks,
                     )
+            print("Creation: %ss" % str(time.time() - t_creation))
+            # time.sleep(1)
 
             # Print out environment state.
             if all(dones.values()):
@@ -247,8 +257,9 @@ def train(settings: Dict[str, Any]) -> None:
 
                 rollouts.after_update()
 
-        print("t0 avg:", np.mean(t0_list))
-        print("t1 avg:", np.mean(t1_list))
+        print("Get value and compute returns:", np.sum(t0_list))
+        print("Updates:", np.sum(t1_list))
+        # time.sleep(1)
 
         """
         # save for every interval-th episode or for the last epoch
