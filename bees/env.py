@@ -1035,9 +1035,7 @@ class Env:
             output += "Num foods: %d.\n" % self.num_foods
             output += "\n"
 
-        # Print dones.
-        if PRINT_DONES:
-            output += "Dones: " + str(self.dones) + "\n"
+        output += "Step: %d\n" % self.iteration
 
         return output
 
