@@ -3,10 +3,12 @@ import os
 import sys
 import json
 import time
+import copy
+import random
 import logging
 import argparse
 import collections
-from collections import deque
+from collections import deque, OrderedDict
 from typing import Dict, Tuple, Set, List, Any
 
 import gym
@@ -65,6 +67,12 @@ def train(settings: Dict[str, Any]) -> None:
     action_losses: Dict[int, float] = {}
     dist_entropies: Dict[int, float] = {}
 
+    # Save dead objects to make creation faster.
+    dead_critics: Set[Policy] = set()
+    dead_agents: Set["AgentAlgo"] = set()
+    state_dicts: List[OrderedDict] = []
+    optim_state_dicts: List[OrderedDict] = []
+
     obs = env.reset()
 
     # Initialize first policies.
@@ -78,6 +86,10 @@ def train(settings: Dict[str, Any]) -> None:
             actor_critics[agent_id] = actor_critic
             rollout_map[agent_id] = rollouts
             episode_rewards[agent_id] = deque(maxlen=10)
+
+            # Save a copy of the state dict.
+            state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
+            optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
 
         # Copy first observations to rollouts, and send to device.
         rollouts = rollout_map[agent_id]
@@ -146,9 +158,49 @@ def train(settings: Dict[str, Any]) -> None:
                 # Initialize new policies.
                 if agent_id not in agents:
                     minted_agents.add(agent_id)
-                    agent, actor_critic, rollouts = get_agent(
-                        args, env.observation_space, env.action_space, device
-                    )
+
+                    # Test whether we can reuse previously instantiated policy
+                    # objects, or if we need to create new ones.
+                    if len(dead_critics) > 0:
+                        
+                        # DEBUG
+                        print("!!!!!!!!!############ REUSING DEAD POLICY ############!!!!!!!!!!!")
+
+                        actor_critic = dead_critics.pop()
+                        agent = dead_agents.pop()
+                        state_dict = copy.deepcopy(random.choice(state_dicts))
+                        optim_state_dict = copy.deepcopy(
+                            random.choice(optim_state_dicts)
+                        )
+
+                        # Load initialized state dicts.
+                        actor_critic.load_state_dict(state_dict)
+                        agent.optimizer.load_state_dict(optim_state_dict)
+
+                        # Create new RolloutStorage object.
+                        rollouts = RolloutStorage(
+                            args.num_steps,
+                            args.num_processes,
+                            env.observation_space.shape,
+                            env.action_space,
+                            actor_critic.recurrent_hidden_state_size,
+                        )
+
+                    else:
+
+                        # DEBUG
+                        print("-------------------- CREATING NEW POLICY ----------------------")
+
+                        agent, actor_critic, rollouts = get_agent(
+                            args, env.observation_space, env.action_space, device
+                        )
+
+                        # Save a copy of the state dict.
+                        state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
+                        optim_state_dicts.append(
+                            copy.deepcopy(agent.optimizer.state_dict())
+                        )
+
                     # Update dicts.
                     agents[agent_id] = agent
                     actor_critics[agent_id] = actor_critic
@@ -178,10 +230,10 @@ def train(settings: Dict[str, Any]) -> None:
                     # If done then remove from environment.
                     if agent_done:
                         actor_critic = actor_critics.pop(agent_id)
-                        del actor_critic
+                        dead_critics.add(actor_critic)
                         # TODO: should we remove from ``rollout_map`` and ``agents``?
                         agent = agents.pop(agent_id)
-                        del agent
+                        dead_agents.add(agent)
 
                     # Shape correction and casting.
                     obs_tensor = torch.FloatTensor([agent_obs])
