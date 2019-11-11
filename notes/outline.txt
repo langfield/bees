@@ -235,6 +235,8 @@ Things to come back to:
    - Logs
      - Fix log formatting (JSON or pickle)
      - Add intrinsic rewards, position, other data?
+   - Implement faster initialization by reusing policies of dead agents
+   - Faster reinitialization by loading from fixed set of randomly initialized state dicts
    - Implement saving and loading runs
    - Build agent sandbox
    - Build log analysis script
