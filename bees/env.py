@@ -536,9 +536,9 @@ class Env:
             1.0 + (sign(delta_density) * math.sqrt(abs(delta_density)))
         )
         grid_size = self.width * self.height
-        MAX_FOOD_DENSITY = 0.15
+        MAX_FOOD_DENSITY = 0.2
         self.plant_foods_mean = min(self.plant_foods_mean, 0.02 * grid_size)
-        self.plant_foods_mean = max(self.plant_foods_mean, 0.01)
+        self.plant_foods_mean = max(self.plant_foods_mean, 0.05)
         if (self.num_foods / grid_size) > MAX_FOOD_DENSITY:
             self.plant_foods_mean = 0.5
         food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
