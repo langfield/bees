@@ -541,7 +541,6 @@ class Env:
         self.plant_foods_mean = max(self.plant_foods_mean, 0.01)
         if (self.num_foods / grid_size) > MAX_FOOD_DENSITY:
             self.plant_foods_mean = 0.5
-        print("\n\nplant mean:", self.plant_foods_mean)
         food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
         num_new_foods = round(food_ev)
         num_new_foods = max(0, num_new_foods)
