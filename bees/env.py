@@ -861,23 +861,6 @@ class Env:
             Maps agent ids to various per-agent info.
         """
 
-        # ===DEBUG===
-        self_agent_len = len(self.agents)
-        healthy_agents = len(
-            [agent for agent in self.agents.values() if agent.health > 0.0]
-        )
-        num_grid_agents = 0
-        num_id_map_agents = 0
-        for i, row in enumerate(self.grid):
-            for j, coord in enumerate(row):
-                if coord[self.obj_type_ids["agent"]] == 1:
-                    num_grid_agents += 1
-                pos_id_map = self.id_map[i][j]
-                if self.obj_type_ids["agent"] in pos_id_map:
-                    num_id_map_agents += len(pos_id_map[self.obj_type_ids["agent"]])
-        assert self_agent_len == num_grid_agents == num_id_map_agents == healthy_agents
-        # ===DEBUG===
-
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
         rew: Dict[int, float] = {}
