@@ -168,6 +168,13 @@ def train(settings: Dict[str, Any]) -> None:
 
                         actor_critic = dead_critics.pop()
                         agent = dead_agents.pop()
+
+                        # TOMORROW
+                        if settings["env"]["reuse_new_policies"]:
+                            pass
+                        else:
+                            pass
+
                         state_dict = copy.deepcopy(random.choice(state_dicts))
                         optim_state_dict = copy.deepcopy(
                             random.choice(optim_state_dicts)
