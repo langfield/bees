@@ -211,6 +211,11 @@ Things to come back to:
     do their job, e.g. agents should be able to learn policies which maximize
     their intrinsic reward functions.
 
+    Apply to this for computing resources:
+    (https://www.olcf.ornl.gov/for-users/documents-forms/olcf-directors-discretion-project-application/)
+
+    Consider rounding health values in log and/or pickling logs instead of writing text.
+
 #===========================================================================================
 
     October sprint:
@@ -232,12 +237,11 @@ Things to come back to:
    - Lose more health the longer they're alive
    - Implement adaptive food regrowth rate to keep population stable (DONE?)
    - Change computation of avg agent lifetime
-   - Logs
-     - Fix log formatting (JSON or pickle)
-     - Add intrinsic rewards, position, other data?
+   - Logs (DONE)
    - Implement faster initialization by reusing policies of dead agents
    - Faster reinitialization by loading from fixed set of randomly initialized state dicts
    - Implement saving and loading runs
+   - Parallelize env.step function?
    - Build agent sandbox
    - Build log analysis script
    - Run experiments

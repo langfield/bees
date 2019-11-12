@@ -1029,7 +1029,7 @@ class Env:
 
         # Write to json log for environment state.
         env_state = self._env_state()
-        json.dump(env_state, ENV_LOG, indent=4)
+        ENV_LOG.write(str(env_state) + "\n")
 
         # Write to visual log, and print visualization if settings["env"]["print"].
         visual = self.__repr__()
@@ -1069,3 +1069,5 @@ class Env:
         }
         state["num_foods"] = self.num_foods
         state["avg_agent_lifetime"] = self.avg_agent_lifetime
+
+        return state
