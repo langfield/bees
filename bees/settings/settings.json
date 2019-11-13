@@ -17,9 +17,11 @@
         "agent_init_x_upper_bound": 5,
         "agent_init_y_upper_bound": 5,
         "target_agent_density": 0.07,
+        "print": true
+    },
+    "env": {
         "time_steps": 100,
-        "print": true,
-        "reuse_new_policies": true
+        "reuse_state_dicts": true
     },
     "rew": {
         "n_layers": 2,
