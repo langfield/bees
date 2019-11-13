@@ -38,7 +38,7 @@ def train(settings: Dict[str, Any]) -> None:
         Global settings file.
     """
     args = get_args()
-    args.num_env_steps = settings["env"]["time_steps"]
+    args.num_env_steps = settings["trainer"]["time_steps"]
     print("Arguments:", str(args))
     env = create_env(settings)
 
@@ -87,9 +87,13 @@ def train(settings: Dict[str, Any]) -> None:
             rollout_map[agent_id] = rollouts
             episode_rewards[agent_id] = deque(maxlen=10)
 
-            # Save a copy of the state dict.
-            state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
-            optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
+            # TOMORROW
+            if settings["trainer"]["reuse_state_dicts"]:
+                # Save a copy of the state dict.
+                state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
+                optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
+            else:
+                pass
 
         # Copy first observations to rollouts, and send to device.
         rollouts = rollout_map[agent_id]
@@ -162,27 +166,27 @@ def train(settings: Dict[str, Any]) -> None:
                     # Test whether we can reuse previously instantiated policy
                     # objects, or if we need to create new ones.
                     if len(dead_critics) > 0:
-                        
+
                         # DEBUG
-                        print("!!!!!!!!!############ REUSING DEAD POLICY ############!!!!!!!!!!!")
+                        print(
+                            "!!!!!!!!!############ REUSING DEAD POLICY ############!!!!!!!!!!!"
+                        )
 
                         actor_critic = dead_critics.pop()
                         agent = dead_agents.pop()
 
                         # TOMORROW
-                        if settings["env"]["reuse_new_policies"]:
-                            pass
+                        if settings["trainer"]["reuse_state_dicts"]:
+                            state_dict = copy.deepcopy(random.choice(state_dicts))
+                            optim_state_dict = copy.deepcopy(
+                                random.choice(optim_state_dicts)
+                            )
+
+                            # Load initialized state dicts.
+                            actor_critic.load_state_dict(state_dict)
+                            agent.optimizer.load_state_dict(optim_state_dict)
                         else:
                             pass
-
-                        state_dict = copy.deepcopy(random.choice(state_dicts))
-                        optim_state_dict = copy.deepcopy(
-                            random.choice(optim_state_dicts)
-                        )
-
-                        # Load initialized state dicts.
-                        actor_critic.load_state_dict(state_dict)
-                        agent.optimizer.load_state_dict(optim_state_dict)
 
                         # Create new RolloutStorage object.
                         rollouts = RolloutStorage(
@@ -196,17 +200,23 @@ def train(settings: Dict[str, Any]) -> None:
                     else:
 
                         # DEBUG
-                        print("-------------------- CREATING NEW POLICY ----------------------")
+                        print(
+                            "-------------------- CREATING NEW POLICY ----------------------"
+                        )
 
                         agent, actor_critic, rollouts = get_agent(
                             args, env.observation_space, env.action_space, device
                         )
 
+                        # TOMORROW
                         # Save a copy of the state dict.
-                        state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
-                        optim_state_dicts.append(
-                            copy.deepcopy(agent.optimizer.state_dict())
-                        )
+                        if settings["trainer"]["reuse_state_dicts"]:
+                            state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
+                            optim_state_dicts.append(
+                                copy.deepcopy(agent.optimizer.state_dict())
+                            )
+                        else:
+                            pass
 
                     # Update dicts.
                     agents[agent_id] = agent

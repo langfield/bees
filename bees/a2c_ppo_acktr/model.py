@@ -1,9 +1,16 @@
+from typing import List, Tuple
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from a2c_ppo_acktr.distributions import Bernoulli, Categorical, DiagGaussian, CategoricalProduct
+from a2c_ppo_acktr.distributions import (
+    Bernoulli,
+    Categorical,
+    DiagGaussian,
+    CategoricalProduct,
+)
 from a2c_ppo_acktr.utils import init
 
 
@@ -44,10 +51,7 @@ class Policy(nn.Module):
                     raise NotImplementedError
 
             subspace_num_outputs = [subspace.n for subspace in action_space]
-            self.dist = CategoricalProduct(
-                self.base.output_size,
-                subspace_num_outputs,
-            )
+            self.dist = CategoricalProduct(self.base.output_size, subspace_num_outputs)
         else:
             raise NotImplementedError
 
@@ -72,6 +76,7 @@ class Policy(nn.Module):
         else:
             action = dist.sample()
 
+        # TODO: what is ``dist_entropy`` used for? Not used at all.
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
 
@@ -106,9 +111,9 @@ class NNBase(nn.Module):
         if recurrent:
             self.gru = nn.GRU(recurrent_input_size, hidden_size)
             for name, param in self.gru.named_parameters():
-                if 'bias' in name:
+                if "bias" in name:
                     nn.init.constant_(param, 0)
-                elif 'weight' in name:
+                elif "weight" in name:
                     nn.init.orthogonal_(param)
 
     @property
@@ -143,11 +148,7 @@ class NNBase(nn.Module):
 
             # Let's figure out which steps in the sequence have a zero for any agent
             # We will always assume t=0 has a zero in it as that makes the logic cleaner
-            has_zeros = ((masks[1:] == 0.0) \
-                            .any(dim=-1)
-                            .nonzero()
-                            .squeeze()
-                            .cpu())
+            has_zeros = (masks[1:] == 0.0).any(dim=-1).nonzero().squeeze().cpu()
 
             # +1 to correct the masks[1:]
             if has_zeros.dim() == 0:
@@ -168,8 +169,8 @@ class NNBase(nn.Module):
                 end_idx = has_zeros[i + 1]
 
                 rnn_scores, hxs = self.gru(
-                    x[start_idx:end_idx],
-                    hxs * masks[start_idx].view(1, -1, 1))
+                    x[start_idx:end_idx], hxs * masks[start_idx].view(1, -1, 1)
+                )
 
                 outputs.append(rnn_scores)
 
@@ -183,34 +184,79 @@ class NNBase(nn.Module):
         return x, hxs
 
 
-#===MOD===
+# ===MOD===
 class CNNBase(NNBase):
     def __init__(self, input_shape, recurrent=False, hidden_size=512):
         super(CNNBase, self).__init__(recurrent, hidden_size, hidden_size)
 
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
-                               constant_(x, 0), nn.init.calculate_gain('relu'))
+        init_ = lambda m: init(
+            m,
+            nn.init.orthogonal_,
+            lambda x: nn.init.constant_(x, 0),
+            nn.init.calculate_gain("relu"),
+        )
 
-        #===MOD===
-        # Kernel size changed to 2.
+        # ===MOD===
         # ``input_shape`` is the shape of the input in CWH format.
         # ``inputs``, one of the params of forward call.
         kernel_size = 3
         channels = 32
         input_channels, input_width, input_height = input_shape
         self.main = nn.Sequential(
-            init_(nn.Conv2d(input_channels, channels, kernel_size, stride=1, padding=1)), nn.ReLU(),
-            init_(nn.Conv2d(channels, 2 * channels, kernel_size, stride=1, padding=1)), nn.ReLU(),
-            init_(nn.Conv2d(2 * channels, 4 * channels, kernel_size, stride=1, padding=1)), nn.ReLU(), Flatten(),
-            init_(nn.Linear(input_width * input_height * 4 * channels, hidden_size)), nn.ReLU())
-        #===MOD===
+            nn.Conv2d(input_channels, channels, kernel_size, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(channels, 2 * channels, kernel_size, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(2 * channels, 4 * channels, kernel_size, stride=1, padding=1),
+            nn.ReLU(),
+            Flatten(),
+            nn.Linear(input_width * input_height * 4 * channels, hidden_size),
+            nn.ReLU(),
+        )
+        # ===MOD===
 
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
-                               constant_(x, 0))
+        init_ = lambda m: init(
+            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
+        )
 
         self.critic_linear = init_(nn.Linear(hidden_size, 1))
 
+        # ===MOD===
+        # TODO: Rename.
+        self.main, self.critic_linear = CNNBase.init_something(
+            self.main, self.critic_linear
+        )
+        # ===MOD===
+
         self.train()
+
+    @staticmethod
+    def init_something(
+        main: nn.Sequential, critic_linear: nn.Linear
+    ) -> Tuple[nn.Sequential, nn.Linear]:
+        """ Runs initializers on arguments. """
+
+        init_ = lambda m: init(
+            m,
+            nn.init.orthogonal_,
+            lambda x: nn.init.constant_(x, 0),
+            nn.init.calculate_gain("relu"),
+        )
+
+        layers: List[nn.Module] = []
+        for module in main.modules():
+            if isinstance(module, (nn.Conv2d, nn.Linear)):
+                layers.append(init_(module))
+            elif not isinstance(module, nn.Sequential):
+                layers.append(module)
+        new_main = nn.Sequential(*layers)
+
+        init_critic = lambda m: init(
+            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
+        )
+        new_critic_linear = init_critic(critic_linear)
+
+        return new_main, new_critic_linear
 
     def forward(self, inputs, rnn_hxs, masks):
         x = self.main(inputs / 255.0)
@@ -229,16 +275,23 @@ class MLPBase(NNBase):
         if recurrent:
             num_inputs = hidden_size
 
-        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
-                               constant_(x, 0), np.sqrt(2))
+        init_ = lambda m: init(
+            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), np.sqrt(2)
+        )
 
         self.actor = nn.Sequential(
-            init_(nn.Linear(num_inputs, hidden_size)), nn.Tanh(),
-            init_(nn.Linear(hidden_size, hidden_size)), nn.Tanh())
+            init_(nn.Linear(num_inputs, hidden_size)),
+            nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
+        )
 
         self.critic = nn.Sequential(
-            init_(nn.Linear(num_inputs, hidden_size)), nn.Tanh(),
-            init_(nn.Linear(hidden_size, hidden_size)), nn.Tanh())
+            init_(nn.Linear(num_inputs, hidden_size)),
+            nn.Tanh(),
+            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Tanh(),
+        )
 
         self.critic_linear = init_(nn.Linear(hidden_size, 1))
 
