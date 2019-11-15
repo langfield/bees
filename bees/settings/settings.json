@@ -21,7 +21,7 @@
     },
     "trainer": {
         "time_steps": 1000,
-        "reuse_state_dicts": false
+        "reuse_state_dicts": true
     },
     "rew": {
         "n_layers": 2,

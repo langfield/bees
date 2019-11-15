@@ -1071,3 +1071,15 @@ class Env:
         state["avg_agent_lifetime"] = self.avg_agent_lifetime
 
         return state
+
+    def save(save_path: str) -> None:
+        """
+        Saves a .pkl representation of the environment state.
+
+        Parameters
+        ----------
+        save_path : str.
+            Path to save environment pickle object.
+        """
+
+        pass

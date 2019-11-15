@@ -351,7 +351,6 @@ def train(settings: Dict[str, Any]) -> None:
         print("Updates:", np.sum(t1_list))
         # time.sleep(1)
 
-        """
         # save for every interval-th episode or for the last epoch
         if (
             j % args.save_interval == 0 or j == num_updates - 1
@@ -359,19 +358,17 @@ def train(settings: Dict[str, Any]) -> None:
             for agent_id, agent in agents.items():
                 if agent_id not in minted_agents:
                     actor_critic = actor_critics[agent_id]
-                    save_path = os.path.join(args.save_dir, args.algo)
+                    save_path = os.path.join(args.save_dir, args.algo, agent_id)
                     try:
                         os.makedirs(save_path)
                     except OSError:
                         pass
 
                     # TODO: implement ``ob_rms`` from ``VecNormalize`` in baselines in our env.
-                    # TODO: Add ``agent_id`` in save path.
                     torch.save(
                         [actor_critic, getattr(env, "ob_rms", None)],
                         os.path.join(save_path, args.env_name + ".pt"),
                     )
-        """
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
