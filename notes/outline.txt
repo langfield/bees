@@ -216,6 +216,13 @@ Things to come back to:
 
     Consider rounding health values in log and/or pickling logs instead of writing text.
 
+    Consider making agents lose health faster the longer they are alive, so that old agents
+    are not identical in terms of healthyness.
+
+    # TODO LATER.
+    - Add health bottleneck for mating
+    - Lose more health for moving
+
 #===========================================================================================
 
     October sprint:
@@ -232,15 +239,12 @@ Things to come back to:
 
    November sprint:
    - Bug with number of agents (DONE?)
-   - Add health bottleneck for mating
-   - Lose more health for moving
-   - Lose more health the longer they're alive
    - Implement adaptive food regrowth rate to keep population stable (DONE?)
    - Change computation of avg agent lifetime
    - Logs (DONE)
-   - Implement faster initialization by reusing policies of dead agents
-   - Faster reinitialization by loading from fixed set of randomly initialized state dicts
-   - Implement saving and loading runs
+   - Implement faster initialization by reusing policies of dead agents (DONE)
+   - Faster reinitialization by loading from fixed set of randomly initialized state dicts (DONE)
+   - Implement saving and loading runs (Started this, need to implement env.save)
    - Parallelize env.step function?
    - Build agent sandbox
    - Build log analysis script

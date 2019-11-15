@@ -76,7 +76,7 @@ class Policy(nn.Module):
         else:
             action = dist.sample()
 
-        # TODO: what is ``dist_entropy`` used for? Not used at all.
+        # ``dist_entropy`` isn't used at all here. This is identical to the original.
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
 
