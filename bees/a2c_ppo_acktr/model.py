@@ -222,8 +222,7 @@ class CNNBase(NNBase):
         self.critic_linear = init_(nn.Linear(hidden_size, 1))
 
         # ===MOD===
-        # TODO: Rename.
-        self.main, self.critic_linear = CNNBase.init_something(
+        self.main, self.critic_linear = CNNBase.init_weights(
             self.main, self.critic_linear
         )
         # ===MOD===
@@ -231,7 +230,7 @@ class CNNBase(NNBase):
         self.train()
 
     @staticmethod
-    def init_something(
+    def init_weights(
         main: nn.Sequential, critic_linear: nn.Linear
     ) -> Tuple[nn.Sequential, nn.Linear]:
         """ Runs initializers on arguments. """
@@ -275,27 +274,57 @@ class MLPBase(NNBase):
         if recurrent:
             num_inputs = hidden_size
 
-        init_ = lambda m: init(
-            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), np.sqrt(2)
-        )
-
         self.actor = nn.Sequential(
-            init_(nn.Linear(num_inputs, hidden_size)),
+            nn.Linear(num_inputs, hidden_size),
             nn.Tanh(),
-            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Linear(hidden_size, hidden_size),
             nn.Tanh(),
         )
 
         self.critic = nn.Sequential(
-            init_(nn.Linear(num_inputs, hidden_size)),
+            nn.Linear(num_inputs, hidden_size),
             nn.Tanh(),
-            init_(nn.Linear(hidden_size, hidden_size)),
+            nn.Linear(hidden_size, hidden_size),
             nn.Tanh(),
         )
 
-        self.critic_linear = init_(nn.Linear(hidden_size, 1))
+        self.critic_linear = nn.Linear(hidden_size, 1)
+
+        self.actor, self.critic, self.critic_linear = MLPBase.init_weights(
+            self.actor, self.critic, self.critic_linear
+        )
 
         self.train()
+
+    @staticmethod
+    def init_weights(
+        actor: nn.Sequential, critic: nn.Sequential, critic_linear: nn.Linear
+    ) -> Tuple[nn.Sequential, nn.Sequential, nn.Linear]:
+        """ Runs initializers on arguments. """
+
+        init_ = lambda m: init(
+            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), np.sqrt(2)
+        )
+
+        layers: List[nn.Module] = []
+        for module in actor.modules():
+            if isinstance(module, nn.Linear):
+                layers.append(init_(module))
+            elif not isinstance(module, nn.Sequential):
+                layers.append(module)
+        new_actor = nn.Sequential(*layers)
+
+        layers: List[nn.Module] = []
+        for module in critic.modules():
+            if isinstance(module, nn.Linear):
+                layers.append(init_(module))
+            elif not isinstance(module, nn.Sequential):
+                layers.append(module)
+        new_critic = nn.Sequential(*layers)
+
+        new_critic_linear = init_(critic_linear)
+
+        return new_actor, new_critic, new_critic_linear
 
     def forward(self, inputs, rnn_hxs, masks):
         x = inputs

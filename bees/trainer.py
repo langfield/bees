@@ -18,7 +18,7 @@ import numpy as np
 
 from a2c_ppo_acktr import algo, utils
 from a2c_ppo_acktr.arguments import get_args
-from a2c_ppo_acktr.model import Policy
+from a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
 from a2c_ppo_acktr.storage import RolloutStorage
 
 # from evaluation import evaluate
@@ -41,6 +41,9 @@ def train(settings: Dict[str, Any]) -> None:
     args.num_env_steps = settings["trainer"]["time_steps"]
     print("Arguments:", str(args))
     env = create_env(settings)
+
+    if not settings["trainer"]["reuse_state_dicts"]:
+        print("Warning: this is slow.")
 
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -87,13 +90,10 @@ def train(settings: Dict[str, Any]) -> None:
             rollout_map[agent_id] = rollouts
             episode_rewards[agent_id] = deque(maxlen=10)
 
-            # TOMORROW
             if settings["trainer"]["reuse_state_dicts"]:
                 # Save a copy of the state dict.
                 state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
                 optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
-            else:
-                pass
 
         # Copy first observations to rollouts, and send to device.
         rollouts = rollout_map[agent_id]
@@ -186,7 +186,28 @@ def train(settings: Dict[str, Any]) -> None:
                             actor_critic.load_state_dict(state_dict)
                             agent.optimizer.load_state_dict(optim_state_dict)
                         else:
-                            pass
+
+                            # Reinitialize the policy of actor_critic
+                            if isinstance(actor_critic.base, CNNBase):
+                                (
+                                    actor_critic.base.main,
+                                    actor_critic.base.critic_linear,
+                                ) = CNNBase.init_weights(
+                                    actor_critic.base.main,
+                                    actor_critic.base.critic_linear,
+                                )
+                            elif isinstance(actor_critic.base, MLPBase):
+                                (
+                                    actor_critic.base.actor,
+                                    actor_critic.base.critic,
+                                    actor_critic.base.critic_linear,
+                                ) = MLPBase.init_weights(
+                                    actor_critic.base.actor,
+                                    actor_critic.base.critic,
+                                    actor_critic.base.critic_linear,
+                                )
+                            else:
+                                raise NotImplementedError
 
                         # Create new RolloutStorage object.
                         rollouts = RolloutStorage(
