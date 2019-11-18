@@ -241,15 +241,14 @@ class Agent:
         output += "Total reward: %f\n" % self.total_reward
         return output
 
-    def _agent_state(self) -> None:
+    def agent_state(self) -> None:
         """
         Returns a state of the agent as a json-style dictionary.
         """
 
         state = {}
-        state_attributes = ['pos', 'health', 'last_reward', 'age']
+        state_attributes = ["pos", "health", "last_reward", "age"]
         for state_attribute in state_attributes:
             state[state_attribute] = getattr(self, state_attribute)
 
         return state
-

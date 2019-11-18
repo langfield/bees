@@ -9,7 +9,7 @@ import math
 import random
 import itertools
 from typing import Tuple, Dict, Any, List, Set
-import json
+import pickle
 
 # Third-party imports.
 import numpy as np
@@ -913,8 +913,7 @@ class Env:
                     self.avg_agent_lifetime = agent.age
                 else:
                     self.avg_agent_lifetime = (
-                        ALPHA * self.avg_agent_lifetime
-                        + (1 - ALPHA) * agent.age
+                        ALPHA * self.avg_agent_lifetime + (1 - ALPHA) * agent.age
                     )
 
             # Update agent ages and update info dictionary
@@ -1028,13 +1027,13 @@ class Env:
         """
 
         # Write to json log for environment state.
-        env_state = self._env_state()
+        env_state = self._env_json_state()
         ENV_LOG.write(str(env_state) + "\n")
 
         # Write to visual log, and print visualization if settings["env"]["print"].
         visual = self.__repr__()
         if self.print_repr:
-            os.system('clear')
+            os.system("clear")
             print(visual)
         VISUAL_LOG.write(visual + 40 * "\n")
 
@@ -1057,7 +1056,7 @@ class Env:
 
         return new_id
 
-    def _env_state(self) -> None:
+    def _env_json_state(self) -> Dict[str, Any]:
         """
         Returns a state of the environment as a json-style dictionary.
         """
@@ -1065,14 +1064,30 @@ class Env:
         state = {}
         state["iteration"] = self.iteration
         state["agents"] = {
-            agent_id: agent._agent_state() for agent_id, agent in self.agents.items()
+            agent_id: agent.agent_state() for agent_id, agent in self.agents.items()
         }
         state["num_foods"] = self.num_foods
         state["avg_agent_lifetime"] = self.avg_agent_lifetime
 
         return state
 
-    def save(save_path: str) -> None:
+    def _env_state(self) -> Dict[str, Any]:
+        """
+        Returns a state of the environment as a dictionary.
+        """
+
+        state = self._env_json_state()
+        state["grid"] = self.grid
+        agent_attrs = ["reward_weights", "reward_biases"]
+        for agent_id in state["agents"]:
+            for agent_attr in agent_attrs:
+                state["agents"][agent_id][agent_attr] = getattr(
+                    self.agents[agent_id], agent_attr
+                )
+
+        return state
+
+    def save(self, save_path: str) -> None:
         """
         Saves a .pkl representation of the environment state.
 
@@ -1082,4 +1097,42 @@ class Env:
             Path to save environment pickle object.
         """
 
-        pass
+        state = self._env_state()
+        with open(save_path, "wb") as f:
+            pickle.dump(state, f)
+
+    def load(self, load_path: str) -> None:
+        """
+        Loads a .pkl representation (from self.save()) of the environment state.
+
+        Parameters
+        ----------
+        load_path : str.
+            Path to load environment pickle object from.
+        """
+
+        with open(load_path, "rb") as f:
+            state = pickle.load(f)
+
+        self.iteration = state["iteration"]
+        self.num_foods = state["num_foods"]
+        self.avg_agent_lifetime = state["avg_agent_lifetime"]
+        self.agents = {}
+        for agent_id, agent_state in state["agents"].items():
+            # TODO: Get rid of default arguments (initial_health is defaulted here).
+            self.agents[agent_id] = Agent(
+                sight_len=self.sight_len,
+                num_obj_types=self.num_obj_types,
+                consts=self.consts,
+                n_layers=self.n_layers,
+                hidden_dim=self.hidden_dim,
+                num_actions=self.num_actions,
+                pos=agent_state["pos"],
+                reward_weights=state["reward_weights"],
+                reward_biases=state["reward_biases"],
+                reward_weight_mean=self.reward_weight_mean,
+                reward_weight_stddev=self.reward_weight_stddev,
+                mating_cooldown_len=self.mating_cooldown_len,
+            )
+            for attr, value in agent_state.items():
+                setattr(self.agents[agent_id], attr, value)
