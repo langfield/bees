@@ -1,6 +1,5 @@
 """ PyTorch environment trainer. """
 import os
-import sys
 import json
 import time
 import copy
@@ -10,10 +9,10 @@ import argparse
 import collections
 from collections import deque, OrderedDict
 from typing import Dict, Tuple, Set, List, Any
+import pickle
 
 import gym
 import torch
-import optuna
 import numpy as np
 
 from a2c_ppo_acktr import algo, utils
@@ -38,9 +37,20 @@ def train(settings: Dict[str, Any]) -> None:
         Global settings file.
     """
     args = get_args()
+
+    # Reload from previous run
+    load_dir = settings["trainer"]["load_from"]
+    if load_dir:
+        env_state_path = os.path.join(load_dir, "env.pkl")
+        settings_path = os.path.join(load_dir, "settings.json")
+        with open(settings_path, "r") as settings_file:
+            settings = json.load(settings_file)
+
     args.num_env_steps = settings["trainer"]["time_steps"]
     print("Arguments:", str(args))
     env = create_env(settings)
+    if load_dir:
+        env.load(env_state_path)
 
     if not settings["trainer"]["reuse_state_dicts"]:
         print("Warning: this is slow.")
@@ -100,8 +110,6 @@ def train(settings: Dict[str, Any]) -> None:
         obs_tensor = torch.FloatTensor([agent_obs])
         rollouts.obs[0].copy_(obs_tensor)
         rollouts.to(device)
-
-    steps_completed = 0
 
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
@@ -301,7 +309,6 @@ def train(settings: Dict[str, Any]) -> None:
                 if settings["env"]["print"]:
                     print("All agents have died.")
                 env_done = True
-            steps_completed += 1
 
         # DEBUG
         print("\n\n")
@@ -358,11 +365,9 @@ def train(settings: Dict[str, Any]) -> None:
             for agent_id, agent in agents.items():
                 if agent_id not in minted_agents:
                     actor_critic = actor_critics[agent_id]
-                    save_path = os.path.join(args.save_dir, args.algo, agent_id)
-                    try:
+                    save_path = os.path.join(args.save_dir, args.algo, str(agent_id))
+                    if not os.path.isdir(save_path):
                         os.makedirs(save_path)
-                    except OSError:
-                        pass
 
                     # TODO: implement ``ob_rms`` from ``VecNormalize`` in baselines in our env.
                     torch.save(
@@ -416,9 +421,15 @@ def train(settings: Dict[str, Any]) -> None:
             break
 
     logging.getLogger().info(
-        "Steps completed during episode: %d / %d"
-        % (steps_completed, args.num_env_steps)
+        "Steps completed during episode: %d / %d" % (env.iteration, args.num_env_steps)
     )
+
+    # Save out environment end state and settings file
+    state_path = os.path.join(args.save_dir, args.algo, "env.pkl")
+    settings_path = os.path.join(args.save_dir, args.algo, "settings.json")
+    env.save(state_path)
+    with open(settings_path, "w") as settings_file:
+        json.dump(settings, settings_file)
 
 
 def get_agent(

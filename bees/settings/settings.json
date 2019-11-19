@@ -17,11 +17,12 @@
         "agent_init_x_upper_bound": 5,
         "agent_init_y_upper_bound": 5,
         "target_agent_density": 0.07,
-        "print": true
+        "print": false
     },
     "trainer": {
-        "time_steps": 1000,
-        "reuse_state_dicts": true
+        "time_steps": 100,
+        "reuse_state_dicts": true,
+        "load_from": "trained_models/ppo"
     },
     "rew": {
         "n_layers": 2,
