@@ -296,7 +296,6 @@ class Env:
         obs : ``Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]``.
             Initial agent observations.
         """
-        # TODO: reconcile ``self.iteration`` and ``steps_completed``.
 
         # Reconstruct agents.
         self.agents = {}
@@ -1128,11 +1127,13 @@ class Env:
                 hidden_dim=self.hidden_dim,
                 num_actions=self.num_actions,
                 pos=agent_state["pos"],
-                reward_weights=state["reward_weights"],
-                reward_biases=state["reward_biases"],
+                reward_weights=agent_state["reward_weights"],
+                reward_biases=agent_state["reward_biases"],
                 reward_weight_mean=self.reward_weight_mean,
                 reward_weight_stddev=self.reward_weight_stddev,
                 mating_cooldown_len=self.mating_cooldown_len,
             )
             for attr, value in agent_state.items():
                 setattr(self.agents[agent_id], attr, value)
+
+        print("loaded!")
