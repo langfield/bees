@@ -776,7 +776,7 @@ class Env:
         -------
         obs : ``np.ndarray``.
             The observation from the given position.
-            Shape: ``(obs_len, obs_len, num_obj_types)``.
+            Shape: ``(num_obj_types, obs_len, obs_len)``.
         """
 
         # Calculate bounds of field of vision.
@@ -1076,7 +1076,9 @@ class Env:
         """
 
         state = self._env_json_state()
-        state["grid"] = self.grid
+        env_attrs = ["grid", "id_map", "agent_ids_created"]
+        for env_attr in env_attrs:
+            state[env_attr] = getattr(self, env_attr)
         agent_attrs = ["reward_weights", "reward_biases"]
         for agent_id in state["agents"]:
             for agent_attr in agent_attrs:
@@ -1113,9 +1115,19 @@ class Env:
         with open(load_path, "rb") as f:
             state = pickle.load(f)
 
-        self.iteration = state["iteration"]
-        self.num_foods = state["num_foods"]
-        self.avg_agent_lifetime = state["avg_agent_lifetime"]
+        # Get environment attributes
+        env_attrs = [
+            "iteration",
+            "num_foods",
+            "avg_agent_lifetime",
+            "grid",
+            "id_map",
+            "agent_ids_created",
+        ]
+        for env_attr in env_attrs:
+            setattr(self, env_attr, state[env_attr])
+
+        # Construct agents
         self.agents = {}
         for agent_id, agent_state in state["agents"].items():
             # TODO: Get rid of default arguments (initial_health is defaulted here).
@@ -1135,5 +1147,9 @@ class Env:
             )
             for attr, value in agent_state.items():
                 setattr(self.agents[agent_id], attr, value)
+
+        # Construct agent observations
+        for agent_id, agent in self.agents.items():
+            agent.observation = self._get_obs(agent.pos)
 
         print("loaded!")

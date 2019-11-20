@@ -90,8 +90,8 @@ class Agent:
 
         self.policy = Policy(consts)
         self.obs_width = 2 * sight_len + 1
-        self.obs_shape = (self.obs_width, self.obs_width, num_obj_types)
-        self.observation = convert_obs_to_tuple(np.zeros(self.obs_shape))
+        self.obs_shape = (num_obj_types, self.obs_width, self.obs_width)
+        self.observation: np.ndarray = np.zeros(self.obs_shape)
 
         self.age = 0
 

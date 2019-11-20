@@ -238,13 +238,15 @@ Things to come back to:
       - Docstrings, mypy, blacken
 
    November sprint:
-   - Bug with number of agents (DONE?)
-   - Implement adaptive food regrowth rate to keep population stable (DONE?)
+   - Bug with number of agents (DONE)
+   - Implement adaptive food regrowth rate to keep population stable (DONE)
    - Change computation of avg agent lifetime
    - Logs (DONE)
    - Implement faster initialization by reusing policies of dead agents (DONE)
    - Faster reinitialization by loading from fixed set of randomly initialized state dicts (DONE)
-   - Implement saving and loading runs (Started this, need to implement env.save)
+   - Implement saving and loading runs
+     - Env saving and loading (DONE)
+     - Policy saving and loading
    - Parallelize env.step function?
    - Build agent sandbox
    - Build log analysis script

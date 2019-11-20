@@ -28,6 +28,7 @@ def one_hot(k: int, dim: int) -> np.ndarray:
     return vec
 
 
+# UNUSED
 def convert_obs_to_tuple(obs: np.ndarray) -> Tuple[Tuple[Tuple[int, ...], ...], ...]:
     """
     Convert an observation to a tuple.

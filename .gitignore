@@ -2,4 +2,4 @@ __pycache__
 *.swp
 logs/
 .mypy_cache/
-trained_models/
+models/

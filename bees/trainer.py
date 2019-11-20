@@ -38,9 +38,12 @@ def train(settings: Dict[str, Any]) -> None:
     """
     args = get_args()
 
-    # Reload from previous run
+    # Resume from previous run
     load_dir = settings["trainer"]["load_from"]
+    resume = False
     if load_dir:
+        resume = True
+    if resume:
         env_state_path = os.path.join(load_dir, "env.pkl")
         settings_path = os.path.join(load_dir, "settings.json")
         with open(settings_path, "r") as settings_file:
@@ -49,7 +52,7 @@ def train(settings: Dict[str, Any]) -> None:
     args.num_env_steps = settings["trainer"]["time_steps"]
     print("Arguments:", str(args))
     env = create_env(settings)
-    if load_dir:
+    if resume:
         env.load(env_state_path)
 
     if not settings["trainer"]["reuse_state_dicts"]:
@@ -86,7 +89,11 @@ def train(settings: Dict[str, Any]) -> None:
     state_dicts: List[OrderedDict] = []
     optim_state_dicts: List[OrderedDict] = []
 
-    obs = env.reset()
+    # Don't reset environment if we are resuming a previous run.
+    if resume:
+        obs = {agent_id: agent.observation for agent_id, agent in env.agents.items()}
+    else:
+        obs = env.reset()
 
     # Initialize first policies.
     env_done = False
@@ -381,7 +388,6 @@ def train(settings: Dict[str, Any]) -> None:
                 if j % args.log_interval == 0 and len(agent_episode_rewards) > 1:
                     total_num_steps = (j + 1) * args.num_processes * args.num_steps
                     end = time.time()
-                    """
                     print(
                         "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".format(
                             j,
@@ -397,7 +403,6 @@ def train(settings: Dict[str, Any]) -> None:
                             action_losses[agent_id],
                         )
                     )
-                    """
 
                 """
                 if (

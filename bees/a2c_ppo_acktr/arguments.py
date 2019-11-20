@@ -111,8 +111,8 @@ def get_args():
         help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument(
         '--save-dir',
-        default='./trained_models/',
-        help='directory to save agent logs (default: ./trained_models/)')
+        default='./models/',
+        help='directory to save agent logs (default: ./models/)')
     parser.add_argument(
         '--no-cuda',
         action='store_true',
