@@ -246,7 +246,10 @@ Things to come back to:
    - Faster reinitialization by loading from fixed set of randomly initialized state dicts (DONE)
    - Implement saving and loading runs
      - Env saving and loading (DONE)
-     - Policy saving and loading
+     - Policy saving and loading (Functional but files are massive because we are double
+                                    saving actor_critic objects)
+     - Better saving and loading runs (with keywords instead of only one save per algo?)
+     - Work out settings between resuming runs (timesteps, changing settings?)
    - Parallelize env.step function?
    - Build agent sandbox
    - Build log analysis script
@@ -256,3 +259,5 @@ Things to come back to:
      - Make arguments not positional
      - Minimize hardcoding
    - Merge
+
+   WRITE TESTS

@@ -369,10 +369,39 @@ def train(settings: Dict[str, Any]) -> None:
         if (
             j % args.save_interval == 0 or j == num_updates - 1
         ) and args.save_dir != "":
+
+            save_root = os.path.join(args.save_dir, args.algo)
+            if not os.path.isdir(save_root):
+                os.makedirs(save_root)
+
+            # Save trainer state objects that aren't pytorch models
+            trainer_state = {
+                "agents": agents,
+                "rollout_map": rollout_map,
+                "episode_rewards": episode_rewards,
+                "minted_agents": minted_agents,
+                "value_losses": value_losses,
+                "action_losses": action_losses,
+                "dist_entropies": dist_entropies,
+                "dead_critics": dead_critics,
+                "dead_agents": dead_agents,
+                "state_dicts": state_dicts,
+                "optim_state_dicts": optim_state_dicts,
+            }
+            """
+            trainer_state_path = os.path.join(save_root, "trainer.pkl")
+            with open(trainer_state_path, "wb") as trainer_file:
+                pickle.dump(trainer_state, trainer_file)
+            """
+            for name, item in trainer_state.items():
+                path = os.path.join(save_root, "%s.pkl" % name)
+                with open(path, 'wb') as f:
+                    pickle.dump(item, f)
+
             for agent_id, agent in agents.items():
                 if agent_id not in minted_agents:
                     actor_critic = actor_critics[agent_id]
-                    save_path = os.path.join(args.save_dir, args.algo, str(agent_id))
+                    save_path = os.path.join(save_root, str(agent_id))
                     if not os.path.isdir(save_path):
                         os.makedirs(save_path)
 
@@ -381,6 +410,13 @@ def train(settings: Dict[str, Any]) -> None:
                         [actor_critic, getattr(env, "ob_rms", None)],
                         os.path.join(save_path, args.env_name + ".pt"),
                     )
+
+            # Save out environment end state and settings file
+            state_path = os.path.join(save_root, "env.pkl")
+            settings_path = os.path.join(save_root, "settings.json")
+            env.save(state_path)
+            with open(settings_path, "w") as settings_file:
+                json.dump(settings, settings_file)
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
@@ -428,13 +464,6 @@ def train(settings: Dict[str, Any]) -> None:
     logging.getLogger().info(
         "Steps completed during episode: %d / %d" % (env.iteration, args.num_env_steps)
     )
-
-    # Save out environment end state and settings file
-    state_path = os.path.join(args.save_dir, args.algo, "env.pkl")
-    settings_path = os.path.join(args.save_dir, args.algo, "settings.json")
-    env.save(state_path)
-    with open(settings_path, "w") as settings_file:
-        json.dump(settings, settings_file)
 
 
 def get_agent(
