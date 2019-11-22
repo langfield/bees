@@ -223,6 +223,11 @@ Things to come back to:
     - Add health bottleneck for mating
     - Lose more health for moving
 
+    Right now, when saving and loading runs, we overwrite the old save, since saving a
+    run takes about 5 gigs. In the future, we may want the ability to keep the
+    intermediate save points so that we can make multiple branches from that point, in
+    which case we'll need to add the functionality to save these intermediate steps.
+
 #===========================================================================================
 
     October sprint:

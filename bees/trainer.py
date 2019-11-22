@@ -38,13 +38,22 @@ def train(settings: Dict[str, Any]) -> None:
     """
     args = get_args()
 
+    # Set log file.
+    if "logging" not in settings:
+        codename, env_log, visual_log = get_logs()
+        settings["logging"] = {}
+        settings["logging"]["codename"] = codename
+        settings["logging"]["env_log"] = env_log
+        settings["logging"]["visual_log"] = visual_log
+
     # Resume from previous run
     load_dir = settings["trainer"]["load_from"]
     resume = False
     if load_dir:
         resume = True
     if resume:
-        env_state_path = os.path.join(load_dir, "env.pkl")
+        env_filename = codename + "_env.pkl"
+        env_state_path = os.path.join(load_dir, env_filename)
         trainer_state_path = os.path.join(load_dir, "trainer.pkl")
         settings_path = os.path.join(load_dir, "settings.json")
         with open(settings_path, "r") as settings_file:
