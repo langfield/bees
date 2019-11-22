@@ -43,6 +43,10 @@ def create_env(settings: Dict[str, Any]) -> Env:
     target_agent_density = env_config["target_agent_density"]
     print_repr = env_config["print"]
 
+    codename = settings["logging"]["codename"]
+    env_log = settings["logging"]["env_log"]
+    visual_log = settings["logging"]["visual_log"]
+
     rew_config = settings["rew"]
     n_layers = rew_config["n_layers"]
     hidden_dim = rew_config["hidden_dim"]
@@ -81,6 +85,9 @@ def create_env(settings: Dict[str, Any]) -> Env:
         mut_sigma,
         mut_p,
         consts,
+        codename,
+        env_log,
+        visual_log,
     )
     return env
 

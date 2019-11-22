@@ -63,12 +63,14 @@ def convert_obs_to_tuple(obs: np.ndarray) -> Tuple[Tuple[Tuple[int, ...], ...], 
     return observation_tuple
 
 
-def get_logs() -> Tuple["TextIOWrapper", "TextIOWrapper"]:
+def get_logs() -> Tuple[str, "TextIOWrapper", "TextIOWrapper"]:
     """
     Creates and returns log objects for repr and reward logs.
 
     Returns
     -------
+    codename : ``str``.
+        The training run codename.
     env_log : ``TextIOWrapper``.
         Environment json log.
     visual_log : ``TextIOWrapper``.
@@ -97,6 +99,8 @@ def get_logs() -> Tuple["TextIOWrapper", "TextIOWrapper"]:
         break
     date = str(datetime.datetime.now())
     date = date.replace(" ", "_")
+    # TODO: Use ``codename`` below.
+    codename = "%s_%s" % (token, date)
     env_log_path = "logs/%s_%s_env_log.txt" % (token, date)
     visual_log_path = "logs/%s_%s_visual_log.txt" % (token, date)
     for log in [env_log_path, visual_log_path]:
@@ -106,4 +110,4 @@ def get_logs() -> Tuple["TextIOWrapper", "TextIOWrapper"]:
     env_log = open(env_log_path, "a+")
     visual_log = open(visual_log_path, "a+")
 
-    return env_log, visual_log
+    return codename, env_log, visual_log
