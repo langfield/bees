@@ -45,9 +45,12 @@ def train(settings: Dict[str, Any]) -> None:
         resume = True
     if resume:
         env_state_path = os.path.join(load_dir, "env.pkl")
+        trainer_state_path = os.path.join(load_dir, "trainer.pkl")
         settings_path = os.path.join(load_dir, "settings.json")
         with open(settings_path, "r") as settings_file:
             settings = json.load(settings_file)
+        with open(trainer_state_path, "rb") as trainer_file:
+            trainer_state = pickle.load(trainer_file)
 
     args.num_env_steps = settings["trainer"]["time_steps"]
     print("Arguments:", str(args))
@@ -73,27 +76,49 @@ def train(settings: Dict[str, Any]) -> None:
     torch.set_num_threads(2)
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
-    # Create multiagent maps.
-    actor_critics: Dict[int, Policy] = {}
-    agents: Dict[int, "AgentAlgo"] = {}
-    rollout_map: Dict[int, RolloutStorage] = {}
-    episode_rewards: Dict[int, collections.deque] = {}
-    minted_agents: Set[int] = set()
-    value_losses: Dict[int, float] = {}
-    action_losses: Dict[int, float] = {}
-    dist_entropies: Dict[int, float] = {}
-
-    # Save dead objects to make creation faster.
-    dead_critics: Set[Policy] = set()
-    dead_agents: Set["AgentAlgo"] = set()
-    state_dicts: List[OrderedDict] = []
-    optim_state_dicts: List[OrderedDict] = []
-
-    # Don't reset environment if we are resuming a previous run.
     if resume:
+        
+        # Load in multiagent maps.
+        agents = trainer_state["agents"]
+        rollout_map = trainer_state["rollout_map"]
+        episode_rewards = trainer_state["episode_rewards"]
+        minted_agents = trainer_state["minted_agents"]
+        value_losses = trainer_state["value_losses"]
+        action_losses = trainer_state["action_losses"]
+        dist_entropies = trainer_state["dist_entropies"]
+
+        # Load in dead objects.
+        dead_critics = trainer_state["dead_critics"]
+        dead_agents = trainer_state["dead_agents"]
+        state_dicts = trainer_state["state_dicts"]
+        optim_state_dicts = trainer_state["optim_state_dicts"]
+
+        # Create actor_critics object from state in ``agents``.
+        actor_critics = {agent_id: agent.actor_critic for agent_id, agent in agents.items()}
+
+        # Don't reset environment if we are resuming a previous run.
         obs = {agent_id: agent.observation for agent_id, agent in env.agents.items()}
+
     else:
+
+        # Create multiagent maps.
+        actor_critics: Dict[int, Policy] = {}
+        agents: Dict[int, "AgentAlgo"] = {}
+        rollout_map: Dict[int, RolloutStorage] = {}
+        episode_rewards: Dict[int, collections.deque] = {}
+        minted_agents: Set[int] = set()
+        value_losses: Dict[int, float] = {}
+        action_losses: Dict[int, float] = {}
+        dist_entropies: Dict[int, float] = {}
+
+        # Save dead objects to make creation faster.
+        dead_critics: Set[Policy] = set()
+        dead_agents: Set["AgentAlgo"] = set()
+        state_dicts: List[OrderedDict] = []
+        optim_state_dicts: List[OrderedDict] = []
+
         obs = env.reset()
+
 
     # Initialize first policies.
     env_done = False
@@ -374,7 +399,7 @@ def train(settings: Dict[str, Any]) -> None:
             if not os.path.isdir(save_root):
                 os.makedirs(save_root)
 
-            # Save trainer state objects that aren't pytorch models
+            # Save trainer state objects
             trainer_state = {
                 "agents": agents,
                 "rollout_map": rollout_map,
@@ -388,16 +413,13 @@ def train(settings: Dict[str, Any]) -> None:
                 "state_dicts": state_dicts,
                 "optim_state_dicts": optim_state_dicts,
             }
-            """
             trainer_state_path = os.path.join(save_root, "trainer.pkl")
             with open(trainer_state_path, "wb") as trainer_file:
                 pickle.dump(trainer_state, trainer_file)
-            """
-            for name, item in trainer_state.items():
-                path = os.path.join(save_root, "%s.pkl" % name)
-                with open(path, 'wb') as f:
-                    pickle.dump(item, f)
 
+            # Commented out because all of the information in actor_critics is
+            # saved in "agents", so there is no need to double save.
+            """
             for agent_id, agent in agents.items():
                 if agent_id not in minted_agents:
                     actor_critic = actor_critics[agent_id]
@@ -410,6 +432,7 @@ def train(settings: Dict[str, Any]) -> None:
                         [actor_critic, getattr(env, "ob_rms", None)],
                         os.path.join(save_path, args.env_name + ".pt"),
                     )
+            """
 
             # Save out environment end state and settings file
             state_path = os.path.join(save_root, "env.pkl")

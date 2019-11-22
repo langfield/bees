@@ -22,7 +22,7 @@
     "trainer": {
         "time_steps": 100,
         "reuse_state_dicts": true,
-        "load_from": ""
+        "load_from": "models/ppo"
     },
     "rew": {
         "n_layers": 2,
