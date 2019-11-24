@@ -107,7 +107,5 @@ def get_logs() -> Tuple[str, "TextIOWrapper", "TextIOWrapper"]:
         log_dir = os.path.dirname(log)
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
-    env_log = open(env_log_path, "a+")
-    visual_log = open(visual_log_path, "a+")
 
-    return codename, env_log, visual_log
+    return codename, env_log_path, visual_log_path
