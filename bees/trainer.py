@@ -23,6 +23,7 @@ from a2c_ppo_acktr.storage import RolloutStorage
 # from evaluation import evaluate
 
 from main import create_env
+from utils import get_logs
 
 # pylint: disable=bad-continuation
 
@@ -37,29 +38,40 @@ def train(settings: Dict[str, Any]) -> None:
         Global settings file.
     """
     args = get_args()
+    save_root = os.path.join(args.save_dir, args.algo)
 
-    # Set log file.
-    if "logging" not in settings:
-        codename, env_log, visual_log = get_logs()
-        settings["logging"] = {}
-        settings["logging"]["codename"] = codename
-        settings["logging"]["env_log"] = env_log
-        settings["logging"]["visual_log"] = visual_log
-
-    # Resume from previous run
-    load_dir = settings["trainer"]["load_from"]
-    resume = False
-    if load_dir:
-        resume = True
+    # Resume from previous run.
+    resume: bool = "logging" in settings
     if resume:
+        codename = settings["logging"]["codename"]
+
+        # Construct paths.
         env_filename = codename + "_env.pkl"
-        env_state_path = os.path.join(load_dir, env_filename)
-        trainer_state_path = os.path.join(load_dir, "trainer.pkl")
-        settings_path = os.path.join(load_dir, "settings.json")
+        trainer_filename = codename + "_trainer.pkl"
+        settings_filename = codename + "_settings.json"
+        env_state_path = os.path.join(save_root, env_filename)
+        trainer_state_path = os.path.join(save_root, trainer_filename)
+        settings_path = os.path.join(save_root, settings_filename)
+
+        # Load.
         with open(settings_path, "r") as settings_file:
             settings = json.load(settings_file)
         with open(trainer_state_path, "rb") as trainer_file:
             trainer_state = pickle.load(trainer_file)
+
+    # Set log file.
+    else:
+        codename, env_log_path, visual_log_path = get_logs()
+        settings["logging"] = {}
+        settings["logging"]["codename"] = codename
+        settings["logging"]["env_log_path"] = env_log_path
+        settings["logging"]["visual_log_path"] = visual_log_path
+
+    # Open logs.
+    env_log = open(settings["logging"]["env_log_path"], "a+")
+    visual_log = open(settings["logging"]["visual_log_path"], "a+")
+    settings["logging"]["env_log"] = env_log
+    settings["logging"]["visual_log"] = visual_log
 
     args.num_env_steps = settings["trainer"]["time_steps"]
     print("Arguments:", str(args))
@@ -86,7 +98,7 @@ def train(settings: Dict[str, Any]) -> None:
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
     if resume:
-        
+
         # Load in multiagent maps.
         agents = trainer_state["agents"]
         rollout_map = trainer_state["rollout_map"]
@@ -103,7 +115,9 @@ def train(settings: Dict[str, Any]) -> None:
         optim_state_dicts = trainer_state["optim_state_dicts"]
 
         # Create actor_critics object from state in ``agents``.
-        actor_critics = {agent_id: agent.actor_critic for agent_id, agent in agents.items()}
+        actor_critics = {
+            agent_id: agent.actor_critic for agent_id, agent in agents.items()
+        }
 
         # Don't reset environment if we are resuming a previous run.
         obs = {agent_id: agent.observation for agent_id, agent in env.agents.items()}
@@ -127,7 +141,6 @@ def train(settings: Dict[str, Any]) -> None:
         optim_state_dicts: List[OrderedDict] = []
 
         obs = env.reset()
-
 
     # Initialize first policies.
     env_done = False
@@ -278,15 +291,12 @@ def train(settings: Dict[str, Any]) -> None:
                             args, env.observation_space, env.action_space, device
                         )
 
-                        # TOMORROW
                         # Save a copy of the state dict.
                         if settings["trainer"]["reuse_state_dicts"]:
                             state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
                             optim_state_dicts.append(
                                 copy.deepcopy(agent.optimizer.state_dict())
                             )
-                        else:
-                            pass
 
                     # Update dicts.
                     agents[agent_id] = agent
@@ -404,7 +414,6 @@ def train(settings: Dict[str, Any]) -> None:
             j % args.save_interval == 0 or j == num_updates - 1
         ) and args.save_dir != "":
 
-            save_root = os.path.join(args.save_dir, args.algo)
             if not os.path.isdir(save_root):
                 os.makedirs(save_root)
 
@@ -422,7 +431,7 @@ def train(settings: Dict[str, Any]) -> None:
                 "state_dicts": state_dicts,
                 "optim_state_dicts": optim_state_dicts,
             }
-            trainer_state_path = os.path.join(save_root, "trainer.pkl")
+            trainer_state_path = os.path.join(save_root, "%s_trainer.pkl" % codename)
             with open(trainer_state_path, "wb") as trainer_file:
                 pickle.dump(trainer_state, trainer_file)
 
@@ -443,12 +452,18 @@ def train(settings: Dict[str, Any]) -> None:
                     )
             """
 
-            # Save out environment end state and settings file
-            state_path = os.path.join(save_root, "env.pkl")
-            settings_path = os.path.join(save_root, "settings.json")
+            # Save out environment state.
+            state_path = os.path.join(save_root, "%s_env.pkl" % codename)
             env.save(state_path)
+
+            # Save out settings, removing log files (not paths) from object.
+            del settings["logging"]["env_log"]
+            del settings["logging"]["visual_log"]
+            settings_path = os.path.join(save_root, "%s_settings.json" % codename)
             with open(settings_path, "w") as settings_file:
                 json.dump(settings, settings_file)
+            settings["logging"]["env_log"] = env_log
+            settings["logging"]["visual_log"] = visual_log
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:

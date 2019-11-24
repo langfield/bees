@@ -252,8 +252,8 @@ Things to come back to:
    - Implement saving and loading runs
      - Env saving and loading (DONE)
      - Policy saving and loading (DONE)
-     - Saving and loading runs with keywords
-     - Work out settings between resuming runs (timesteps, changing settings?)
+     - Saving and loading runs with keywords (DONE)
+     - Work out settings between resuming runs (absolute vs. relative timesteps, changing settings?)
    - Parallelize env.step function?
    - Build agent sandbox
    - Build log analysis script
