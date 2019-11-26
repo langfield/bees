@@ -38,41 +38,56 @@ def train(settings: Dict[str, Any]) -> None:
         Global settings file.
     """
     args = get_args()
-    save_root = os.path.join(args.save_dir, args.algo)
+
+    # TOMORROW: A whole bunch of stuff from here until environment creation needs to be
+    # reworked. env_filename, trainer_filename, etc. need to be set in the else case,
+    # and we should rename those variables in the first case to old_env_filename, etc,
+    # so that we can set the new ones. We also should change args.save_dir to
+    # args.save_root in a2c/arguments.py, and we need to get rid of all references to
+    # settings["logging"]. We may need to do more, but do all of these first and then
+    # run it and see.
 
     # Resume from previous run.
-    resume: bool = "logging" in settings
-    if resume:
-        codename = settings["logging"]["codename"]
+    if args.load_from:
+
+        # Construct new codename.
+        old_codename = os.path.basename(args.load_from)
+        token = old_codename.split("_")[0]
+        date = str(datetime.datetime.now())
+        date = date.replace(" ", "_")
+        codename = "%s_%s" % (token, date)
 
         # Construct paths.
         env_filename = codename + "_env.pkl"
         trainer_filename = codename + "_trainer.pkl"
         settings_filename = codename + "_settings.json"
-        env_state_path = os.path.join(save_root, env_filename)
-        trainer_state_path = os.path.join(save_root, trainer_filename)
-        settings_path = os.path.join(save_root, settings_filename)
+        env_log_filename = codename + "_env_log.txt"
+        visual_log_filename = codename + "_visual_log.txt"
+        env_state_path = os.path.join(args.load_from, env_filename)
+        trainer_state_path = os.path.join(args.load_from, trainer_filename)
+        settings_path = os.path.join(args.load_from, settings_filename)
+        env_log_path = os.path.join(args.load_from, env_log_filename)
+        visual_log_path = os.path.join(args.load_from, visual_log_filename)
 
         # Load.
-        with open(settings_path, "r") as settings_file:
-            settings = json.load(settings_file)
+        # TODO: Make args.settings optional, and load from old settings file if none is
+        # given.
         with open(trainer_state_path, "rb") as trainer_file:
             trainer_state = pickle.load(trainer_file)
 
     # Set log file.
     else:
-        codename, env_log_path, visual_log_path = get_logs()
-        settings["logging"] = {}
-        settings["logging"]["codename"] = codename
-        settings["logging"]["env_log_path"] = env_log_path
-        settings["logging"]["visual_log_path"] = visual_log_path
+        token = get_token(args.save_root)
+        date = str(datetime.datetime.now())
+        date = date.replace(" ", "_")
+        codename = "%s_%s" % (token, date)
+        save_dir = os.path.join(args.save_root, codename)
 
     # Open logs.
-    env_log = open(settings["logging"]["env_log_path"], "a+")
-    visual_log = open(settings["logging"]["visual_log_path"], "a+")
-    settings["logging"]["env_log"] = env_log
-    settings["logging"]["visual_log"] = visual_log
+    env_log = open(env_log_path, "a+")
+    visual_log = open(env_log_path, "a+")
 
+    # Create environment.
     args.num_env_steps = settings["trainer"]["time_steps"]
     print("Arguments:", str(args))
     env = create_env(settings)
@@ -412,7 +427,7 @@ def train(settings: Dict[str, Any]) -> None:
         # save for every interval-th episode or for the last epoch
         if (
             j % args.save_interval == 0 or j == num_updates - 1
-        ) and args.save_dir != "":
+        ) and args.save_root != "":
 
             if not os.path.isdir(save_root):
                 os.makedirs(save_root)

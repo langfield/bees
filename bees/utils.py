@@ -63,18 +63,14 @@ def convert_obs_to_tuple(obs: np.ndarray) -> Tuple[Tuple[Tuple[int, ...], ...], 
     return observation_tuple
 
 
-def get_logs() -> Tuple[str, "TextIOWrapper", "TextIOWrapper"]:
+def get_token(save_root: str) -> str:
     """
-    Creates and returns log objects for repr and reward logs.
+    Creates and returns a new token for saving and loading runs.
 
     Returns
     -------
-    codename : ``str``.
-        The training run codename.
-    env_log : ``TextIOWrapper``.
-        Environment json log.
-    visual_log : ``TextIOWrapper``.
-        Environment visualization.
+    token : ``str``.
+        The training run token name.
     """
 
     # HARDCODE
@@ -82,9 +78,9 @@ def get_logs() -> Tuple[str, "TextIOWrapper", "TextIOWrapper"]:
         tokens = [word.rstrip() for word in english.readlines()]
     tokens.sort()
     tokens = [word for word in tokens if len(word) > 5]
-    if not os.path.isdir("logs/"):
-        os.mkdir("logs/")
-    dirlist = os.listdir("logs/")
+    if not os.path.isdir(save_root):
+        os.makedirs(save_root)
+    dirlist = os.listdir(save_root)
     token_idx = 0
     while 1:
         token = tokens[token_idx]
@@ -97,15 +93,5 @@ def get_logs() -> Tuple[str, "TextIOWrapper", "TextIOWrapper"]:
             token_idx += 1
             continue
         break
-    date = str(datetime.datetime.now())
-    date = date.replace(" ", "_")
-    # TODO: Use ``codename`` below.
-    codename = "%s_%s" % (token, date)
-    env_log_path = "logs/%s_%s_env_log.txt" % (token, date)
-    visual_log_path = "logs/%s_%s_visual_log.txt" % (token, date)
-    for log in [env_log_path, visual_log_path]:
-        log_dir = os.path.dirname(log)
-        if not os.path.isdir(log_dir):
-            os.makedirs(log_dir)
 
-    return codename, env_log_path, visual_log_path
+    return token
