@@ -6,6 +6,7 @@ import torch
 def get_args():
     parser = argparse.ArgumentParser(description="RL")
     parser.add_argument("--load-from", default="", help="Saved directory to load from.")
+    parser.add_argument("--settings", default="", help="Settings file to use.")
     parser.add_argument(
         "--algo", default="ppo", help="algorithm to use: a2c | ppo | acktr"
     )
