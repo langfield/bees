@@ -78,8 +78,11 @@ def get_token(save_root: str) -> str:
         tokens = [word.rstrip() for word in english.readlines()]
     tokens.sort()
     tokens = [word for word in tokens if len(word) > 5]
+
+    # TODO: Add warning when path doesn't exist.
     if not os.path.isdir(save_root):
         os.makedirs(save_root)
+
     dirlist = os.listdir(save_root)
     token_idx = 0
     while 1:

@@ -4,7 +4,9 @@ import json
 import time
 import copy
 import random
+import shutil
 import logging
+import datetime
 import argparse
 import collections
 from collections import deque, OrderedDict
@@ -23,7 +25,7 @@ from a2c_ppo_acktr.storage import RolloutStorage
 # from evaluation import evaluate
 
 from main import create_env
-from utils import get_logs
+from utils import get_token
 
 # pylint: disable=bad-continuation
 
@@ -47,41 +49,92 @@ def train(settings: Dict[str, Any]) -> None:
     # settings["logging"]. We may need to do more, but do all of these first and then
     # run it and see.
 
+    """
+    Three command line arguments ``--settings``, ``--load-from``, ``--save-root``.
+
+    If you want to run training from scratch, you must pass ``--settings``, so that
+    the program knows what to do, and you may optionally pass ``--save-root`` in the
+    case where you would like to save elsewhere from the canonical directory.
+
+    Passing ``--load-from`` will tell the program to attempt to load from a previously
+    saved training run at the directory specified by the value of the argument. If
+    ``--save-root`` is passed, then all saves during the current run will be saved in
+    that root directory, regardless of the root directory implied by ``--load-from``.
+    If ``--settings`` is passed, then the settings file, if any, in the ``--load-from``
+    directory will be ignored. If no ``--settings`` argument is passed and there is no
+    settings file in the ``--load-from`` directory, then the program will raise an
+    error. If no ``--save-root`` is passed, the root will be implicitly set to the
+    parent directory of ``--load-from``, i.e. the ``--save-root`` from the training run
+    being loaded in. It will NOT default to the canonical root unless this is also the
+    parent directory of ``--load-from``.
+
+    Since there are a lot of cases, we should add an ``validate_args()`` function which
+    raises errors when needed.
+
+    --save-root : ALWAYS OPTIONAL -> Canonical rootdir default.
+
+    --load-from : ALWAYS OPTIONAL -> Empty default.
+
+    --settings : OPTIONAL IF --load-from ELSE REQUIRED -> Empty default.
+
+    """
+
+    # TODO: Convert everything to abspaths.
     # Resume from previous run.
     if args.load_from:
 
+        # TODO: assert ``args.load_from`` exists.
+
         # Construct new codename.
+        # NOTE: we were going to have the basename be just the token, but this seems
+        # ill-advised since you'd have to go into each folder to determine which is
+        # newest.
         old_codename = os.path.basename(args.load_from)
         token = old_codename.split("_")[0]
-        date = str(datetime.datetime.now())
-        date = date.replace(" ", "_")
-        codename = "%s_%s" % (token, date)
 
         # Construct paths.
-        env_filename = codename + "_env.pkl"
-        trainer_filename = codename + "_trainer.pkl"
-        settings_filename = codename + "_settings.json"
-        env_log_filename = codename + "_env_log.txt"
-        visual_log_filename = codename + "_visual_log.txt"
+        env_filename = old_codename + "_env.pkl"
+        trainer_filename = old_codename + "_trainer.pkl"
+        settings_filename = old_codename + "_settings.json"
+        env_log_filename = old_codename + "_env_log.txt"
+        visual_log_filename = old_codename + "_visual_log.txt"
         env_state_path = os.path.join(args.load_from, env_filename)
         trainer_state_path = os.path.join(args.load_from, trainer_filename)
         settings_path = os.path.join(args.load_from, settings_filename)
         env_log_path = os.path.join(args.load_from, env_log_filename)
         visual_log_path = os.path.join(args.load_from, visual_log_filename)
 
-        # Load.
-        # TODO: Make args.settings optional, and load from old settings file if none is
-        # given.
+        # Load trainer state.
         with open(trainer_state_path, "rb") as trainer_file:
             trainer_state = pickle.load(trainer_file)
 
-    # Set log file.
+    # New training run.
     else:
         token = get_token(args.save_root)
-        date = str(datetime.datetime.now())
-        date = date.replace(" ", "_")
-        codename = "%s_%s" % (token, date)
-        save_dir = os.path.join(args.save_root, codename)
+
+    # TODO: Make args.settings optional; load from old settings file if "".
+    # TODO: Raise an error if settings is not passed and there is no settings in
+    # ``args.load-from``.
+    if args.settings:
+        settings_path = args.settings
+
+    # Load settings dict.
+    with open(settings_path, "r") as settings_file:
+        settings = json.load(settings_file)
+
+    # Construct a new ``save_dir`` in either case.
+    date = str(datetime.datetime.now())
+    date = date.replace(" ", "_")
+    codename = "%s_%s" % (token, date)
+    save_dir = os.path.join(args.save_root, codename)
+
+    # If ``save_dir`` is not the same as ``load_from`` we must copy the existing logs
+    # into the new save directory, then contine to append to them.
+    if args.load_from and save_dir not in env_log_path:
+        new_env_log_filename = codename + "_env_log.txt"
+        new_env_log_path = os.path.join(save_dir, new_env_log_filename)
+        shutil.copyfile(env_log_path, new_env_log_path)
+        env_log_path = new_env_log_path
 
     # Open logs.
     env_log = open(env_log_path, "a+")
@@ -91,8 +144,6 @@ def train(settings: Dict[str, Any]) -> None:
     args.num_env_steps = settings["trainer"]["time_steps"]
     print("Arguments:", str(args))
     env = create_env(settings)
-    if resume:
-        env.load(env_state_path)
 
     if not settings["trainer"]["reuse_state_dicts"]:
         print("Warning: this is slow.")
@@ -112,7 +163,10 @@ def train(settings: Dict[str, Any]) -> None:
     torch.set_num_threads(2)
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
-    if resume:
+    if args.load_from:
+
+        # Load the environment state from file.
+        env.load(env_state_path)
 
         # Load in multiagent maps.
         agents = trainer_state["agents"]
@@ -429,8 +483,8 @@ def train(settings: Dict[str, Any]) -> None:
             j % args.save_interval == 0 or j == num_updates - 1
         ) and args.save_root != "":
 
-            if not os.path.isdir(save_root):
-                os.makedirs(save_root)
+            if not os.path.isdir(save_dir):
+                os.makedirs(save_dir)
 
             # Save trainer state objects
             trainer_state = {
@@ -446,7 +500,7 @@ def train(settings: Dict[str, Any]) -> None:
                 "state_dicts": state_dicts,
                 "optim_state_dicts": optim_state_dicts,
             }
-            trainer_state_path = os.path.join(save_root, "%s_trainer.pkl" % codename)
+            trainer_state_path = os.path.join(save_dir, "%s_trainer.pkl" % codename)
             with open(trainer_state_path, "wb") as trainer_file:
                 pickle.dump(trainer_state, trainer_file)
 
@@ -456,7 +510,7 @@ def train(settings: Dict[str, Any]) -> None:
             for agent_id, agent in agents.items():
                 if agent_id not in minted_agents:
                     actor_critic = actor_critics[agent_id]
-                    save_path = os.path.join(save_root, str(agent_id))
+                    save_path = os.path.join(save_dir, str(agent_id))
                     if not os.path.isdir(save_path):
                         os.makedirs(save_path)
 
@@ -468,13 +522,13 @@ def train(settings: Dict[str, Any]) -> None:
             """
 
             # Save out environment state.
-            state_path = os.path.join(save_root, "%s_env.pkl" % codename)
+            state_path = os.path.join(save_dir, "%s_env.pkl" % codename)
             env.save(state_path)
 
             # Save out settings, removing log files (not paths) from object.
             del settings["logging"]["env_log"]
             del settings["logging"]["visual_log"]
-            settings_path = os.path.join(save_root, "%s_settings.json" % codename)
+            settings_path = os.path.join(save_dir, "%s_settings.json" % codename)
             with open(settings_path, "w") as settings_file:
                 json.dump(settings, settings_file)
             settings["logging"]["env_log"] = env_log
