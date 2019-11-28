@@ -20,7 +20,6 @@ import gym
 # Bees imports.
 from agent import Agent
 from genetics import get_child_reward_network
-from utils import get_logs
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
@@ -94,12 +93,6 @@ class Env:
         Probability of mutation on reward vectors.
     consts : ``Dict[str, Any]``.
         Dictionary of various constants.
-    codename : ``str``.
-        Unique english-language identifier for training run.
-    env_log : ``TextIOWrapper``.
-        Environment log file object, already open.
-    visual_log : ``TextIOWrapper``.
-        Grid log file object, already open.
     """
 
     # TODO: make optional arguments consistent throughout nested init calls.
@@ -131,9 +124,6 @@ class Env:
         mut_sigma: float,
         mut_p: float,
         consts: Dict[str, Any],
-        codename: str,
-        env_log: "TextIOWrapper",
-        visual_log: "TextIOWrapper",
     ) -> None:
 
         self.width = width
@@ -154,11 +144,6 @@ class Env:
         self.agent_init_y_upper_bound = agent_init_y_upper_bound
         self.target_agent_density = target_agent_density
         self.print_repr = print_repr
-        
-        # GLOBALS
-        self.codename = codename
-        self.env_log = env_log
-        self.visual_log = visual_log
 
         # HARDCODE
         self.agent_init_x_upper_bound = min(
@@ -364,8 +349,6 @@ class Env:
         elif move == self.STAY:
             new_pos = pos
         else:
-            self.env_log.close()
-            self.visual_log.close()
             raise ValueError("'%s' is not a valid action." % move)
 
         return new_pos  # type: ignore
@@ -401,8 +384,6 @@ class Env:
         # Remove from ``self.grid``.
         grid_idx = pos + (obj_type_id,)
         if self.grid[grid_idx] != 1:
-            self.env_log.close()
-            self.visual_log.close()
             raise ValueError(
                 "Object '%s' does not exist at grid position '(%d, %d)'."
                 % (self.obj_type_name[obj_type_id], x, y)
@@ -452,8 +433,6 @@ class Env:
         # Add to ``self.grid``.
         grid_idx = pos + (obj_type_id,)
         if obj_type_id == self.obj_type_ids["agent"] and self.grid[grid_idx] == 1:
-            self.env_log.close()
-            self.visual_log.close()
             raise ValueError(
                 "An agent already exists at grid position '(%d, %d)'." % (x, y)
             )
@@ -936,9 +915,6 @@ class Env:
 
         self.dones = dict(done)
 
-        # Write environment representation to log
-        self._log_state()
-
         self.iteration += 1
         return obs, rew, done, info
 
@@ -1030,7 +1006,7 @@ class Env:
 
         return output
 
-    def _log_state(self) -> None:
+    def log_state(self, env_log, visual_log) -> None:
         """
         Logs the state of the environment as a string to a
         prespecified log file path.
@@ -1038,14 +1014,14 @@ class Env:
 
         # Write to json log for environment state.
         env_state = self._env_json_state()
-        self.env_log.write(str(env_state) + "\n")
+        env_log.write(str(env_state) + "\n")
 
         # Write to visual log, and print visualization if settings["env"]["print"].
         visual = self.__repr__()
         if self.print_repr:
             os.system("clear")
             print(visual)
-        self.visual_log.write(visual + 40 * "\n")
+        visual_log.write(visual + 40 * "\n")
 
     def _new_agent_id(self) -> int:
         """

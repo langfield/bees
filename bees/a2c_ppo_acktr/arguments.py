@@ -130,7 +130,7 @@ def get_args():
         help="directory to save agent logs (default: /tmp/gym)",
     )
     parser.add_argument(
-        "--save-dir",
+        "--save-root",
         default="./models/",
         help="directory to save agent logs (default: ./models/)",
     )
