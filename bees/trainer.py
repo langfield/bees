@@ -89,20 +89,16 @@ def train(settings: Dict[str, Any]) -> None:
         # NOTE: we were going to have the basename be just the token, but this seems
         # ill-advised since you'd have to go into each folder to determine which is
         # newest.
-        old_codename = os.path.basename(args.load_from)
-        token = old_codename.split("_")[0]
+        codename = os.path.basename(os.path.abspath(args.load_from))
+        token = codename.split("_")[0]
 
         # Construct paths.
-        env_filename = old_codename + "_env.pkl"
-        trainer_filename = old_codename + "_trainer.pkl"
-        settings_filename = old_codename + "_settings.json"
-        env_log_filename = old_codename + "_env_log.txt"
-        visual_log_filename = old_codename + "_visual_log.txt"
+        env_filename = codename + "_env.pkl"
+        trainer_filename = codename + "_trainer.pkl"
+        settings_filename = codename + "_settings.json"
         env_state_path = os.path.join(args.load_from, env_filename)
         trainer_state_path = os.path.join(args.load_from, trainer_filename)
         settings_path = os.path.join(args.load_from, settings_filename)
-        env_log_path = os.path.join(args.load_from, env_log_filename)
-        visual_log_path = os.path.join(args.load_from, visual_log_filename)
 
         # Load trainer state.
         with open(trainer_state_path, "rb") as trainer_file:
@@ -111,6 +107,9 @@ def train(settings: Dict[str, Any]) -> None:
     # New training run.
     else:
         token = get_token(args.save_root)
+        date = str(datetime.datetime.now())
+        date = date.replace(" ", "_")
+        codename = "%s_%s" % (token, date)
 
     # TODO: Make args.settings optional; load from old settings file if "".
     # TODO: Raise an error if settings is not passed and there is no settings in
@@ -123,22 +122,33 @@ def train(settings: Dict[str, Any]) -> None:
         settings = json.load(settings_file)
 
     # Construct a new ``save_dir`` in either case.
-    date = str(datetime.datetime.now())
-    date = date.replace(" ", "_")
-    codename = "%s_%s" % (token, date)
     save_dir = os.path.join(args.save_root, codename)
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+
+    # Construct log paths.
+    env_log_filename = codename + "_env_log.txt"
+    visual_log_filename = codename + "_visual_log.txt"
+    env_log_path = os.path.join(save_dir, env_log_filename)
+    visual_log_path = os.path.join(save_dir, visual_log_filename)
 
     # If ``save_dir`` is not the same as ``load_from`` we must copy the existing logs
     # into the new save directory, then contine to append to them.
-    if args.load_from and save_dir not in env_log_path:
+    if args.load_from and os.path.abspath(save_dir) not in os.path.abspath(
+        env_log_path
+    ):
         new_env_log_filename = codename + "_env_log.txt"
+        new_visual_log_filename = codename + "_visual_log.txt"
         new_env_log_path = os.path.join(save_dir, new_env_log_filename)
+        new_visual_log_path = os.path.join(save_dir, new_visual_log_filename)
         shutil.copyfile(env_log_path, new_env_log_path)
+        shutil.copyfile(visual_log_path, new_visual_log_path)
         env_log_path = new_env_log_path
+        visual_log_path = new_visual_log_path
 
     # Open logs.
     env_log = open(env_log_path, "a+")
-    visual_log = open(env_log_path, "a+")
+    visual_log = open(visual_log_path, "a+")
 
     # Create environment.
     args.num_env_steps = settings["trainer"]["time_steps"]
@@ -277,6 +287,7 @@ def train(settings: Dict[str, Any]) -> None:
             t_step = time.time()
             # Observe reward and next obs.
             obs, rewards, dones, infos = env.step(action_dict)
+            env.log_state(env_log, visual_log)
             print("Env step: %ss" % str(time.time() - t_step))
             # time.sleep(1)
 
@@ -483,9 +494,6 @@ def train(settings: Dict[str, Any]) -> None:
             j % args.save_interval == 0 or j == num_updates - 1
         ) and args.save_root != "":
 
-            if not os.path.isdir(save_dir):
-                os.makedirs(save_dir)
-
             # Save trainer state objects
             trainer_state = {
                 "agents": agents,
@@ -526,13 +534,9 @@ def train(settings: Dict[str, Any]) -> None:
             env.save(state_path)
 
             # Save out settings, removing log files (not paths) from object.
-            del settings["logging"]["env_log"]
-            del settings["logging"]["visual_log"]
             settings_path = os.path.join(save_dir, "%s_settings.json" % codename)
             with open(settings_path, "w") as settings_file:
                 json.dump(settings, settings_file)
-            settings["logging"]["env_log"] = env_log
-            settings["logging"]["visual_log"] = visual_log
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:

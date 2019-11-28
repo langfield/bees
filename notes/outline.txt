@@ -228,6 +228,10 @@ Things to come back to:
     intermediate save points so that we can make multiple branches from that point, in
     which case we'll need to add the functionality to save these intermediate steps.
 
+    We moved the call of env._log_state (renamed env.log_state) to trainer.py instead of
+    from env.step. This causes env.iteration to be 1 value larger at each timestep than
+    it was earlier.
+
 #===========================================================================================
 
     October sprint:
