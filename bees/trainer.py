@@ -112,10 +112,10 @@ def train(settings: Dict[str, Any]) -> None:
         codename = "%s_%s" % (token, date)
 
     # TODO: Make args.settings optional; load from old settings file if "".
-    # TODO: Raise an error if settings is not passed and there is no settings in
-    # ``args.load-from``.
     if args.settings:
         settings_path = args.settings
+    elif args.load_from == "":
+        raise ValueError("You must pass a value for ``--settings``.")
 
     # Load settings dict.
     with open(settings_path, "r") as settings_file:
@@ -245,7 +245,10 @@ def train(settings: Dict[str, Any]) -> None:
         rollouts.to(device)
 
     start = time.time()
-    num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
+    # MOD
+    num_updates = (
+        int(args.num_env_steps - env.iteration) // args.num_steps // args.num_processes
+    )
     for j in range(num_updates):
 
         if args.use_linear_lr_decay:

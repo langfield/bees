@@ -249,7 +249,7 @@ Things to come back to:
    November sprint:
    - Bug with number of agents (DONE)
    - Implement adaptive food regrowth rate to keep population stable (DONE)
-   - Change computation of avg agent lifetime
+   - Change computation of avg agent lifetime (DONE? Currently EMA)
    - Logs (DONE)
    - Implement faster initialization by reusing policies of dead agents (DONE)
    - Faster reinitialization by loading from fixed set of randomly initialized state dicts (DONE)
@@ -257,7 +257,7 @@ Things to come back to:
      - Env saving and loading (DONE)
      - Policy saving and loading (DONE)
      - Saving and loading runs with keywords (DONE)
-     - Work out settings between resuming runs (absolute vs. relative timesteps, changing settings?)
+     - Work out settings between resuming runs (absolute vs. relative timesteps, changing settings?) (DONE?)
    - Parallelize env.step function?
    - Build agent sandbox
    - Build log analysis script
