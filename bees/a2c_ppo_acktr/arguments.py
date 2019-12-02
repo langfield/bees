@@ -1,3 +1,4 @@
+import os
 import argparse
 
 import torch
@@ -166,4 +167,23 @@ def get_args():
             "ppo",
         ], "Recurrent policy is not implemented for ACKTR"
 
+    validate_args(args)
+
     return args
+
+def validate_args(args):
+    """ Validates ``args``. Will raise ValueError if invalid arguments are given. """
+
+    # Check for settings file or loading path.
+    if not args.settings and not args.load_from:
+        raise ValueError("Must either provide argument --settings or --load-from.")
+
+    # Validate paths.
+    if args.load_from and not os.path.isdir(args.load_from):
+        raise ValueError("Invalid load directory for argument --load-from: '%s'." % args.load_from)
+    if args.settings and not os.path.isfile(args.settings):
+        raise ValueError("Invalid settings file for argument --settings: '%s'." % args.settings)
+
+    # Check for missing --settings argument.
+    if args.load_from and not args.settings:
+        print("Warning: Argument --settings not provided, loading from '%s'." % args.load_from)

@@ -253,16 +253,17 @@ Things to come back to:
    - Logs (DONE)
    - Implement faster initialization by reusing policies of dead agents (DONE)
    - Faster reinitialization by loading from fixed set of randomly initialized state dicts (DONE)
-   - Implement saving and loading runs
+   - Implement saving and loading runs (DONE)
      - Env saving and loading (DONE)
      - Policy saving and loading (DONE)
      - Saving and loading runs with keywords (DONE)
-     - Work out settings between resuming runs (absolute vs. relative timesteps, changing settings?) (DONE?)
+     - Work out settings between resuming runs (absolute vs. relative timesteps, changing settings) (DONE)
    - Parallelize env.step function?
    - Build agent sandbox
    - Build log analysis script
    - Run experiments
    - Refactor
+     - Move arguments from arguments.py into settings file
      - Fix mixture of arguments
      - Make arguments not positional
      - Minimize hardcoding
