@@ -41,14 +41,6 @@ def train(settings: Dict[str, Any]) -> None:
     """
     args = get_args()
 
-    # TOMORROW: A whole bunch of stuff from here until environment creation needs to be
-    # reworked. env_filename, trainer_filename, etc. need to be set in the else case,
-    # and we should rename those variables in the first case to old_env_filename, etc,
-    # so that we can set the new ones. We also should change args.save_dir to
-    # args.save_root in a2c/arguments.py, and we need to get rid of all references to
-    # settings["logging"]. We may need to do more, but do all of these first and then
-    # run it and see.
-
     """
     Three command line arguments ``--settings``, ``--load-from``, ``--save-root``.
 
