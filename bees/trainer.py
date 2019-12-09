@@ -72,7 +72,6 @@ def train(settings: Dict[str, Any]) -> None:
     # Resume from previous run.
     if args.load_from:
 
-
         # Construct new codename.
         # NOTE: we were going to have the basename be just the token, but this seems
         # ill-advised since you'd have to go into each folder to determine which is
