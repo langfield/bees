@@ -4,7 +4,7 @@ import argparse
 import torch
 
 
-def get_args():
+def get_args() -> args.Namespace:
     parser = argparse.ArgumentParser(description="RL")
     parser.add_argument("--load-from", default="", help="Saved directory to load from.")
     parser.add_argument("--settings", default="", help="Settings file to use.")
@@ -171,7 +171,7 @@ def get_args():
 
     return args
 
-def validate_args(args):
+def validate_args(args: argparse.Namespace) -> None:
     """ Validates ``args``. Will raise ValueError if invalid arguments are given. """
 
     # Check for settings file or loading path.
