@@ -34,14 +34,6 @@ def train(settings: Dict[str, Any]) -> None:
     """
     Runs the environment.
 
-    Parameters
-    ----------
-    settings : ``Dict[str, Any]``.
-        Global settings file.
-    """
-    args = get_args()
-
-    """
     Three command line arguments ``--settings``, ``--load-from``, ``--save-root``.
 
     If you want to run training from scratch, you must pass ``--settings``, so that
@@ -69,13 +61,17 @@ def train(settings: Dict[str, Any]) -> None:
 
     --settings : OPTIONAL IF --load-from ELSE REQUIRED -> Empty default.
 
+    Parameters
+    ----------
+    settings : ``Dict[str, Any]``.
+        Global settings file.
     """
+    args = get_args()
 
     # TODO: Convert everything to abspaths.
     # Resume from previous run.
     if args.load_from:
 
-        # TODO: assert ``args.load_from`` exists.
 
         # Construct new codename.
         # NOTE: we were going to have the basename be just the token, but this seems
@@ -103,7 +99,6 @@ def train(settings: Dict[str, Any]) -> None:
         date = date.replace(" ", "_")
         codename = "%s_%s" % (token, date)
 
-    # TODO: Make args.settings optional; load from old settings file if "".
     if args.settings:
         settings_path = args.settings
     elif args.load_from == "":
@@ -403,7 +398,7 @@ def train(settings: Dict[str, Any]) -> None:
                     if agent_done:
                         actor_critic = actor_critics.pop(agent_id)
                         dead_critics.add(actor_critic)
-                        # TODO: should we remove from ``rollout_map`` and ``agents``?
+                        # TODO: should we remove from ``rollout_map``?
                         agent = agents.pop(agent_id)
                         dead_agents.add(agent)
 
@@ -438,14 +433,14 @@ def train(settings: Dict[str, Any]) -> None:
 
         # DEBUG
         print("\n\n")
-        t0_list = []
-        t1_list = []
+        t_0_list = []
+        t_1_list = []
 
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
 
                 # DEBUG
-                t0 = time.time()
+                t_0 = time.time()
 
                 actor_critic = actor_critics[agent_id]
                 rollouts = rollout_map[agent_id]
@@ -466,13 +461,13 @@ def train(settings: Dict[str, Any]) -> None:
                 )
 
                 # DEBUG
-                t0_list.append(time.time() - t0)
-                t1 = time.time()
+                t_0_list.append(time.time() - t_0)
+                t_1 = time.time()
 
                 value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
                 # DEBUG
-                t1_list.append(time.time() - t1)
+                t_1_list.append(time.time() - t_1)
 
                 value_losses[agent_id] = value_loss
                 action_losses[agent_id] = action_loss
@@ -480,8 +475,8 @@ def train(settings: Dict[str, Any]) -> None:
 
                 rollouts.after_update()
 
-        print("Get value and compute returns:", np.sum(t0_list))
-        print("Updates:", np.sum(t1_list))
+        print("Get value and compute returns:", np.sum(t_0_list))
+        print("Updates:", np.sum(t_1_list))
         # time.sleep(1)
 
         # save for every interval-th episode or for the last epoch
@@ -507,6 +502,7 @@ def train(settings: Dict[str, Any]) -> None:
             with open(trainer_state_path, "wb") as trainer_file:
                 pickle.dump(trainer_state, trainer_file)
 
+            # TODO: ``ob_rms``.
             # Commented out because all of the information in actor_critics is
             # saved in "agents", so there is no need to double save.
             """
@@ -540,15 +536,20 @@ def train(settings: Dict[str, Any]) -> None:
                     total_num_steps = (j + 1) * args.num_processes * args.num_steps
                     end = time.time()
                     print(
-                        "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".format(
+                        "Updates {}, num timesteps {}, FPS {} \n Last {} ".format(
                             j,
                             total_num_steps,
                             int(total_num_steps / (end - start)),
                             len(agent_episode_rewards),
+                        )
+                        + "training episodes: mean/median reward "
+                        + "{:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".format(
                             np.mean(agent_episode_rewards),
                             np.median(agent_episode_rewards),
                             np.min(agent_episode_rewards),
                             np.max(agent_episode_rewards),
+                        )
+                        + "Dist entropy: {} Value loss: {} Action loss: {}.".format(
                             dist_entropies[agent_id],
                             value_losses[agent_id],
                             action_losses[agent_id],
@@ -577,7 +578,9 @@ def train(settings: Dict[str, Any]) -> None:
             break
 
     logging.getLogger().info(
-        "Steps completed during episode: %d / %d" % (env.iteration, args.num_env_steps)
+        "Steps completed during episode out of total: %d / %d",
+        env.iteration,
+        args.num_env_steps,
     )
 
 
