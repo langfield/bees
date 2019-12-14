@@ -258,10 +258,12 @@ Things to come back to:
      - Policy saving and loading (DONE)
      - Saving and loading runs with keywords (DONE)
      - Work out settings between resuming runs (absolute vs. relative timesteps, changing settings) (DONE)
-   - Parallelize env.step function?
-   - Build agent sandbox
-   - Build log analysis script
+
+   December sprint:
+   - Log analysis (rewards over time, children per agent, ?)
+   - Reproductive mechanics (health bottleneck, consentual reproduction, ?)
    - Run experiments
+   - Analyze results
    - Refactor
      - Move arguments from arguments.py into settings file
      - Fix mixture of arguments
@@ -269,4 +271,7 @@ Things to come back to:
      - Minimize hardcoding
    - Merge
 
-   WRITE TESTS
+   Other things:
+   - Parallelize env.step function
+   - Build agent sandbox
+   - Tests
