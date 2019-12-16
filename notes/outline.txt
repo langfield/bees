@@ -260,8 +260,14 @@ Things to come back to:
      - Work out settings between resuming runs (absolute vs. relative timesteps, changing settings) (DONE)
 
    December sprint:
-   - Log analysis (rewards over time, children per agent, ?)
-   - Reproductive mechanics (health bottleneck, consentual reproduction, ?)
+   - Log analysis
+     - Rewards over time
+     - Children per agent
+     - ?
+   - Reproductive mechanics
+     - Health bottleneck (DONE)
+     - Consentual reproduction (DONE)
+     - ?
    - Run experiments
    - Analyze results
    - Refactor
@@ -275,3 +281,6 @@ Things to come back to:
    - Parallelize env.step function
    - Build agent sandbox
    - Tests
+   - Do away with minimum mating health
+   - Some mechanic to make reproduction happen at later ages (minimum mating age?)
+   - Run experiment with one agent, analyze learning curve to maximize intrinsic reward
