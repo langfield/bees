@@ -668,6 +668,12 @@ class Env:
             Ids of the newly created child agents.
         """
         child_ids = set()
+
+        # HARDCODE
+        wants = lambda x: True if x == self.MATE else False
+        wants_child = {
+            agent_id: wants(action[2]) for agent_id, action in action_dict.items()
+        }
         for mom_id, action in action_dict.items():
             mom = self.agents[mom_id]
             pos = mom.pos
@@ -677,8 +683,7 @@ class Env:
                 continue
 
             # Grab action, do nothing if the agent chose not to mate.
-            _, _, mate = action
-            if mate == self.NO_MATE:
+            if not wants_child[mom_id]:
                 continue
 
             # Search adjacent positions for possible mates and find mate.
@@ -686,7 +691,6 @@ class Env:
             next_to_agent = False
             for adj_pos in adj_positions:
                 if self._obj_exists(self.obj_type_ids["agent"], adj_pos):
-                    next_to_agent = True
                     mate_pos = adj_pos
                     x = mate_pos[0]
                     y = mate_pos[1]
@@ -695,7 +699,11 @@ class Env:
                     agent_id_set = self.id_map[x][y][self.obj_type_ids["agent"]].copy()
                     dad_id = agent_id_set.pop()
                     dad = self.agents[dad_id]
-                    break
+
+                    # Otherwise, continue looking for mate
+                    if dad_id not in child_ids and wants_child[dad_id]:
+                        next_to_agent = True
+                        break
 
             # If there is another agent in an adjacent position, spawn child.
             if next_to_agent:
@@ -731,7 +739,7 @@ class Env:
                     )
 
                     # Place child and add to ``self.grid``.
-                    #child_health = min(dad.health, mom.health)
+                    # child_health = min(dad.health, mom.health)
                     child_health = (dad.health + mom.health) / 2
                     child = Agent(
                         sight_len=self.sight_len,
@@ -753,6 +761,8 @@ class Env:
                     child_ids.add(child_id)
 
                     self._place(self.obj_type_ids["agent"], child_pos, child_id)
+                    wants_child[mom_id] = False
+                    wants_child[dad_id] = False
 
         return child_ids
 
