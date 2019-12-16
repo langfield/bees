@@ -5,7 +5,7 @@
         "sight_len": 6,
         "num_obj_types": 2,
         "num_agents": 16,
-        "food_density": 0.00,
+        "food_density": 0.2,
         "food_size_mean": 0.29,
         "food_size_stddev": 0.247,
         "plant_foods_mean": 0.01,
@@ -20,7 +20,7 @@
         "print": true
     },
     "trainer": {
-        "time_steps": 100,
+        "time_steps": 1000,
         "reuse_state_dicts": true
     },
     "rew": {
