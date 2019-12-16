@@ -731,6 +731,8 @@ class Env:
                     )
 
                     # Place child and add to ``self.grid``.
+                    #child_health = min(dad.health, mom.health)
+                    child_health = (dad.health + mom.health) / 2
                     child = Agent(
                         sight_len=self.sight_len,
                         num_obj_types=self.num_obj_types,
@@ -739,6 +741,7 @@ class Env:
                         hidden_dim=self.hidden_dim,
                         num_actions=self.num_actions,
                         pos=child_pos,
+                        initial_health=child_health,
                         reward_weight_mean=self.reward_weight_mean,
                         reward_weight_stddev=self.reward_weight_stddev,
                         reward_weights=reward_weights,
