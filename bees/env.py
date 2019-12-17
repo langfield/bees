@@ -733,6 +733,10 @@ class Env:
                     mom.mating_cooldown = mom.mating_cooldown_len
                     dad.mating_cooldown = dad.mating_cooldown_len
 
+                    # Increment total child counters.
+                    mom.num_children += 1
+                    dad.num_children += 1
+
                     # Crossover and mutate parent DNA.
                     reward_weights, reward_biases = get_child_reward_network(
                         mom, dad, self.mut_sigma, self.mut_p
