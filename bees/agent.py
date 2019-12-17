@@ -94,6 +94,7 @@ class Agent:
         self.observation: np.ndarray = np.zeros(self.obs_shape)
 
         self.age = 0
+        self.num_children = 0
 
         # The ``+ 2`` is for the dimensions for current health and previous health.
         self.input_dim = (self.obs_width ** 2) * num_obj_types + self.num_actions + 2
@@ -247,7 +248,7 @@ class Agent:
         """
 
         state = {}
-        state_attributes = ["pos", "health", "last_reward", "age"]
+        state_attributes = ["pos", "health", "last_reward", "age", "num_children"]
         for state_attribute in state_attributes:
             state[state_attribute] = getattr(self, state_attribute)
 
