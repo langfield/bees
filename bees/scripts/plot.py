@@ -1,4 +1,5 @@
 """ Plot data from environment log. """
+import os
 import pprint
 import argparse
 from typing import List, Dict, Any
@@ -56,11 +57,10 @@ def main(args: argparse.Namespace) -> None:
     save_path = os.path.join(os.path.dirname(args.log_path), 'reward_log.svg')
     graph(
         dfs=[reward_df],
-        ylabels=["rewards"],
-        filename="reward_log",
+        y_labels=["rewards"],
         column_counts=[len(reward_log_map)],
-        phase="",
         save_path=save_path,
+        settings_path=args.settings_path,
     )
     print(reward_df)
 
@@ -68,5 +68,6 @@ def main(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("--log-path", required=True, type=str, help="Path to log.")
+    PARSER.add_argument("--settings-path", required=True, type=str)
     ARGS = PARSER.parse_args()
     main(ARGS)
