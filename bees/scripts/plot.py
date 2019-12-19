@@ -1,6 +1,5 @@
 """ Plot data from environment log. """
 import os
-import pprint
 import argparse
 from typing import List, Dict, Any
 
@@ -9,13 +8,9 @@ import pandas as pd
 from plotplotplot.draw import graph
 
 
-# pylint: disable=too-many-locals
-def main(args: argparse.Namespace) -> None:
-    """ Plot rewards from a log. """
-    with open(args.log_path, "r") as log_file:
-        steps: List[Dict[str, Any]] = [
-            eval(line.strip()) for line in log_file.readlines()
-        ]
+def parse_agent_data(steps: List[Dict[str, Any]]) -> Dict[int, Dict[str, List[Any]]]:
+    """ Parse log data to be indexed by agent instead of by step. """
+
     agent_data: Dict[int, Dict[str, List[Any]]] = {}
     for step in steps:
         agents: Dict[int, Dict[str, Any]] = step["agents"]
@@ -38,6 +33,12 @@ def main(args: argparse.Namespace) -> None:
                         value_list.append(agent_info[field])
                         agent_data[agent_id][field] = value_list
 
+    return agent_data
+
+
+def get_rewards(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFrame:
+    """ Parses ``agent_data`` into a DataFrame with rewards for each agent. """
+
     # Map ``agent_id`` to lists of last rewards.
     reward_key = "last_reward"
     reward_log_map: Dict[int, List[float]] = {}
@@ -54,15 +55,47 @@ def main(args: argparse.Namespace) -> None:
             reward_log_map[agent_id] = reward_log
 
     reward_df = pd.DataFrame.from_dict(reward_log_map)
-    save_path = os.path.join(os.path.dirname(args.log_path), 'reward_log.svg')
+    return reward_df
+
+def get_child_count_map(agent_data: Dict[int, Dict[str, List[Any]]]) -> Dict[int, int]:
+    """ Gets histogram-like data for number of children per agent. """
+
+    children_per_agent = {agent_id: agent_data[agent_id]['num_children'][-1] for agent_id in agent_data.keys()}
+    children_values = list(set(children_per_agent.values()))
+    num_children = {}
+    for children_value in children_values:
+        num_children[children_value] = len([agent_id for agent_id in children_per_agent if children_per_agent[agent_id] == children_value])
+
+    return num_children
+
+# pylint: disable=too-many-locals
+def main(args: argparse.Namespace) -> None:
+    """ Plot rewards from a log. """
+
+    # Read and parse log.
+    with open(args.log_path, "r") as log_file:
+        steps: List[Dict[str, Any]] = [
+            eval(line.strip()) for line in log_file.readlines()
+        ]
+    agent_data = parse_agent_data(steps)
+
+    # Get individual metrics from parsed data.
+    reward_df = get_rewards(agent_data)
+    child_count_map = get_child_count_map(agent_data)
+
+    # Plot or write out individual metrics.
+    save_dir = os.path.dirname(args.log_path)
+    plot_path = os.path.join(save_dir, 'reward_log.svg')
     graph(
         dfs=[reward_df],
         y_labels=["rewards"],
-        column_counts=[len(reward_log_map)],
-        save_path=save_path,
+        column_counts=[len(reward_df.columns)],
+        save_path=plot_path,
         settings_path=args.settings_path,
     )
-    print(reward_df)
+    children_path = os.path.join(save_dir, "num_children.txt")
+    with open(children_path, "w") as children_file:
+        children_file.write(str(child_count_map))
 
 
 if __name__ == "__main__":
