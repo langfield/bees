@@ -241,7 +241,9 @@ Things to come back to:
     time/math than its worth. We should also make some script which takes a reward function
     weights and provides some insight about what that function is actually rewarding. Also
     mess with hyperparameters, especially because depth and height of reward network
-    contribute to nonlinearity.
+    contribute to nonlinearity. We should also look for details in the Wang paper "Evolving
+    intrinsic motivations for altruistic behavior" about how they parameterize their reward
+    networks, what optimization methods/resources they use for training, etc.
 
 #===========================================================================================
 
@@ -278,7 +280,7 @@ Things to come back to:
      - Health bottleneck (DONE)
      - Consentual reproduction (DONE)
    - Reward engineering
-     - Linear reward function baseline
+     - Linear reward function baseline (DONE)
      - Tweak hyperparameters (especially reward network parameters)
      - Reward network analysis to determine rewarded behavior
      - Constrain network weights to produce "less non-linear" reward functions

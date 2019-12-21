@@ -48,6 +48,7 @@ def create_env(settings: Dict[str, Any]) -> Env:
     hidden_dim = rew_config["hidden_dim"]
     reward_weight_mean = rew_config["weight_mean"]
     reward_weight_stddev = rew_config["weight_stddev"]
+    reward_inputs = rew_config["reward_inputs"]
 
     genetics_config = settings["genetics"]
     mut_sigma = genetics_config["mut_sigma"]
@@ -78,6 +79,7 @@ def create_env(settings: Dict[str, Any]) -> Env:
         hidden_dim,
         reward_weight_mean,
         reward_weight_stddev,
+        reward_inputs,
         mut_sigma,
         mut_p,
         consts,
