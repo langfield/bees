@@ -171,6 +171,7 @@ def get_args() -> argparse.Namespace:
 
     return args
 
+
 def validate_args(args: argparse.Namespace) -> None:
     """ Validates ``args``. Will raise ValueError if invalid arguments are given. """
 
@@ -180,10 +181,17 @@ def validate_args(args: argparse.Namespace) -> None:
 
     # Validate paths.
     if args.load_from and not os.path.isdir(args.load_from):
-        raise ValueError("Invalid load directory for argument --load-from: '%s'." % args.load_from)
+        raise ValueError(
+            "Invalid load directory for argument --load-from: '%s'." % args.load_from
+        )
     if args.settings and not os.path.isfile(args.settings):
-        raise ValueError("Invalid settings file for argument --settings: '%s'." % args.settings)
+        raise ValueError(
+            "Invalid settings file for argument --settings: '%s'." % args.settings
+        )
 
     # Check for missing --settings argument.
     if args.load_from and not args.settings:
-        print("Warning: Argument --settings not provided, loading from '%s'." % args.load_from)
+        print(
+            "Warning: Argument --settings not provided, loading from '%s'."
+            % args.load_from
+        )
