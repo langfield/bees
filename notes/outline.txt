@@ -278,8 +278,8 @@ Things to come back to:
      - Health bottleneck (DONE)
      - Consentual reproduction (DONE)
    - Reward engineering
-     - Tweak hyperparameters (especially reward network parameters)
      - Linear reward function baseline
+     - Tweak hyperparameters (especially reward network parameters)
      - Reward network analysis to determine rewarded behavior
      - Constrain network weights to produce "less non-linear" reward functions
    - Run experiments
