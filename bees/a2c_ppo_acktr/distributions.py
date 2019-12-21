@@ -21,14 +21,17 @@ old_sample = FixedCategorical.sample
 FixedCategorical.sample = lambda self: old_sample(self).unsqueeze(-1)
 
 log_prob_cat = FixedCategorical.log_prob
+
+
 def temp_log_probs(self, actions):
     temp = log_prob_cat(self, actions.squeeze(-1))
     temp = temp.view(actions.size(0), -1)
     temp = temp.sum(-1)
     temp = temp.unsqueeze(-1)
-    
+
     return temp
-    
+
+
 FixedCategorical.log_probs = temp_log_probs
 
 FixedCategorical.mode = lambda self: self.probs.argmax(dim=-1, keepdim=True)
@@ -129,9 +132,9 @@ class CategoricalProduct(nn.Module):
             m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0), gain=0.01
         )
 
-        self.linears = nn.ModuleList([
-            init_(nn.Linear(num_inputs, outputs)) for outputs in num_outputs_list
-        ])
+        self.linears = nn.ModuleList(
+            [init_(nn.Linear(num_inputs, outputs)) for outputs in num_outputs_list]
+        )
 
     def forward(self, x):
         logits_list = [linear(x) for linear in self.linears]
@@ -146,12 +149,16 @@ class FixedCategoricalProduct:
         ]
 
     def mode(self):
-        return torch.stack([categorical.mode().view((1,)) for categorical in
-            self.fixedCategoricals], dim=1)
+        return torch.stack(
+            [categorical.mode().view((1,)) for categorical in self.fixedCategoricals],
+            dim=1,
+        )
 
     def sample(self):
-        return torch.stack([categorical.sample().view((1,)) for categorical in
-            self.fixedCategoricals], dim=1)
+        return torch.stack(
+            [categorical.sample().view((1,)) for categorical in self.fixedCategoricals],
+            dim=1,
+        )
 
     def log_probs(self, actions):
         """
@@ -163,7 +170,9 @@ class FixedCategoricalProduct:
         """
         num_subactions = actions.shape[1]
         subaction_log_probs_list = []
-        for categorical, subaction_index in zip(self.fixedCategoricals, range(num_subactions)):
+        for categorical, subaction_index in zip(
+            self.fixedCategoricals, range(num_subactions)
+        ):
             action = actions[:, subaction_index]
             subaction_log_probs_list.append(categorical.log_probs(action))
         subaction_log_probs = torch.cat(subaction_log_probs_list, dim=-1)
