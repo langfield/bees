@@ -232,6 +232,17 @@ Things to come back to:
     from env.step. This causes env.iteration to be 1 value larger at each timestep than
     it was earlier.
 
+    Currently the agents aren't really able to learn to maximize their intrinsic reward
+    functions. This may be due to optimization, lack of computing resources, or that the
+    reward functions are just too hard to learn. To test the third option, we should make
+    very simple reward functions (linear combinations of inputs) and see if the agents are
+    able to learn to maximize them. Another possibility is to impose some condition on the
+    weights of the reward network to make them "less non-linear", though this might be more
+    time/math than its worth. We should also make some script which takes a reward function
+    weights and provides some insight about what that function is actually rewarding. Also
+    mess with hyperparameters, especially because depth and height of reward network
+    contribute to nonlinearity.
+
 #===========================================================================================
 
     October sprint:
@@ -261,13 +272,16 @@ Things to come back to:
 
    December sprint:
    - Log analysis
-     - Rewards over time
-     - Children per agent
-     - ?
+     - Rewards over time (DONE)
+     - Children per agent (DONE)
    - Reproductive mechanics
      - Health bottleneck (DONE)
      - Consentual reproduction (DONE)
-     - ?
+   - Reward engineering
+     - Tweak hyperparameters (especially reward network parameters)
+     - Linear reward function baseline
+     - Reward network analysis to determine rewarded behavior
+     - Constrain network weights to produce "less non-linear" reward functions
    - Run experiments
    - Analyze results
    - Refactor
