@@ -4,14 +4,14 @@
         "height": 15,
         "sight_len": 6,
         "num_obj_types": 2,
-        "num_agents": 16,
+        "num_agents": 1,
         "food_density": 0.2,
         "food_size_mean": 0.29,
         "food_size_stddev": 0.247,
         "plant_foods_mean": 0.01,
         "plant_foods_stddev": 0.2,
         "food_plant_retries": 3,
-        "aging_rate": 0.01,
+        "aging_rate": 0.0001,
         "mating_cooldown_len": 40,
         "min_mating_health": 0.112,
         "agent_init_x_upper_bound": 5,
@@ -24,10 +24,11 @@
         "reuse_state_dicts": true
     },
     "rew": {
-        "n_layers": 2,
+        "n_layers": 1,
         "hidden_dim": 256,
         "weight_mean": 0.0,
-        "weight_stddev": 0.4
+        "weight_stddev": 0.4,
+        "reward_inputs": ["obs", "health", "actions"]
     },
     "genetics": {
         "mut_sigma": 0.3,

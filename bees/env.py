@@ -121,6 +121,7 @@ class Env:
         hidden_dim: int,
         reward_weight_mean: float,
         reward_weight_stddev: float,
+        reward_inputs: List[str],
         mut_sigma: float,
         mut_p: float,
         consts: Dict[str, Any],
@@ -157,6 +158,7 @@ class Env:
         self.hidden_dim = hidden_dim
         self.reward_weight_mean = reward_weight_mean
         self.reward_weight_stddev = reward_weight_stddev
+        self.reward_inputs = reward_inputs
 
         self.mut_sigma = mut_sigma
         self.mut_p = mut_p
@@ -306,6 +308,7 @@ class Env:
                 num_actions=self.num_actions,
                 reward_weight_mean=self.reward_weight_mean,
                 reward_weight_stddev=self.reward_weight_stddev,
+                reward_inputs=self.reward_inputs,
                 mating_cooldown_len=self.mating_cooldown_len,
             )
 
@@ -754,10 +757,11 @@ class Env:
                         num_actions=self.num_actions,
                         pos=child_pos,
                         initial_health=child_health,
-                        reward_weight_mean=self.reward_weight_mean,
-                        reward_weight_stddev=self.reward_weight_stddev,
                         reward_weights=reward_weights,
                         reward_biases=reward_biases,
+                        reward_weight_mean=self.reward_weight_mean,
+                        reward_weight_stddev=self.reward_weight_stddev,
+                        reward_inputs=self.reward_inputs,
                         mating_cooldown_len=self.mating_cooldown_len,
                     )
                     child_id = self._new_agent_id()
@@ -1147,6 +1151,7 @@ class Env:
                 reward_biases=agent_state["reward_biases"],
                 reward_weight_mean=self.reward_weight_mean,
                 reward_weight_stddev=self.reward_weight_stddev,
+                reward_inputs=self.reward_inputs,
                 mating_cooldown_len=self.mating_cooldown_len,
             )
             for attr, value in agent_state.items():

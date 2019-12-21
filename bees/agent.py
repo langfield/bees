@@ -58,6 +58,7 @@ class Agent:
         n_layers: int,
         hidden_dim: int,
         num_actions: int,
+        reward_inputs: List[str],
         pos: Tuple[int, int] = None,
         initial_health: float = 1,
         reward_weights: List[np.ndarray] = None,
@@ -79,6 +80,7 @@ class Agent:
 
         self.reward_weight_mean = reward_weight_mean
         self.reward_weight_stddev = reward_weight_stddev
+        self.reward_inputs = reward_inputs
 
         # How many timesteps until they can mate again.
         self.mating_cooldown = mating_cooldown_len
@@ -97,7 +99,14 @@ class Agent:
         self.num_children = 0
 
         # The ``+ 2`` is for the dimensions for current health and previous health.
-        self.input_dim = (self.obs_width ** 2) * num_obj_types + self.num_actions + 2
+        self.input_dim = 0
+        if "obs" in self.reward_inputs:
+            self.input_dim += (self.obs_width ** 2) * num_obj_types
+        if "actions" in self.reward_inputs:
+            self.input_dim += self.num_actions
+        if "health" in self.reward_inputs:
+            self.input_dim += 2
+
         self.total_reward = 0.0
         self.last_reward = 0.0
         if reward_weights is None:
@@ -171,10 +180,19 @@ class Agent:
             health, action, and observation of the agent.
         """
 
-        flat_obs = np.array(self.observation).flatten()
-        flat_action = self.get_flat_action(action)
-        flat_healths = np.array([prev_health, self.health])
-        inputs = np.concatenate((flat_obs, flat_action, flat_healths))
+        input_arrays: List[np.ndarray] = []
+
+        if "obs" in self.reward_inputs:
+            flat_obs = np.array(self.observation).flatten()
+            input_arrays.append(flat_obs)
+        if "actions" in self.reward_inputs:
+            flat_action = self.get_flat_action(action)
+            input_arrays.append(flat_action)
+        if "health" in self.reward_inputs:
+            flat_healths = np.array([prev_health, self.health])
+            input_arrays.append(flat_healths)
+
+        inputs = np.concatenate(input_arrays)
         reward = np.copy(inputs)
 
         for i in range(self.n_layers):
