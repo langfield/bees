@@ -74,12 +74,15 @@ def DNA_to_reward(
     for i in range(n_layers):
 
         # Get number of rows and columns in each layer.
-        if i == 0:
+        if i == 0 == n_layers - 1:
             num_rows = input_dim
-            num_cols = hidden_dim
+            num_cols = 1
         elif i == n_layers - 1:
             num_rows = hidden_dim
             num_cols = 1
+        elif i == 0:
+            num_rows = input_dim
+            num_cols = hidden_dim
         else:
             num_rows = hidden_dim
             num_cols = hidden_dim
