@@ -1,5 +1,4 @@
 """ Agent object for instantiating agents in the environment. """
-
 import copy
 from typing import Tuple, Dict, Any, List
 

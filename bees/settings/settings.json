@@ -20,7 +20,7 @@
         "print": true
     },
     "trainer": {
-        "time_steps": 1000,
+        "time_steps": 1000000,
         "reuse_state_dicts": true
     },
     "rew": {
