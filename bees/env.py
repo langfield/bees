@@ -1084,7 +1084,7 @@ class Env:
         """
 
         state = self._env_json_state()
-        env_attrs = ["grid", "id_map", "agent_ids_created"]
+        env_attrs = ["grid", "id_map", "agent_ids_created", "action_space"]
         for env_attr in env_attrs:
             state[env_attr] = getattr(self, env_attr)
         agent_attrs = ["reward_weights", "reward_biases"]
