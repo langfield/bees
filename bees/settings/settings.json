@@ -24,7 +24,7 @@
         "reuse_state_dicts": true
     },
     "rew": {
-        "n_layers": 1,
+        "n_layers": 3,
         "hidden_dim": 256,
         "weight_mean": 0.0,
         "weight_stddev": 0.4,
