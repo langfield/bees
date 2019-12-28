@@ -6,14 +6,16 @@ import argparse
 import json
 import random
 import pickle
+from pprint import pprint
 
 import numpy as np
-from np.random import normal
+from numpy.random import normal
 
 from agent import Agent
 
 EAT_PROB = 0.1
-REWARD_SAMPLE_SIZE = 32
+OBS_DENSITY = 0.3
+REWARD_SAMPLE_SIZE = 3200
 
 
 def one_hot(n, k):
@@ -40,7 +42,7 @@ def search_model_dir(modelDir, template):
     return results[0]
 
 
-def main(main):
+def main(args):
 
     # Read in env.pkl.
     env_path = search_model_dir(args.modelDir, "*_env.pkl")
@@ -76,6 +78,7 @@ def main(main):
     food_size_mean = settings["env"]["food_size_mean"]
     food_size_stddev = settings["env"]["food_size_stddev"]
     sight_len = settings["env"]["sight_len"]
+    num_obj_types = settings["env"]["num_obj_types"]
 
     # Define function to sample from food distribution.
     def get_food():
@@ -90,15 +93,18 @@ def main(main):
 
     for subaction_index, subaction_size in enumerate(subaction_sizes):
         for subaction in range(subaction_size):
-            for i in range(REWARD_SAMPLE_SIZE):
+
+            rewards = []
+            for _ in range(REWARD_SAMPLE_SIZE):
 
                 # Sample and set health.
                 health = random.random()
                 prev_health = (
-                    health - get_food()
+                    max(health - get_food(), 0.0)
                     if random.random() < EAT_PROB
-                    else max(health + aging_rate, 1.0)
+                    else min(health + aging_rate, 1.0)
                 )
+                agent.health = health
 
                 # Sample action.
                 action = []
@@ -112,30 +118,30 @@ def main(main):
                 # Sample and set observation.
                 obs_length = 2 * sight_len + 1
                 observation = np.zeros((num_obj_types, obs_length, obs_length))
-                for x in range(-sight_len, sight_len + 1):
-                    for y in range(-sight_len, sight_len + 1):
+                for x in range(obs_length):
+                    for y in range(obs_length):
 
-                        if x == 0 and y == 0:
-                            object_type = AGENT_OBJ_TYPE
-                        else:
-                            object_type = random.choice(num_obj_types)
-
-                        observation[:, x, y] = one_hot(object_type, num_obj_types)
+                        # x == sight_len == y iff (x, y) is in center of agent's
+                        # field of vision, AKA the agent's position.
+                        if random.random() < OBS_DENSITY or (x == sight_len == y):
+                            if x == sight_len == y:
+                                object_type = AGENT_OBJ_TYPE
+                            else:
+                                object_type = random.choice(list(range(num_obj_types)))
+                            observation[:, x, y] = one_hot(num_obj_types, object_type)
+                agent.observation = observation
 
                 # Compute reward.
-                # DEBUG
-                reward_input = (observation, action, health, prev_health)
-                print(reward_input)
+                rewards.append(agent.compute_reward(prev_health, action))
 
-                # TOMORROW:
-                # - Compute reward for each (obs, action, health, prev_health).
-                # - Compute average and standard deviation of each reward distribution.
-                # - Only sample reward inputs corresponding to
-                #   settings["rew"]["reward_inputs"].
+            mean = np.mean(rewards)
+            std = np.std(rewards)
+            distributions[(subaction_index, subaction)] = {"mean": mean, "std": std}
+
+    pprint(distributions)
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "modelDir", type=str, help="Directory containing environment state and logs."
