@@ -245,6 +245,39 @@ Things to come back to:
     intrinsic motivations for altruistic behavior" about how they parameterize their reward
     networks, what optimization methods/resources they use for training, etc.
 
+    Upon some reward network analysis, we found the following distributions for the rewards
+    resulting from fixing a given action for a reward network of 1 vs. 3 layers:
+
+    1:
+    {
+        (0, 0): {'mean': 1.6710889711187393, 'std': 2.6830863962492755},
+        (0, 1): {'mean': 1.4405449986986656, 'std': 2.681561864293255},
+        (0, 2): {'mean': 1.632757996828577, 'std': 2.663539715560427},
+        (0, 3): {'mean': 0.9429008474412299, 'std': 2.6019059282551624},
+        (0, 4): {'mean': 1.3787049708595864, 'std': 2.6407181281861125},
+        (1, 0): {'mean': 1.557499144304561, 'std': 2.663676365281745},
+        (1, 1): {'mean': 1.2947283264494556, 'std': 2.646747033807548},
+        (2, 0): {'mean': 1.1658612818973182, 'std': 2.6167149303113257},
+        (2, 1): {'mean': 1.6934441103251188, 'std': 2.703221366882886}
+    }
+
+    3:
+    {
+        (0, 0): {'mean': 25.94105866013453, 'std': 35.65950986852765},
+        (0, 1): {'mean': 22.36563662856978, 'std': 36.28916437707366},
+        (0, 2): {'mean': 30.44983135554303, 'std': 36.059172880909664},
+        (0, 3): {'mean': 26.299393034271016, 'std': 36.16811218858602},
+        (0, 4): {'mean': 29.91889629784399, 'std': 36.388935714111746},
+        (1, 0): {'mean': 24.467416819677098, 'std': 36.05558641269532},
+        (1, 1): {'mean': 29.77231193537858, 'std': 35.96699633133658},
+        (2, 0): {'mean': 30.281839454767997, 'std': 36.57556147981293},
+        (2, 1): {'mean': 23.011885372851495, 'std': 36.04396301184068}
+    }
+
+    The stark difference here might just be variance (we only looked at a single reward
+    network of each type) but we should go look at more of them and investigate.
+
+
 #===========================================================================================
 
     October sprint:
