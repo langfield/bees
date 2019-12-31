@@ -6,6 +6,7 @@ import argparse
 import json
 import random
 import pickle
+from itertools import product
 from pprint import pprint
 
 import numpy as np
@@ -91,52 +92,47 @@ def main(args):
     # health vary.
     distributions = {}
 
-    for subaction_index, subaction_size in enumerate(subaction_sizes):
-        for subaction in range(subaction_size):
+    for action in product(*[list(range(subaction_size)) for subaction_size in subaction_sizes]):
+        rewards = []
 
-            rewards = []
-            for _ in range(REWARD_SAMPLE_SIZE):
+        # HARDCODE
+        # Since the observation and health spaces are large, we randomly sample from
+        # them instead of iterating over them. If these values aren't inputs to the
+        # reward network, there is no need to sample, so take sample_size = 1.
+        sample_size = 1 if settings["rew"]["reward_inputs"] == ["actions"] else REWARD_SAMPLE_SIZE
+        for _ in range(sample_size):
 
-                # Sample and set health.
-                health = random.random()
-                prev_health = (
-                    max(health - get_food(), 0.0)
-                    if random.random() < EAT_PROB
-                    else min(health + aging_rate, 1.0)
-                )
-                agent.health = health
+            # Sample and set health.
+            health = random.random()
+            prev_health = (
+                max(health - get_food(), 0.0)
+                if random.random() < EAT_PROB
+                else min(health + aging_rate, 1.0)
+            )
+            agent.health = health
 
-                # Sample action.
-                action = []
-                for j in range(len(subaction_sizes)):
-                    if j == subaction_index:
-                        action.append(subaction)
-                    else:
-                        action.append(random.choice(list(range(subaction_sizes[j]))))
-                action = tuple(action)
+            # Sample and set observation.
+            obs_length = 2 * sight_len + 1
+            observation = np.zeros((num_obj_types, obs_length, obs_length))
+            for x in range(obs_length):
+                for y in range(obs_length):
 
-                # Sample and set observation.
-                obs_length = 2 * sight_len + 1
-                observation = np.zeros((num_obj_types, obs_length, obs_length))
-                for x in range(obs_length):
-                    for y in range(obs_length):
+                    # x == sight_len == y iff (x, y) is in center of agent's
+                    # field of vision, AKA the agent's position.
+                    if random.random() < OBS_DENSITY or (x == sight_len == y):
+                        if x == sight_len == y:
+                            object_type = AGENT_OBJ_TYPE
+                        else:
+                            object_type = random.choice(list(range(num_obj_types)))
+                        observation[:, x, y] = one_hot(num_obj_types, object_type)
+            agent.observation = observation
 
-                        # x == sight_len == y iff (x, y) is in center of agent's
-                        # field of vision, AKA the agent's position.
-                        if random.random() < OBS_DENSITY or (x == sight_len == y):
-                            if x == sight_len == y:
-                                object_type = AGENT_OBJ_TYPE
-                            else:
-                                object_type = random.choice(list(range(num_obj_types)))
-                            observation[:, x, y] = one_hot(num_obj_types, object_type)
-                agent.observation = observation
+            # Compute reward.
+            rewards.append(agent.compute_reward(prev_health, action))
 
-                # Compute reward.
-                rewards.append(agent.compute_reward(prev_health, action))
-
-            mean = np.mean(rewards)
-            std = np.std(rewards)
-            distributions[(subaction_index, subaction)] = {"mean": mean, "std": std}
+        mean = np.mean(rewards)
+        std = np.std(rewards)
+        distributions[action] = {"mean": mean, "std": std}
 
     pprint(distributions)
 

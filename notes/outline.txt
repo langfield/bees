@@ -277,6 +277,19 @@ Things to come back to:
     The stark difference here might just be variance (we only looked at a single reward
     network of each type) but we should go look at more of them and investigate.
 
+    A metric for determining whether or not agents are learning their reward functions:
+
+        Compute the ground-truth distribution by iterating over the action
+        space and computing the mean output of the reward network given each
+        action tuple. These are treated as an unnormalized distribution, which
+        we then normalize with a softmax. We then compute the actual, running,
+        learned distribution by sampling from the action distribution taking
+        during training by a given agent. In this, we treat frequency as the
+        probability mass and again, take a softmax over all possible action
+        inputs to normalize the distribution. We then compute the running
+        KL-divergence of these two distributions to determine how well-trained
+        the agent is.
+
 
 #===========================================================================================
 
@@ -314,8 +327,8 @@ Things to come back to:
      - Consentual reproduction (DONE)
    - Reward engineering
      - Linear reward function baseline (DONE)
-     - Tweak hyperparameters (especially reward network parameters)
-     - Reward network analysis to determine rewarded behavior
+     - Tweak hyperparameters (especially reward network parameters) (DONE?)
+     - Reward network analysis to determine rewarded behavior (DONE?)
      - Constrain network weights to produce "less non-linear" reward functions
    - Run experiments
    - Analyze results
