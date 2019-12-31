@@ -330,9 +330,11 @@ Things to come back to:
      - Tweak hyperparameters (especially reward network parameters) (DONE?)
      - Reward network analysis to determine rewarded behavior (DONE?)
      - Constrain network weights to produce "less non-linear" reward functions
+     - Compute policy score
    - Run experiments
    - Analyze results
    - Refactor
+     - Universal config file
      - Move arguments from arguments.py into settings file
      - Fix mixture of arguments
      - Make arguments not positional
@@ -346,3 +348,4 @@ Things to come back to:
    - Do away with minimum mating health
    - Some mechanic to make reproduction happen at later ages (minimum mating age?)
    - Run experiment with one agent, analyze learning curve to maximize intrinsic reward
+   - Rewrite PPO implementation
