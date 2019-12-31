@@ -24,11 +24,11 @@
         "reuse_state_dicts": true
     },
     "rew": {
-        "n_layers": 3,
+        "n_layers": 1,
         "hidden_dim": 256,
         "weight_mean": 0.0,
         "weight_stddev": 0.4,
-        "reward_inputs": ["obs", "health", "actions"]
+        "reward_inputs": ["actions"]
     },
     "genetics": {
         "mut_sigma": 0.3,
