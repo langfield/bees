@@ -1,7 +1,7 @@
 {
     "env": {
-        "width": 15,
-        "height": 15,
+        "width": 12,
+        "height": 3,
         "sight_len": 6,
         "num_obj_types": 2,
         "num_agents": 1,
@@ -14,8 +14,6 @@
         "aging_rate": 0.0001,
         "mating_cooldown_len": 40,
         "min_mating_health": 0.112,
-        "agent_init_x_upper_bound": 5,
-        "agent_init_y_upper_bound": 5,
         "target_agent_density": 0.07,
         "print": true
     },
