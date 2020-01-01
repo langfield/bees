@@ -92,14 +92,18 @@ def main(args):
     # health vary.
     distributions = {}
 
-    for action in product(*[list(range(subaction_size)) for subaction_size in subaction_sizes]):
+    for action in product(
+        *[list(range(subaction_size)) for subaction_size in subaction_sizes]
+    ):
         rewards = []
 
         # HARDCODE
         # Since the observation and health spaces are large, we randomly sample from
         # them instead of iterating over them. If these values aren't inputs to the
         # reward network, there is no need to sample, so take sample_size = 1.
-        sample_size = 1 if settings["rew"]["reward_inputs"] == ["actions"] else REWARD_SAMPLE_SIZE
+        sample_size = (
+            1 if settings["rew"]["reward_inputs"] == ["actions"] else REWARD_SAMPLE_SIZE
+        )
         for _ in range(sample_size):
 
             # Sample and set health.

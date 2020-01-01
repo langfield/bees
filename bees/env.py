@@ -69,12 +69,6 @@ class Env:
         How long agents must wait in between mate actions.
     min_mating_health : ``float``.
         The minimum health bar value at which agents can mate.
-    agent_init_x_upper_bound : ``int``.
-        The right bound on the top left grid section in which the first agents
-        are initialized.
-    agent_init_y_upper_bound : ``int``.
-        The bottom bound on the top left grid section in which the first agents
-        are initialized.
     target_agent_density: ``float``.
         The target agent density for adaptive food regeneration rate.
     print_repr: ``bool``.
@@ -113,8 +107,6 @@ class Env:
         food_plant_retries: int,
         mating_cooldown_len: int,
         min_mating_health: float,
-        agent_init_x_upper_bound: int,
-        agent_init_y_upper_bound: int,
         target_agent_density: float,
         print_repr: bool,
         n_layers: int,
@@ -141,18 +133,8 @@ class Env:
         self.food_plant_retries = food_plant_retries
         self.mating_cooldown_len = mating_cooldown_len
         self.min_mating_health = min_mating_health
-        self.agent_init_x_upper_bound = agent_init_x_upper_bound
-        self.agent_init_y_upper_bound = agent_init_y_upper_bound
         self.target_agent_density = target_agent_density
         self.print_repr = print_repr
-
-        # HARDCODE
-        self.agent_init_x_upper_bound = min(
-            math.ceil(2 * math.sqrt(num_agents)), self.width
-        )
-        self.agent_init_x_upper_bound = min(
-            math.ceil(2 * math.sqrt(num_agents)), self.height
-        )
 
         self.n_layers = n_layers
         self.hidden_dim = hidden_dim
@@ -252,14 +234,9 @@ class Env:
         self.num_foods = 0
 
         # Set unique agent positions.
-        grid_positions = list(itertools.product(range(self.height), range(self.width)))
+        grid_positions = list(itertools.product(range(self.width), range(self.height)))
 
-        # HARDCODE: agents bounded in bottom left corner upon initialization.
-        x_bound = self.agent_init_x_upper_bound
-        y_bound = self.agent_init_y_upper_bound
-        grid_corner = [(x, y) for x, y in grid_positions if x < x_bound and y < y_bound]
-
-        agent_positions = random.sample(grid_corner, self.num_agents)
+        agent_positions = random.sample(grid_positions, self.num_agents)
         for i, (agent_id, agent) in enumerate(self.agents.items()):
             agent_pos = agent_positions[i]
             self._place(self.obj_type_ids["agent"], agent_pos, agent_id)
@@ -267,6 +244,7 @@ class Env:
 
         # Set unique food positions.
         assert self.num_foods == 0
+
         food_positions = random.sample(grid_positions, self.initial_num_foods)
         for food_pos in food_positions:
             self._place(self.obj_type_ids["food"], food_pos)
@@ -439,6 +417,7 @@ class Env:
             raise ValueError(
                 "An agent already exists at grid position '(%d, %d)'." % (x, y)
             )
+
         self.grid[grid_idx] = 1
 
         # Add to ``self.id_map``.
@@ -539,7 +518,7 @@ class Env:
         num_new_foods = min(self.height * self.width, num_new_foods)
 
         # Set new food positions.
-        grid_positions = list(itertools.product(range(self.height), range(self.width)))
+        grid_positions = list(itertools.product(range(self.width), range(self.height)))
         food_positions = random.sample(grid_positions, num_new_foods)
         for food_pos in food_positions:
             if self._obj_exists(self.obj_type_ids["food"], food_pos):

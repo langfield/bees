@@ -38,8 +38,6 @@ def create_env(settings: Dict[str, Any]) -> Env:
     food_plant_retries = env_config["food_plant_retries"]
     mating_cooldown_len = env_config["mating_cooldown_len"]
     min_mating_health = env_config["min_mating_health"]
-    agent_init_x_upper_bound = env_config["agent_init_x_upper_bound"]
-    agent_init_y_upper_bound = env_config["agent_init_y_upper_bound"]
     target_agent_density = env_config["target_agent_density"]
     print_repr = env_config["print"]
 
@@ -71,8 +69,6 @@ def create_env(settings: Dict[str, Any]) -> Env:
         food_plant_retries,
         mating_cooldown_len,
         min_mating_health,
-        agent_init_x_upper_bound,
-        agent_init_y_upper_bound,
         target_agent_density,
         print_repr,
         n_layers,
