@@ -1,5 +1,4 @@
 """ Analyzes the reward network of an agent. """
-
 import os
 import glob
 import argparse
