@@ -4,7 +4,6 @@ from typing import Tuple, List, Dict, Any
 
 import numpy as np
 
-from policy import Policy
 from config import Config
 
 # pylint: disable=bad-continuation, too-many-arguments, too-many-instance-attributes
@@ -79,21 +78,6 @@ class Agent:
         self.mating_cooldown = self.mating_cooldown_len
         self.health = self.initial_health
 
-        # Temp
-        self.consts = {  # TEMPORARY HARDCODE
-            "STAY": 0,
-            "LEFT": 1,
-            "RIGHT": 2,
-            "UP": 3,
-            "DOWN": 4,
-            "EAT": 0,
-            "NO_EAT": 1,
-            "MATE": 0,
-            "NO_MATE": 1,
-            "BEE_HEAVEN": [-1, -1],
-        }
-        self.policy = Policy(self.consts)
-
         # Set initial agent observation.
         self.obs_width = 2 * config.sight_len + 1
         self.obs_shape = (self.num_obj_types, self.obs_width, self.obs_width)
@@ -124,17 +108,6 @@ class Agent:
         self.last_reward = 0.0
         self.age = 0
         self.num_children = 0
-
-    def get_action(self) -> np.ndarray:
-        """
-        Uses the policy to choose an action based on the observation.
-
-        Returns
-        -------
-        action: ``np.ndarray``.
-            5D Multi-Binary numpy array representing action.
-        """
-        return self.policy.get_action(self.observation, self.health)
 
     def initialize_reward_weights(self) -> None:
         """ Initializes the weights of the reward function. """
