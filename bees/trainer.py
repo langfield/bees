@@ -26,6 +26,7 @@ from a2c_ppo_acktr.storage import RolloutStorage
 
 from main import create_env
 from utils import get_token
+from config import Config
 
 # pylint: disable=bad-continuation
 
@@ -66,26 +67,30 @@ def train(settings: Dict[str, Any]) -> None:
     settings : ``Dict[str, Any]``.
         Global settings file.
     """
+    config = Config(settings)
+
+
+
     args = get_args()
 
     # TODO: Convert everything to abspaths.
     # Resume from previous run.
-    if args.load_from:
+    if config.load_from:
 
         # Construct new codename.
         # NOTE: we were going to have the basename be just the token, but this seems
         # ill-advised since you'd have to go into each folder to determine which is
         # newest.
-        codename = os.path.basename(os.path.abspath(args.load_from))
+        codename = os.path.basename(os.path.abspath(config.load_from))
         token = codename.split("_")[0]
 
         # Construct paths.
         env_filename = codename + "_env.pkl"
         trainer_filename = codename + "_trainer.pkl"
         settings_filename = codename + "_settings.json"
-        env_state_path = os.path.join(args.load_from, env_filename)
-        trainer_state_path = os.path.join(args.load_from, trainer_filename)
-        settings_path = os.path.join(args.load_from, settings_filename)
+        env_state_path = os.path.join(config.load_from, env_filename)
+        trainer_state_path = os.path.join(config.load_from, trainer_filename)
+        settings_path = os.path.join(config.load_from, settings_filename)
 
         # Load trainer state.
         with open(trainer_state_path, "rb") as trainer_file:
@@ -93,14 +98,14 @@ def train(settings: Dict[str, Any]) -> None:
 
     # New training run.
     else:
-        token = get_token(args.save_root)
+        token = get_token(config.save_root)
         date = str(datetime.datetime.now())
         date = date.replace(" ", "_")
         codename = "%s_%s" % (token, date)
 
-    if args.settings:
-        settings_path = args.settings
-    elif args.load_from == "":
+    if config.settings:
+        settings_path = config.settings
+    elif config.load_from == "":
         raise ValueError("You must pass a value for ``--settings``.")
 
     # Load settings dict.
@@ -108,7 +113,7 @@ def train(settings: Dict[str, Any]) -> None:
         settings = json.load(settings_file)
 
     # Construct a new ``save_dir`` in either case.
-    save_dir = os.path.join(args.save_root, codename)
+    save_dir = os.path.join(config.save_root, codename)
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
@@ -120,7 +125,7 @@ def train(settings: Dict[str, Any]) -> None:
 
     # If ``save_dir`` is not the same as ``load_from`` we must copy the existing logs
     # into the new save directory, then contine to append to them.
-    if args.load_from and os.path.abspath(save_dir) not in os.path.abspath(
+    if config.load_from and os.path.abspath(save_dir) not in os.path.abspath(
         env_log_path
     ):
         new_env_log_filename = codename + "_env_log.txt"
@@ -137,29 +142,29 @@ def train(settings: Dict[str, Any]) -> None:
     visual_log = open(visual_log_path, "a+")
 
     # Create environment.
-    args.num_env_steps = settings["trainer"]["time_steps"]
-    print("Arguments:", str(args))
+    config.num_env_steps = settings["trainer"]["time_steps"]
+    print("Arguments:", str(config))
     env = create_env(settings)
 
     if not settings["trainer"]["reuse_state_dicts"]:
         print("Warning: this is slow.")
 
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
+    torch.manual_seed(config.seed)
+    torch.cuda.manual_seed_all(config.seed)
 
-    if args.cuda and torch.cuda.is_available() and args.cuda_deterministic:
+    if config.cuda and torch.cuda.is_available() and config.cuda_deterministic:
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
-    log_dir = os.path.expanduser(args.log_dir)
+    log_dir = os.path.expanduser(config.log_dir)
     eval_log_dir = log_dir + "_eval"
     utils.cleanup_log_dir(log_dir)
     utils.cleanup_log_dir(eval_log_dir)
 
     torch.set_num_threads(2)
-    device = torch.device("cuda:0" if args.cuda else "cpu")
+    device = torch.device("cuda:0" if config.cuda else "cpu")
 
-    if args.load_from:
+    if config.load_from:
 
         # Load the environment state from file.
         env.load(env_state_path)
@@ -212,7 +217,7 @@ def train(settings: Dict[str, Any]) -> None:
     for agent_id, agent_obs in obs.items():
         if agent_id not in agents:
             agent, actor_critic, rollouts = get_agent(
-                args, env.observation_space, env.action_space, device
+                config, env.observation_space, env.action_space, device
             )
             agents[agent_id] = agent
             actor_critics[agent_id] = actor_critic
@@ -233,20 +238,20 @@ def train(settings: Dict[str, Any]) -> None:
     start = time.time()
     # MOD
     num_updates = (
-        int(args.num_env_steps - env.iteration) // args.num_steps // args.num_processes
+        int(config.num_env_steps - env.iteration) // config.num_steps // config.num_processes
     )
     for j in range(num_updates):
 
-        if args.use_linear_lr_decay:
+        if config.use_linear_lr_decay:
             # decrease learning rate linearly.
             utils.update_linear_schedule(
                 agent.optimizer,
                 j,
                 num_updates,
-                agent.optimizer.lr if args.algo == "acktr" else args.lr,
+                agent.optimizer.lr if config.algo == "acktr" else config.lr,
             )
 
-        for step in range(args.num_steps):
+        for step in range(config.num_steps):
 
             minted_agents = set()
             value_dict: Dict[int, float] = {}
@@ -280,7 +285,7 @@ def train(settings: Dict[str, Any]) -> None:
             print("Env step: %ss" % str(time.time() - t_step))
             # time.sleep(1)
 
-            # NOTE: we assume ``args.num_processes`` is ``1``.
+            # NOTE: we assume ``config.num_processes`` is ``1``.
 
             t_creation = time.time()
             # Agent creation and termination, rollout stacking.
@@ -342,8 +347,8 @@ def train(settings: Dict[str, Any]) -> None:
 
                         # Create new RolloutStorage object.
                         rollouts = RolloutStorage(
-                            args.num_steps,
-                            args.num_processes,
+                            config.num_steps,
+                            config.num_processes,
                             env.observation_space.shape,
                             env.action_space,
                             actor_critic.recurrent_hidden_state_size,
@@ -357,7 +362,7 @@ def train(settings: Dict[str, Any]) -> None:
                         )
 
                         agent, actor_critic, rollouts = get_agent(
-                            args, env.observation_space, env.action_space, device
+                            config, env.observation_space, env.action_space, device
                         )
 
                         # Save a copy of the state dict.
@@ -453,10 +458,10 @@ def train(settings: Dict[str, Any]) -> None:
 
                 rollouts.compute_returns(
                     next_value,
-                    args.use_gae,
-                    args.gamma,
-                    args.gae_lambda,
-                    args.use_proper_time_limits,
+                    config.use_gae,
+                    config.gamma,
+                    config.gae_lambda,
+                    config.use_proper_time_limits,
                 )
 
                 # DEBUG
@@ -480,8 +485,8 @@ def train(settings: Dict[str, Any]) -> None:
 
         # save for every interval-th episode or for the last epoch
         if (
-            j % args.save_interval == 0 or j == num_updates - 1
-        ) and args.save_root != "":
+            j % config.save_interval == 0 or j == num_updates - 1
+        ) and config.save_root != "":
 
             # Save trainer state objects
             trainer_state = {
@@ -515,7 +520,7 @@ def train(settings: Dict[str, Any]) -> None:
                     # TODO: implement ``ob_rms`` from ``VecNormalize`` in baselines in our env.
                     torch.save(
                         [actor_critic, getattr(env, "ob_rms", None)],
-                        os.path.join(save_path, args.env_name + ".pt"),
+                        os.path.join(save_path, config.env_name + ".pt"),
                     )
             """
 
@@ -531,8 +536,8 @@ def train(settings: Dict[str, Any]) -> None:
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
                 agent_episode_rewards = episode_rewards[agent_id]
-                if j % args.log_interval == 0 and len(agent_episode_rewards) > 1:
-                    total_num_steps = (j + 1) * args.num_processes * args.num_steps
+                if j % config.log_interval == 0 and len(agent_episode_rewards) > 1:
+                    total_num_steps = (j + 1) * config.num_processes * config.num_steps
                     end = time.time()
                     print(
                         "Updates {}, num timesteps {}, FPS {} \n Last {} ".format(
@@ -557,17 +562,17 @@ def train(settings: Dict[str, Any]) -> None:
 
                 """
                 if (
-                    args.eval_interval is not None
+                    config.eval_interval is not None
                     and len(agent_episode_rewards) > 1
-                    and j % args.eval_interval == 0
+                    and j % config.eval_interval == 0
                 ):
                     ob_rms = utils.get_vec_normalize(env).ob_rms
                     evaluate(
                         actor_critic,
                         ob_rms,
-                        args.env_name,
-                        args.seed,
-                        args.num_processes,
+                        config.env_name,
+                        config.seed,
+                        config.num_processes,
                         eval_log_dir,
                         device,
                     )
@@ -579,12 +584,12 @@ def train(settings: Dict[str, Any]) -> None:
     logging.getLogger().info(
         "Steps completed during episode out of total: %d / %d",
         env.iteration,
-        args.num_env_steps,
+        config.num_env_steps,
     )
 
 
 def get_agent(
-    args: argparse.Namespace,
+    config: Config,
     obs_space: gym.Space,
     act_space: gym.Space,
     device: torch.device,
@@ -594,7 +599,7 @@ def get_agent(
 
     Parameters
     ----------
-    args : ``argparse.Namespace``.
+    config : ``Config``.
         Command-line arguments from a2c-ppo-acktr.
     obs_space : ``gym.Space``.
         Observation space from the environment.
@@ -614,40 +619,40 @@ def get_agent(
     """
 
     actor_critic = Policy(
-        obs_space.shape, act_space, base_kwargs={"recurrent": args.recurrent_policy}
+        obs_space.shape, act_space, base_kwargs={"recurrent": config.recurrent_policy}
     )
     actor_critic.to(device)
 
-    if args.algo == "a2c":
+    if config.algo == "a2c":
         agent = algo.A2C_ACKTR(
             actor_critic,
-            args.value_loss_coef,
-            args.entropy_coef,
-            lr=args.lr,
-            eps=args.eps,
-            alpha=args.alpha,
-            max_grad_norm=args.max_grad_norm,
+            config.value_loss_coef,
+            config.entropy_coef,
+            lr=config.lr,
+            eps=config.eps,
+            alpha=config.alpha,
+            max_grad_norm=config.max_grad_norm,
         )
-    elif args.algo == "ppo":
+    elif config.algo == "ppo":
         agent = algo.PPO(
             actor_critic,
-            args.clip_param,
-            args.ppo_epoch,
-            args.num_mini_batch,
-            args.value_loss_coef,
-            args.entropy_coef,
-            lr=args.lr,
-            eps=args.eps,
-            max_grad_norm=args.max_grad_norm,
+            config.clip_param,
+            config.ppo_epoch,
+            config.num_mini_batch,
+            config.value_loss_coef,
+            config.entropy_coef,
+            lr=config.lr,
+            eps=config.eps,
+            max_grad_norm=config.max_grad_norm,
         )
-    elif args.algo == "acktr":
+    elif config.algo == "acktr":
         agent = algo.A2C_ACKTR(
-            actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True
+            actor_critic, config.value_loss_coef, config.entropy_coef, acktr=True
         )
 
     rollouts = RolloutStorage(
-        args.num_steps,
-        args.num_processes,
+        config.num_steps,
+        config.num_processes,
         obs_space.shape,
         act_space,
         actor_critic.recurrent_hidden_state_size,
