@@ -18,7 +18,6 @@ import torch
 import numpy as np
 
 from a2c_ppo_acktr import algo, utils
-from a2c_ppo_acktr.arguments import get_args
 from a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
 from a2c_ppo_acktr.storage import RolloutStorage
 
@@ -31,7 +30,7 @@ from config import Config
 # pylint: disable=bad-continuation
 
 
-def train(settings: Dict[str, Any]) -> None:
+def train(args: argparse.Namespace) -> None:
     """
     Runs the environment.
 
@@ -64,56 +63,51 @@ def train(settings: Dict[str, Any]) -> None:
 
     Parameters
     ----------
-    settings : ``Dict[str, Any]``.
-        Global settings file.
+    args : ``argparse.Namespace``.
+        Contains arguments as described above.
     """
-    config = Config(settings)
-
-
-
-    args = get_args()
 
     # TODO: Convert everything to abspaths.
     # Resume from previous run.
-    if config.load_from:
+    if args.load_from:
 
         # Construct new codename.
         # NOTE: we were going to have the basename be just the token, but this seems
         # ill-advised since you'd have to go into each folder to determine which is
         # newest.
-        codename = os.path.basename(os.path.abspath(config.load_from))
+        codename = os.path.basename(os.path.abspath(args.load_from))
         token = codename.split("_")[0]
 
         # Construct paths.
         env_filename = codename + "_env.pkl"
         trainer_filename = codename + "_trainer.pkl"
         settings_filename = codename + "_settings.json"
-        env_state_path = os.path.join(config.load_from, env_filename)
-        trainer_state_path = os.path.join(config.load_from, trainer_filename)
-        settings_path = os.path.join(config.load_from, settings_filename)
+        env_state_path = os.path.join(args.load_from, env_filename)
+        trainer_state_path = os.path.join(args.load_from, trainer_filename)
+        settings_path = os.path.join(args.load_from, settings_filename)
 
         # Load trainer state.
         with open(trainer_state_path, "rb") as trainer_file:
             trainer_state = pickle.load(trainer_file)
 
     # New training run.
-    else:
-        token = get_token(config.save_root)
+    elif args.settings:
+        token = get_token(args.save_root)
         date = str(datetime.datetime.now())
         date = date.replace(" ", "_")
         codename = "%s_%s" % (token, date)
+        settings_path = args.settings
 
-    if config.settings:
-        settings_path = config.settings
-    elif config.load_from == "":
+    else:
         raise ValueError("You must pass a value for ``--settings``.")
 
-    # Load settings dict.
+    # Load settings dict into Config object.
     with open(settings_path, "r") as settings_file:
         settings = json.load(settings_file)
+    config = Config(settings)
 
     # Construct a new ``save_dir`` in either case.
-    save_dir = os.path.join(config.save_root, codename)
+    save_dir = os.path.join(args.save_root, codename)
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
@@ -125,7 +119,7 @@ def train(settings: Dict[str, Any]) -> None:
 
     # If ``save_dir`` is not the same as ``load_from`` we must copy the existing logs
     # into the new save directory, then contine to append to them.
-    if config.load_from and os.path.abspath(save_dir) not in os.path.abspath(
+    if args.load_from and os.path.abspath(save_dir) not in os.path.abspath(
         env_log_path
     ):
         new_env_log_filename = codename + "_env_log.txt"
@@ -660,10 +654,50 @@ def get_agent(
     return agent, actor_critic, rollouts
 
 
+def validate_args(args: argparse.Namespace) -> None:
+    """ Validates ``args``. Will raise ValueError if invalid arguments are given. """
+
+    # Check for settings file or loading path.
+    if not args.settings and not args.load_from:
+        raise ValueError("Must either provide argument --settings or --load-from.")
+
+    # Validate paths.
+    if args.load_from and not os.path.isdir(args.load_from):
+        raise ValueError(
+            "Invalid load directory for argument --load-from: '%s'." % args.load_from
+        )
+    if args.settings and not os.path.isfile(args.settings):
+        raise ValueError(
+            "Invalid settings file for argument --settings: '%s'." % args.settings
+        )
+
+    # Check for missing --settings argument.
+    if args.load_from and not args.settings:
+        print(
+            "Warning: Argument --settings not provided, loading from '%s'."
+            % args.load_from
+        )
+
+
+def main() -> None:
+    """ Main function for trainer.py. """
+
+    # Get and validate args.
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--load-from", default="", help="Saved directory to load from.")
+    parser.add_argument("--settings", default="", help="Settings file to use.")
+    parser.add_argument(
+        "--save-root",
+        default="./models/",
+        help="directory to save agent logs (default: ./models/)",
+    )
+
+    args = parser.parse_args()
+    validate_args(args)
+
+    # Run training.
+    train(args)
+
+
 if __name__ == "__main__":
-    # Get settings and create environment.
-    # HARDCODE
-    SETTINGS_FILE = "settings/settings.json"
-    with open(SETTINGS_FILE, "r") as f:
-        SETTINGS = json.load(f)
-    train(SETTINGS)
+    main()

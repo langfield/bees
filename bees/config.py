@@ -11,6 +11,8 @@ class Config:
     """ Configuration object. """
 
     def __init__(self, settings: Dict[str, Any]) -> None:
+        """ __init__ function for Config class. """
+
         self.keys: List[str] = []
         self.settings: Dict[str, Any] = settings
         for key, value in settings.items():
@@ -18,6 +20,11 @@ class Config:
                 value = Config(value)
             setattr(self, key, value)
             self.keys.append(key)
+
+    def __repr__(self) -> str:
+        """ Return string representation of object. """
+
+        return str(self.settings)
 
 
 def main() -> None:
