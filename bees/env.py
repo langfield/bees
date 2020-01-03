@@ -20,6 +20,7 @@ import gym
 # Bees imports.
 from agent import Agent
 from genetics import get_child_reward_network
+from config import Config
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
@@ -92,36 +93,9 @@ class Env:
 
     # TODO: make optional arguments consistent throughout nested init calls.
 
-    """
-    def __init__(
-        self,
-        width: int,
-        height: int,
-        sight_len: int,
-        num_obj_types: int,
-        num_agents: int,
-        aging_rate: float,
-        food_density: float,
-        food_size_mean: float,
-        food_size_stddev: float,
-        plant_foods_mean: float,
-        plant_foods_stddev: float,
-        food_plant_retries: int,
-        mating_cooldown_len: int,
-        min_mating_health: float,
-        target_agent_density: float,
-        print_repr: bool,
-        n_layers: int,
-        hidden_dim: int,
-        reward_weight_mean: float,
-        reward_weight_stddev: float,
-        reward_inputs: List[str],
-        mut_sigma: float,
-        mut_p: float,
-        consts: Dict[str, Any],
-    ) -> None:
-    """
-    def __init__(self, config: "Config") -> None:
+    def __init__(self, config: Config) -> None:
+
+        self.config = config
 
         # Environment config
         self.width = config.width
@@ -154,18 +128,6 @@ class Env:
 
         # pylint: disable=invalid-name
         # Get constants.
-        self.consts = { # TEMPORARY HARDCODE
-            "STAY": 0,
-            "LEFT": 1,
-            "RIGHT": 2,
-            "UP": 3,
-            "DOWN": 4,
-            "EAT": 0,
-            "NO_EAT": 1,
-            "MATE": 0,
-            "NO_MATE": 1,
-            "BEE_HEAVEN": [-1, -1]
-        }
         self.LEFT = config.LEFT
         self.RIGHT = config.RIGHT
         self.UP = config.UP
@@ -296,16 +258,7 @@ class Env:
         self.agent_ids_created = 0
         for _ in range(self.num_agents):
             self.agents[self._new_agent_id()] = Agent(
-                sight_len=self.sight_len,
-                num_obj_types=self.num_obj_types,
-                consts=self.consts,
-                n_layers=self.n_layers,
-                hidden_dim=self.hidden_dim,
-                num_actions=self.num_actions,
-                reward_weight_mean=self.reward_weight_mean,
-                reward_weight_stddev=self.reward_weight_stddev,
-                reward_inputs=self.reward_inputs,
-                mating_cooldown_len=self.mating_cooldown_len,
+                config=self.config, num_actions=self.num_actions,
             )
 
         self.iteration = 0
@@ -674,7 +627,7 @@ class Env:
         wants_child = {
             agent_id: wants(action[2]) for agent_id, action in action_dict.items()
         }
-        for mom_id, action in action_dict.items():
+        for mom_id in action_dict:
             mom = self.agents[mom_id]
             pos = mom.pos
 
@@ -746,20 +699,12 @@ class Env:
                     # child_health = min(dad.health, mom.health)
                     child_health = (dad.health + mom.health) / 2
                     child = Agent(
-                        sight_len=self.sight_len,
-                        num_obj_types=self.num_obj_types,
-                        consts=self.consts,
-                        n_layers=self.n_layers,
-                        hidden_dim=self.hidden_dim,
+                        config=self.config,
                         num_actions=self.num_actions,
                         pos=child_pos,
                         initial_health=child_health,
                         reward_weights=reward_weights,
                         reward_biases=reward_biases,
-                        reward_weight_mean=self.reward_weight_mean,
-                        reward_weight_stddev=self.reward_weight_stddev,
-                        reward_inputs=self.reward_inputs,
-                        mating_cooldown_len=self.mating_cooldown_len,
                     )
                     child_id = self._new_agent_id()
                     self.agents[child_id] = child
@@ -1137,19 +1082,11 @@ class Env:
         for agent_id, agent_state in state["agents"].items():
             # TODO: Get rid of default arguments (initial_health is defaulted here).
             self.agents[agent_id] = Agent(
-                sight_len=self.sight_len,
-                num_obj_types=self.num_obj_types,
-                consts=self.consts,
-                n_layers=self.n_layers,
-                hidden_dim=self.hidden_dim,
+                config=self.config,
                 num_actions=self.num_actions,
                 pos=agent_state["pos"],
                 reward_weights=agent_state["reward_weights"],
                 reward_biases=agent_state["reward_biases"],
-                reward_weight_mean=self.reward_weight_mean,
-                reward_weight_stddev=self.reward_weight_stddev,
-                reward_inputs=self.reward_inputs,
-                mating_cooldown_len=self.mating_cooldown_len,
             )
             for attr, value in agent_state.items():
                 setattr(self.agents[agent_id], attr, value)

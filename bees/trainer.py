@@ -10,7 +10,7 @@ import datetime
 import argparse
 import collections
 from collections import deque, OrderedDict
-from typing import Dict, Tuple, Set, List, Any
+from typing import Dict, Tuple, Set, List
 import pickle
 
 import gym
@@ -23,12 +23,11 @@ from a2c_ppo_acktr.storage import RolloutStorage
 
 # from evaluation import evaluate
 
-from main import create_env
 from env import Env
 from utils import get_token
 from config import Config
 
-# pylint: disable=bad-continuation
+# pylint: disable=bad-continuation, no-member
 
 
 def train(args: argparse.Namespace) -> None:
@@ -142,7 +141,6 @@ def train(args: argparse.Namespace) -> None:
     # also has one. This is temporary.
     config.num_env_steps = config.time_steps
     print("Arguments:", str(config))
-    #env = create_env(settings)
     env = Env(config)
 
     if not config.reuse_state_dicts:
@@ -163,7 +161,7 @@ def train(args: argparse.Namespace) -> None:
     torch.set_num_threads(2)
     device = torch.device("cuda:0" if config.cuda else "cpu")
 
-    if config.load_from:
+    if args.load_from:
 
         # Load the environment state from file.
         env.load(env_state_path)
@@ -223,7 +221,7 @@ def train(args: argparse.Namespace) -> None:
             rollout_map[agent_id] = rollouts
             episode_rewards[agent_id] = deque(maxlen=10)
 
-            if settings["trainer"]["reuse_state_dicts"]:
+            if config.reuse_state_dicts:
                 # Save a copy of the state dict.
                 state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
                 optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
@@ -237,7 +235,9 @@ def train(args: argparse.Namespace) -> None:
     start = time.time()
     # MOD
     num_updates = (
-        int(config.num_env_steps - env.iteration) // config.num_steps // config.num_processes
+        int(config.num_env_steps - env.iteration)
+        // config.num_steps
+        // config.num_processes
     )
     for j in range(num_updates):
 
@@ -302,16 +302,10 @@ def train(args: argparse.Namespace) -> None:
                     # objects, or if we need to create new ones.
                     if len(dead_critics) > 0:
 
-                        # DEBUG
-                        print(
-                            "!!!!!!!!!############ REUSING DEAD POLICY ############!!!!!!!!!!!"
-                        )
-
                         actor_critic = dead_critics.pop()
                         agent = dead_agents.pop()
 
-                        # TOMORROW
-                        if settings["trainer"]["reuse_state_dicts"]:
+                        if config.reuse_state_dicts:
                             state_dict = copy.deepcopy(random.choice(state_dicts))
                             optim_state_dict = copy.deepcopy(
                                 random.choice(optim_state_dicts)
@@ -355,17 +349,12 @@ def train(args: argparse.Namespace) -> None:
 
                     else:
 
-                        # DEBUG
-                        print(
-                            "-------------------- CREATING NEW POLICY ----------------------"
-                        )
-
                         agent, actor_critic, rollouts = get_agent(
                             config, env.observation_space, env.action_space, device
                         )
 
                         # Save a copy of the state dict.
-                        if settings["trainer"]["reuse_state_dicts"]:
+                        if config.reuse_state_dicts:
                             state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
                             optim_state_dicts.append(
                                 copy.deepcopy(agent.optimizer.state_dict())
@@ -430,7 +419,7 @@ def train(args: argparse.Namespace) -> None:
 
             # Print out environment state.
             if all(dones.values()):
-                if settings["env"]["print"]:
+                if config.print_repr:
                     print("All agents have died.")
                 env_done = True
 
@@ -485,7 +474,7 @@ def train(args: argparse.Namespace) -> None:
         # save for every interval-th episode or for the last epoch
         if (
             j % config.save_interval == 0 or j == num_updates - 1
-        ) and config.save_root != "":
+        ) and args.save_root != "":
 
             # Save trainer state objects
             trainer_state = {
@@ -588,10 +577,7 @@ def train(args: argparse.Namespace) -> None:
 
 
 def get_agent(
-    config: Config,
-    obs_space: gym.Space,
-    act_space: gym.Space,
-    device: torch.device,
+    config: Config, obs_space: gym.Space, act_space: gym.Space, device: torch.device,
 ) -> Tuple["AgentAlgo", Policy, RolloutStorage]:
     """
     Spins up a new agent/policy.
@@ -599,7 +585,7 @@ def get_agent(
     Parameters
     ----------
     config : ``Config``.
-        Command-line arguments from a2c-ppo-acktr.
+        Config object parsed from settings file.
     obs_space : ``gym.Space``.
         Observation space from the environment.
     act_space : ``gym.Space``.
