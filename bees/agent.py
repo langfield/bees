@@ -1,18 +1,19 @@
 """ Agent object for instantiating agents in the environment. """
 import copy
-from typing import Tuple, Dict, Any, List
+from typing import Tuple, List, Dict, Any
 
 import numpy as np
 
 from policy import Policy
-from utils import convert_obs_to_tuple
+from config import Config
 
-# pylint: disable=bad-continuation
+# pylint: disable=bad-continuation, too-many-arguments, too-many-instance-attributes
 
 
 class Agent:
     """
-    An agent with position and health attributes.
+    An agent with position and health attributes. Note that all of the parameters are
+    contained in the ``config`` argument.
 
     Parameters
     ----------
@@ -48,66 +49,67 @@ class Agent:
 
     # TODO: Remove default values from ``__init__`` parameters.
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self,
-        sight_len: int,
-        num_obj_types: int,
-        consts: Dict[str, Any],
-        n_layers: int,
-        hidden_dim: int,
+        config: Config,
         num_actions: int,
-        reward_inputs: List[str],
         pos: Tuple[int, int] = None,
         initial_health: float = 1,
         reward_weights: List[np.ndarray] = None,
         reward_biases: List[np.ndarray] = None,
-        reward_weight_mean: float = 0.0,
-        reward_weight_stddev: float = 0.4,
-        mating_cooldown_len: int = 10,
     ) -> None:
-        """ ``health`` ranges in ``[0, 1]``. """
-        self.sight_len = sight_len
-        self.num_obj_types = num_obj_types
-        self.n_layers = n_layers
-        self.hidden_dim = hidden_dim
+        """ __init__ function for Agent class. """
 
+        # Environment config.
+        self.sight_len = config.sight_len
+        self.num_obj_types = config.num_obj_types
+        self.mating_cooldown_len = config.mating_cooldown_len
+
+        # Reward config.
+        self.n_layers = config.n_layers
+        self.hidden_dim = config.hidden_dim
+        self.reward_weight_mean = config.reward_weight_mean
+        self.reward_weight_stddev = config.reward_weight_stddev
+        self.reward_inputs = config.reward_inputs
+
+        # Agent state.
+        self.num_actions = num_actions
         self.pos = pos
         self.initial_health = initial_health
-        self.health = initial_health
-        self.num_actions = num_actions
+        self.mating_cooldown = self.mating_cooldown_len
+        self.health = self.initial_health
 
-        self.reward_weight_mean = reward_weight_mean
-        self.reward_weight_stddev = reward_weight_stddev
-        self.reward_inputs = reward_inputs
+        # Temp
+        self.consts = {  # TEMPORARY HARDCODE
+            "STAY": 0,
+            "LEFT": 1,
+            "RIGHT": 2,
+            "UP": 3,
+            "DOWN": 4,
+            "EAT": 0,
+            "NO_EAT": 1,
+            "MATE": 0,
+            "NO_MATE": 1,
+            "BEE_HEAVEN": [-1, -1],
+        }
+        self.policy = Policy(self.consts)
 
-        # How many timesteps until they can mate again.
-        self.mating_cooldown = mating_cooldown_len
-        self.mating_cooldown_len = mating_cooldown_len
-
-        # pylint: disable=invalid-name
-        # Get constants.
-        self.consts = consts
-
-        self.policy = Policy(consts)
-        self.obs_width = 2 * sight_len + 1
-        self.obs_shape = (num_obj_types, self.obs_width, self.obs_width)
+        # Set initial agent observation.
+        self.obs_width = 2 * config.sight_len + 1
+        self.obs_shape = (self.num_obj_types, self.obs_width, self.obs_width)
         self.observation: np.ndarray = np.zeros(self.obs_shape)
 
-        self.age = 0
-        self.num_children = 0
-
+        # Calculate input dimension of reward network.
         # The ``+ 2`` is for the dimensions for current health and previous health.
         self.input_dim = 0
         if "obs" in self.reward_inputs:
-            self.input_dim += (self.obs_width ** 2) * num_obj_types
+            self.input_dim += (self.obs_width ** 2) * self.num_obj_types
         if "actions" in self.reward_inputs:
             self.input_dim += self.num_actions
         if "health" in self.reward_inputs:
             self.input_dim += 2
 
-        self.total_reward = 0.0
-        self.last_reward = 0.0
+        # Initialize/set reward weights and biases.
         if reward_weights is None:
             self.initialize_reward_weights()
         else:
@@ -116,6 +118,12 @@ class Agent:
             self.initialize_reward_biases()
         else:
             self.reward_biases = copy.deepcopy(reward_biases)
+
+        # Miscellaneous agent state.
+        self.total_reward = 0.0
+        self.last_reward = 0.0
+        self.age = 0
+        self.num_children = 0
 
     def get_action(self) -> np.ndarray:
         """
@@ -259,7 +267,7 @@ class Agent:
         output += "Total reward: %f\n" % self.total_reward
         return output
 
-    def agent_state(self) -> None:
+    def agent_state(self) -> Dict[str, Any]:
         """
         Returns a state of the agent as a json-style dictionary.
         """
