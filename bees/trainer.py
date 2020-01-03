@@ -21,8 +21,6 @@ from bees.a2c_ppo_acktr import algo, utils
 from bees.a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
 from bees.a2c_ppo_acktr.storage import RolloutStorage
 
-# from evaluation import evaluate
-
 from bees.env import Env
 from bees.utils import get_token, validate_args
 from bees.config import Config
@@ -66,6 +64,9 @@ def train(args: argparse.Namespace) -> None:
     args : ``argparse.Namespace``.
         Contains arguments as described above.
     """
+
+    # Validate arguments.
+    validate_args(args)
 
     # TODO: Convert everything to abspaths.
     # Resume from previous run.
@@ -643,27 +644,3 @@ def get_agent(
         actor_critic.recurrent_hidden_state_size,
     )
     return agent, actor_critic, rollouts
-
-
-def main() -> None:
-    """ Main function for trainer.py. """
-
-    # Get and validate args.
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--load-from", default="", help="Saved directory to load from.")
-    parser.add_argument("--settings", default="", help="Settings file to use.")
-    parser.add_argument(
-        "--save-root",
-        default="./models/",
-        help="directory to save agent logs (default: ./models/)",
-    )
-
-    args = parser.parse_args()
-    validate_args(args)
-
-    # Run training.
-    train(args)
-
-
-if __name__ == "__main__":
-    main()

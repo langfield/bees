@@ -75,7 +75,9 @@ def get_token(save_root: str) -> str:
     """
 
     # HARDCODE
-    with open("settings/google-10000-english.txt", "r", encoding="utf-8") as english:
+    with open(
+        "bees/settings/google-10000-english.txt", "r", encoding="utf-8"
+    ) as english:
         tokens = [word.rstrip() for word in english.readlines()]
     tokens.sort()
     tokens = [word for word in tokens if len(word) > 5]
@@ -124,5 +126,3 @@ def validate_args(args: argparse.Namespace) -> None:
             "Warning: Argument --settings not provided, loading from '%s'."
             % args.load_from
         )
-
-
