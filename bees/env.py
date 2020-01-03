@@ -33,7 +33,8 @@ ALPHA = 0.9
 
 class Env:
     """
-    Environment with bees in it.
+    Environment with bees in it. Note that all of the parameters are contained in the
+    ``config`` argument.
 
     Parameters
     ----------
@@ -91,6 +92,7 @@ class Env:
 
     # TODO: make optional arguments consistent throughout nested init calls.
 
+    """
     def __init__(
         self,
         width: int,
@@ -118,46 +120,62 @@ class Env:
         mut_p: float,
         consts: Dict[str, Any],
     ) -> None:
+    """
+    def __init__(self, config: "Config") -> None:
 
-        self.width = width
-        self.height = height
-        self.sight_len = sight_len
-        self.num_obj_types = num_obj_types
-        self.num_agents = num_agents
-        self.aging_rate = aging_rate
-        self.food_density = food_density
-        self.food_size_mean = food_size_mean
-        self.food_size_stddev = food_size_stddev
-        self.plant_foods_mean = plant_foods_mean
-        self.plant_foods_stddev = plant_foods_stddev
-        self.food_plant_retries = food_plant_retries
-        self.mating_cooldown_len = mating_cooldown_len
-        self.min_mating_health = min_mating_health
-        self.target_agent_density = target_agent_density
-        self.print_repr = print_repr
+        # Environment config
+        self.width = config.width
+        self.height = config.height
+        self.sight_len = config.sight_len
+        self.num_obj_types = config.num_obj_types
+        self.num_agents = config.num_agents
+        self.food_density = config.food_density
+        self.food_size_mean = config.food_size_mean
+        self.food_size_stddev = config.food_size_stddev
+        self.plant_foods_mean = config.plant_foods_mean
+        self.plant_foods_stddev = config.plant_foods_stddev
+        self.food_plant_retries = config.food_plant_retries
+        self.aging_rate = config.aging_rate
+        self.mating_cooldown_len = config.mating_cooldown_len
+        self.min_mating_health = config.min_mating_health
+        self.target_agent_density = config.target_agent_density
+        self.print_repr = config.print_repr
 
-        self.n_layers = n_layers
-        self.hidden_dim = hidden_dim
-        self.reward_weight_mean = reward_weight_mean
-        self.reward_weight_stddev = reward_weight_stddev
-        self.reward_inputs = reward_inputs
+        # Reward config
+        self.n_layers = config.n_layers
+        self.hidden_dim = config.hidden_dim
+        self.reward_weight_mean = config.reward_weight_mean
+        self.reward_weight_stddev = config.reward_weight_stddev
+        self.reward_inputs = config.reward_inputs
 
-        self.mut_sigma = mut_sigma
-        self.mut_p = mut_p
+        # Genetics config
+        self.mut_sigma = config.mut_sigma
+        self.mut_p = config.mut_p
 
         # pylint: disable=invalid-name
         # Get constants.
-        self.consts = consts
-        self.LEFT = consts["LEFT"]
-        self.RIGHT = consts["RIGHT"]
-        self.UP = consts["UP"]
-        self.DOWN = consts["DOWN"]
-        self.STAY = consts["STAY"]
-        self.EAT = consts["EAT"]
-        self.NO_EAT = consts["NO_EAT"]
-        self.MATE = consts["MATE"]
-        self.NO_MATE = consts["NO_MATE"]
-        self.HEAVEN: Tuple[int, int] = tuple(consts["BEE_HEAVEN"])  # type: ignore
+        self.consts = { # TEMPORARY HARDCODE
+            "STAY": 0,
+            "LEFT": 1,
+            "RIGHT": 2,
+            "UP": 3,
+            "DOWN": 4,
+            "EAT": 0,
+            "NO_EAT": 1,
+            "MATE": 0,
+            "NO_MATE": 1,
+            "BEE_HEAVEN": [-1, -1]
+        }
+        self.LEFT = config.LEFT
+        self.RIGHT = config.RIGHT
+        self.UP = config.UP
+        self.DOWN = config.DOWN
+        self.STAY = config.STAY
+        self.EAT = config.EAT
+        self.NO_EAT = config.NO_EAT
+        self.MATE = config.MATE
+        self.NO_MATE = config.NO_MATE
+        self.HEAVEN: Tuple[int, int] = tuple(config.BEE_HEAVEN)  # type: ignore
 
         # Construct object identifier dictionary.
         self.obj_type_ids = {"agent": 0, "food": 1}

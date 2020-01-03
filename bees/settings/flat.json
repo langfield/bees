@@ -16,7 +16,7 @@
     "mating_cooldown_len": 40,
     "min_mating_health": 0.112,
     "target_agent_density": 0.07,
-    "print": true,
+    "print_repr": true,
 
     "2": "====================TRAINER====================",
 
@@ -27,8 +27,8 @@
 
     "n_layers": 1,
     "hidden_dim": 256,
-    "weight_mean": 0.0,
-    "weight_stddev": 0.4,
+    "reward_weight_mean": 0.0,
+    "reward_weight_stddev": 0.4,
     "reward_inputs": ["actions"],
 
     "4": "====================GENETICS====================",
@@ -74,7 +74,6 @@
     "num_env_steps": 10e6,
     "env_name": "bees",
     "log_dir": "/tmp/gym/",
-    "save_root": "./models/",
     "no_cuda": false,
     "use_proper_time_limits": false,
     "recurrent_policy": false,

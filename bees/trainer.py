@@ -24,6 +24,7 @@ from a2c_ppo_acktr.storage import RolloutStorage
 # from evaluation import evaluate
 
 from main import create_env
+from env import Env
 from utils import get_token
 from config import Config
 
@@ -136,12 +137,16 @@ def train(args: argparse.Namespace) -> None:
     visual_log = open(visual_log_path, "a+")
 
     # Create environment.
-    config.num_env_steps = settings["trainer"]["time_steps"]
+    # The next line is here to account for the fact that the A2C implementation
+    # uses its own argument for the number of time steps, but the main bees pipeline
+    # also has one. This is temporary.
+    config.num_env_steps = config.time_steps
     print("Arguments:", str(config))
-    env = create_env(settings)
+    #env = create_env(settings)
+    env = Env(config)
 
-    if not settings["trainer"]["reuse_state_dicts"]:
-        print("Warning: this is slow.")
+    if not config.reuse_state_dicts:
+        print("Warning: this is slower, but with more diverse policies.")
 
     torch.manual_seed(config.seed)
     torch.cuda.manual_seed_all(config.seed)
