@@ -17,15 +17,15 @@ import gym
 import torch
 import numpy as np
 
-from a2c_ppo_acktr import algo, utils
-from a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
-from a2c_ppo_acktr.storage import RolloutStorage
+from bees.a2c_ppo_acktr import algo, utils
+from bees.a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
+from bees.a2c_ppo_acktr.storage import RolloutStorage
 
 # from evaluation import evaluate
 
-from env import Env
-from utils import get_token
-from config import Config
+from bees.env import Env
+from bees.utils import get_token, validate_args
+from bees.config import Config
 
 # pylint: disable=bad-continuation, no-member
 
@@ -643,31 +643,6 @@ def get_agent(
         actor_critic.recurrent_hidden_state_size,
     )
     return agent, actor_critic, rollouts
-
-
-def validate_args(args: argparse.Namespace) -> None:
-    """ Validates ``args``. Will raise ValueError if invalid arguments are given. """
-
-    # Check for settings file or loading path.
-    if not args.settings and not args.load_from:
-        raise ValueError("Must either provide argument --settings or --load-from.")
-
-    # Validate paths.
-    if args.load_from and not os.path.isdir(args.load_from):
-        raise ValueError(
-            "Invalid load directory for argument --load-from: '%s'." % args.load_from
-        )
-    if args.settings and not os.path.isfile(args.settings):
-        raise ValueError(
-            "Invalid settings file for argument --settings: '%s'." % args.settings
-        )
-
-    # Check for missing --settings argument.
-    if args.load_from and not args.settings:
-        print(
-            "Warning: Argument --settings not provided, loading from '%s'."
-            % args.load_from
-        )
 
 
 def main() -> None:

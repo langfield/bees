@@ -4,7 +4,7 @@ from typing import Tuple, List, Dict, Any
 
 import numpy as np
 
-from config import Config
+from bees.config import Config
 
 # pylint: disable=bad-continuation, too-many-arguments, too-many-instance-attributes
 

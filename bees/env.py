@@ -18,9 +18,9 @@ import numpy as np
 import gym
 
 # Bees imports.
-from agent import Agent
-from genetics import get_child_reward_network
-from config import Config
+from bees.agent import Agent
+from bees.genetics import get_child_reward_network
+from bees.config import Config
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True

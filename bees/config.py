@@ -3,7 +3,7 @@ import sys
 import json
 from typing import List, Dict, Any
 
-from pprint import pprint
+from pprint import pprint, pformat
 
 
 # pylint: disable=no-member
@@ -24,7 +24,12 @@ class Config:
     def __repr__(self) -> str:
         """ Return string representation of object. """
 
-        return str(self.settings)
+        # Try to use ``sort_dicts`` option, only available in Python 3.8.
+        try:
+            formatted = pformat(self.settings, sort_dicts=False)
+        except TypeError:
+            formatted = pformat(self.settings)
+        return formatted
 
 
 def main() -> None:

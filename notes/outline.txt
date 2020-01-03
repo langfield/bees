@@ -334,7 +334,7 @@ Things to come back to:
    - Run experiments
    - Analyze results
    - Refactor
-     - Universal config file
+     - Universal config file (DONE)
      - Move arguments from arguments.py into settings file
      - Fix mixture of arguments
      - Make arguments not positional
