@@ -329,14 +329,18 @@ Things to come back to:
      - Linear reward function baseline (DONE)
      - Tweak hyperparameters (especially reward network parameters) (DONE?)
      - Reward network analysis to determine rewarded behavior (DONE?)
+
+
+   January sprint:
+   - Reward engineering
      - Constrain network weights to produce "less non-linear" reward functions
      - Compute policy score
    - Run experiments
    - Analyze results
    - Refactor
      - Universal config file (DONE)
-     - Move arguments from arguments.py into settings file
-     - Fix mixture of arguments
+     - Move arguments from arguments.py into settings file (DONE)
+     - Fix mixture of arguments (DONE)
      - Make arguments not positional
      - Minimize hardcoding
    - Merge
