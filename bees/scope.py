@@ -11,7 +11,7 @@ from pprint import pprint
 import numpy as np
 from numpy.random import normal
 
-from agent import Agent
+from bees.agent import Agent
 
 EAT_PROB = 0.1
 OBS_DENSITY = 0.3

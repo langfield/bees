@@ -2,7 +2,7 @@
 from typing import List, Tuple
 import numpy as np
 from deap.tools import cxOnePoint, mutGaussian
-from agent import Agent
+from bees.agent import Agent
 
 # pylint: disable=invalid-name, bad-continuation
 def reward_to_DNA(

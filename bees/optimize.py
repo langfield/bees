@@ -6,7 +6,7 @@ import datetime
 
 import optuna
 
-from trainer import train
+from bees.trainer import train
 
 # pylint: disable=bad-continuation
 
