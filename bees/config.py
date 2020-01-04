@@ -26,6 +26,7 @@ class Config:
 
         # Try to use ``sort_dicts`` option, only available in Python 3.8.
         try:
+            # pylint: disable=unexpected-keyword-arg
             formatted = pformat(self.settings, sort_dicts=False)
         except TypeError:
             formatted = pformat(self.settings)
