@@ -1,68 +1,116 @@
+""" Modifies standard torch distributions so they are compatible with this library. """
 import math
 
+# pylint: disable=import-error
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from bees.utils import DEBUG
 from bees.a2c_ppo_acktr.utils import AddBias, init
 
-"""
-Modify standard PyTorch distributions so they are compatible with this code.
-"""
+# pylint: disable=bad-continuation, abstract-method
+
 
 #
 # Standardize distribution interfaces
 #
 
-# Categorical
-FixedCategorical = torch.distributions.Categorical
 
-old_sample = FixedCategorical.sample
-FixedCategorical.sample = lambda self: old_sample(self).unsqueeze(-1)
+class FixedCategorical(torch.distributions.Categorical):
+    r"""
+    Fixed parameter categorical distribution.
+    CONSTRAINT: Either ``probs`` or ``logits`` must be passed.
+    
 
-log_prob_cat = FixedCategorical.log_prob
+    Parameters
+    ----------
+    probs : ``Optional[torch.Tensorn[n]]``.
+        The probabilities for each category, where ``n`` is the number of categories.
+    logits : ``Optional[torch.Tensor[n]]``.
+        The logits ($\log\frac{p}{1 - p}$ where $p$ is the probability) for each
+        category, where ``n`` is the number of categories.
+    validate_args : ``Optional[bool]``.
+        Whether to validate arguments. Does not validate if not passed (functionally
+        equivalent to a default of ``False``).
+    """
+
+    def sample(self, sample_shape: torch.Size = torch.Size([])):
+        """ Samples and unsqueezes. """
+
+        #===DEBUG===
+        unperturbed_sample = super().sample()
+        DEBUG(unperturbed_sample)
+        unsqueezed_sample = unperturbed_sample.unsqueeze(-1)
+        DEBUG(unsqueezed_sample)
+        #===DEBUG===
+
+        return super().sample(sample_shape=sample_shape).unsqueeze(-1) # ORIGINAL
+
+    def log_probs(self, actions):
+        return (
+            super()
+            .log_prob(actions.squeeze(-1))
+            .view(actions.size(0), -1)
+            .sum(-1)
+            .unsqueeze(-1)
+        )
+
+    def mode(self):
+        return self.probs.argmax(dim=-1, keepdim=True)
 
 
-def temp_log_probs(self, actions):
-    temp = log_prob_cat(self, actions.squeeze(-1))
-    temp = temp.view(actions.size(0), -1)
-    temp = temp.sum(-1)
-    temp = temp.unsqueeze(-1)
+class FixedNormal(torch.distributions.Normal):
+    """
+    Fixed parameter normal distribution.
 
-    return temp
+    Parameters
+    ----------
+    loc : ``Union[float, torch.Tensor]``.
+        The mean.
+    scale : ``Union[float, torch.Tensor]``.
+        The standard deviation.
+    validate_args : ``Optional[bool]``.
+        Whether to validate arguments. Does not validate if not passed (functionally
+        equivalent to a default of ``False``).
+    """
+
+    def log_probs(self, actions):
+        return super().log_prob(actions).sum(-1, keepdim=True)
+
+    # pylint: disable=no-self-use
+    def entrop(self):
+        return super.entropy().sum(-1)
+
+    def mode(self):
+        return self.mean
 
 
-FixedCategorical.log_probs = temp_log_probs
+class FixedBernoulli(torch.distributions.Bernoulli):
+    """
+    Fixed parameter Bernoulli distribution.
+    CONSTRAINT: Either ``probs`` or ``logits`` must be passed.
 
-FixedCategorical.mode = lambda self: self.probs.argmax(dim=-1, keepdim=True)
+    Parameters
+    ----------
+    probs : ``Optional[Union[int, float, torch.Tensor]]``.
+        The scalar probability of sampling ``1``.
+    logits : ``Optional[Union[int, float, torch.Tensor]]``.
+        The scalar log-odds of sampling ``1``.
+    validate_args : ``Optional[bool]``.
+        Whether to validate arguments. Does not validate if not passed (functionally
+        equivalent to a default of ``False``).
+    """
 
-# Normal
-FixedNormal = torch.distributions.Normal
+    def log_probs(self, actions):
+        return super.log_prob(actions).view(actions.size(0), -1).sum(-1).unsqueeze(-1)
 
-log_prob_normal = FixedNormal.log_prob
-FixedNormal.log_probs = lambda self, actions: log_prob_normal(self, actions).sum(
-    -1, keepdim=True
-)
+    # pylint: disable=no-self-use
+    def entropy(self):
+        return super().entropy().sum(-1)
 
-normal_entropy = FixedNormal.entropy
-FixedNormal.entropy = lambda self: normal_entropy(self).sum(-1)
-
-FixedNormal.mode = lambda self: self.mean
-
-# Bernoulli
-FixedBernoulli = torch.distributions.Bernoulli
-
-log_prob_bernoulli = FixedBernoulli.log_prob
-FixedBernoulli.log_probs = (
-    lambda self, actions: log_prob_bernoulli(self, actions)
-    .view(actions.size(0), -1)
-    .sum(-1)
-    .unsqueeze(-1)
-)
-
-bernoulli_entropy = FixedBernoulli.entropy
-FixedBernoulli.entropy = lambda self: bernoulli_entropy(self).sum(-1)
-FixedBernoulli.mode = lambda self: torch.gt(self.probs, 0.5).float()
+    def mode(self):
+        return torch.gt(self.probs, 0.5).float()
 
 
 class Categorical(nn.Module):
