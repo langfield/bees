@@ -1,8 +1,10 @@
 """ Various functions for use in ``env.py``. """
 import os
+import re
+import inspect
 import datetime
 import argparse
-from typing import Tuple
+from typing import Tuple, Any
 
 import numpy as np
 
@@ -126,3 +128,45 @@ def validate_args(args: argparse.Namespace) -> None:
             "Warning: Argument --settings not provided, loading from '%s'."
             % args.load_from
         )
+
+
+# pylint: disable=invalid-name
+def DEBUG(var: Any) -> None:
+    """
+    Debugging tool to print a variable's name and value.
+
+    Paramters
+    ---------
+    var : ``Any``.
+        Any variable.
+    """
+    name = ""
+    delimit = False
+    string_repr = repr(var)
+    lines = string_repr.split("\n")
+    if len(lines) > 1 or len(string_repr) > 80:
+        delimit = True
+
+    found_name = False
+    frame = inspect.currentframe()
+    for key, val in frame.f_back.f_locals.items():
+        if var is val:
+            name = key  
+            found_name = True
+
+    if not found_name:
+        raise ValueError("DEBUG() was not able to find the name of the variable.")
+
+    if delimit:
+        print(
+            "vvvvvvvvvv||VARIABLE NAME: '%s' | TYPE: '%s'||vvvvvvvvvv"
+            % (name, type(var))
+        )
+        print(var)
+        print(
+            "^^^^^^^^^^||VARIABLE NAME: '%s' | TYPE: '%s'||^^^^^^^^^^"
+            % (name, type(var))
+        )
+    else:
+        print("'%s':" % name, var)
+        print("Type of '%s':" % name, type(var))
