@@ -9,6 +9,7 @@ from baselines.common.running_mean_std import RunningMeanStd
 
 # pylint: disable=no-member, abstract-method
 
+
 class Discriminator(nn.Module):
     def __init__(self, input_dim, hidden_dim, device):
         super(Discriminator, self).__init__()
