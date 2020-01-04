@@ -1,4 +1,3 @@
-import h5py
 import numpy as np
 import torch
 import torch.nn as nn
@@ -8,6 +7,7 @@ from torch import autograd
 
 from baselines.common.running_mean_std import RunningMeanStd
 
+# pylint: disable=no-member, abstract-method
 
 class Discriminator(nn.Module):
     def __init__(self, input_dim, hidden_dim, device):
@@ -147,7 +147,7 @@ class ExpertDataset(torch.utils.data.Dataset):
 
         self.get_idx = []
 
-        for j in range(self.length):
+        for _ in range(self.length):
 
             while self.trajectories["lengths"][traj_idx].item() <= i:
                 i -= self.trajectories["lengths"][traj_idx].item()

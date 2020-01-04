@@ -184,7 +184,6 @@ class NNBase(nn.Module):
         return x, hxs
 
 
-# ===MOD===
 class CNNBase(NNBase):
     def __init__(self, input_shape, recurrent=False, hidden_size=512):
         super(CNNBase, self).__init__(recurrent, hidden_size, hidden_size)
@@ -196,7 +195,6 @@ class CNNBase(NNBase):
             nn.init.calculate_gain("relu"),
         )
 
-        # ===MOD===
         # ``input_shape`` is the shape of the input in CWH format.
         # ``inputs``, one of the params of forward call.
         kernel_size = 3
@@ -213,7 +211,6 @@ class CNNBase(NNBase):
             nn.Linear(input_width * input_height * 4 * channels, hidden_size),
             nn.ReLU(),
         )
-        # ===MOD===
 
         init_ = lambda m: init(
             m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
@@ -221,11 +218,9 @@ class CNNBase(NNBase):
 
         self.critic_linear = init_(nn.Linear(hidden_size, 1))
 
-        # ===MOD===
         self.main, self.critic_linear = CNNBase.init_weights(
             self.main, self.critic_linear
         )
-        # ===MOD===
 
         self.train()
 

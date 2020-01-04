@@ -1,7 +1,6 @@
 """ Modifies standard torch distributions so they are compatible with this library. """
 import math
 
-# pylint: disable=import-error
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -38,14 +37,14 @@ class FixedCategorical(torch.distributions.Categorical):
     def sample(self, sample_shape: torch.Size = torch.Size([])):
         """ Samples and unsqueezes. """
 
-        #===DEBUG===
+        # ===DEBUG===
         unperturbed_sample = super().sample()
         DEBUG(unperturbed_sample)
         unsqueezed_sample = unperturbed_sample.unsqueeze(-1)
         DEBUG(unsqueezed_sample)
-        #===DEBUG===
+        # ===DEBUG===
 
-        return super().sample(sample_shape=sample_shape).unsqueeze(-1) # ORIGINAL
+        return super().sample(sample_shape=sample_shape).unsqueeze(-1)  # ORIGINAL
 
     def log_probs(self, actions):
         return (
@@ -111,6 +110,54 @@ class FixedBernoulli(torch.distributions.Bernoulli):
 
     def mode(self):
         return torch.gt(self.probs, 0.5).float()
+
+
+class FixedCategoricalProduct:
+    def __init__(self, logits_list=None):
+        self.logits_list = logits_list
+        self.fixedCategoricals = [
+            FixedCategorical(logits=logits) for logits in logits_list
+        ]
+
+    def mode(self):
+        return torch.stack(
+            [categorical.mode().view((1,)) for categorical in self.fixedCategoricals],
+            dim=1,
+        )
+
+    def sample(self):
+        return torch.stack(
+            [categorical.sample().view((1,)) for categorical in self.fixedCategoricals],
+            dim=1,
+        )
+
+    def log_probs(self, actions):
+        """
+        Parameters
+        ----------
+        actions : ``torch.Tensor``.
+            The actions from ``action_tensor_dict``.
+            Shape: ``(num_processes, num_subactions)``.
+        """
+        num_subactions = actions.shape[1]
+        subaction_log_probs_list = []
+        for categorical, subaction_index in zip(
+            self.fixedCategoricals, range(num_subactions)
+        ):
+            action = actions[:, subaction_index]
+            subaction_log_probs_list.append(categorical.log_probs(action))
+        subaction_log_probs = torch.cat(subaction_log_probs_list, dim=-1)
+
+        # Shape: ``(num_subactions,)``.
+        log_probabilities = torch.sum(subaction_log_probs, dim=-1)
+        return log_probabilities
+
+    def entropy(self):
+        entropies = torch.stack(
+            [categorical.entropy() for categorical in self.fixedCategoricals]
+        )
+        ent = torch.sum(entropies)
+        return ent
 
 
 class Categorical(nn.Module):
@@ -187,51 +234,3 @@ class CategoricalProduct(nn.Module):
     def forward(self, x):
         logits_list = [linear(x) for linear in self.linears]
         return FixedCategoricalProduct(logits_list=logits_list)
-
-
-class FixedCategoricalProduct:
-    def __init__(self, logits_list=None):
-        self.logits_list = logits_list
-        self.fixedCategoricals = [
-            FixedCategorical(logits=logits) for logits in logits_list
-        ]
-
-    def mode(self):
-        return torch.stack(
-            [categorical.mode().view((1,)) for categorical in self.fixedCategoricals],
-            dim=1,
-        )
-
-    def sample(self):
-        return torch.stack(
-            [categorical.sample().view((1,)) for categorical in self.fixedCategoricals],
-            dim=1,
-        )
-
-    def log_probs(self, actions):
-        """
-        Parameters
-        ----------
-        actions : ``torch.Tensor``.
-            The actions from ``action_tensor_dict``.
-            Shape: ``(num_processes, num_subactions)``.
-        """
-        num_subactions = actions.shape[1]
-        subaction_log_probs_list = []
-        for categorical, subaction_index in zip(
-            self.fixedCategoricals, range(num_subactions)
-        ):
-            action = actions[:, subaction_index]
-            subaction_log_probs_list.append(categorical.log_probs(action))
-        subaction_log_probs = torch.cat(subaction_log_probs_list, dim=-1)
-
-        # Shape: ``(num_subactions,)``.
-        log_probabilities = torch.sum(subaction_log_probs, dim=-1)
-        return log_probabilities
-
-    def entropy(self):
-        entropies = torch.stack(
-            [categorical.entropy() for categorical in self.fixedCategoricals]
-        )
-        ent = torch.sum(entropies)
-        return ent
