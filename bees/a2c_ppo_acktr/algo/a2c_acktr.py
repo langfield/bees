@@ -20,6 +20,7 @@ class A2C_ACKTR:
     actor_critic : ``Policy``.
         Policy object.
     """
+
     # TODO: Finish docstring.
     def __init__(
         self,

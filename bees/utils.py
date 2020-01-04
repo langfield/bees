@@ -161,6 +161,8 @@ def DEBUG(var: Any) -> None:
             % (name, type(var))
         )
         print(var)
+        if hasattr(var, "shape"):
+            print("||Shape:", var.shape)
         print(
             "^^^^^^^^^^||VARIABLE NAME: '%s' | TYPE: '%s'||^^^^^^^^^^"
             % (name, type(var))
