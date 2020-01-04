@@ -25,7 +25,7 @@ from bees.env import Env
 from bees.utils import get_token, validate_args
 from bees.config import Config
 
-# pylint: disable=bad-continuation, no-member
+# pylint: disable=bad-continuation
 
 
 def train(args: argparse.Namespace) -> None:
