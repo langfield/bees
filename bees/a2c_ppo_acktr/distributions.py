@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from bees.utils import DEBUG
 from bees.a2c_ppo_acktr.utils import AddBias, init
 
-# pylint: disable=bad-continuation, abstract-method
+# pylint: disable=bad-continuation, abstract-method, no-member
 
 
 #
@@ -21,7 +21,6 @@ class FixedCategorical(torch.distributions.Categorical):
     Fixed parameter categorical distribution.
     CONSTRAINT: Either ``probs`` or ``logits`` must be passed.
     
-
     Parameters
     ----------
     probs : ``Optional[torch.Tensorn[n]]``.
@@ -35,18 +34,39 @@ class FixedCategorical(torch.distributions.Categorical):
     """
 
     def sample(self, sample_shape: torch.Size = torch.Size([])):
-        """ Samples and unsqueezes. """
+        """
+        Samples and unsqueezes. We add a dimension to the Tensor at the end of the shape
+        to represent the process dimension.
 
-        # ===DEBUG===
-        unperturbed_sample = super().sample()
-        DEBUG(unperturbed_sample)
-        unsqueezed_sample = unperturbed_sample.unsqueeze(-1)
-        DEBUG(unsqueezed_sample)
-        # ===DEBUG===
+        Parameters
+        ----------
+        sample_shape : ``torch.Size``, optional.
+            The shape in which to request the sample.
+        """
 
-        return super().sample(sample_shape=sample_shape).unsqueeze(-1)  # ORIGINAL
+        return super().sample(sample_shape=sample_shape).unsqueeze(-1)
 
-    def log_probs(self, actions):
+    def log_probs(self, actions: torch.Tensor) -> torch.Tensor:
+        """
+        Computes log probabilities for actions by first getting rid of the process
+        dimension, calling the log_prob() function from the parent class, and
+        summing over.
+
+        Note that ``super().log_prob()`` returns a tensor of the same shape as its
+        argument.
+
+        Parameters
+        ----------
+        actions : ``torch.Tensor``.
+            A tensor of (possibly many) actions.
+            Shape: ``(config.num_processes, ...)``.
+
+        Returns
+        -------
+        log_prob : ``torch.Tensor``.
+            The log probabilties of ``actions``.
+            Shape: ``(config.num_processes, ...)``.
+        """
         return (
             super()
             .log_prob(actions.squeeze(-1))
@@ -56,6 +76,7 @@ class FixedCategorical(torch.distributions.Categorical):
         )
 
     def mode(self):
+        """ Returns the index of the category with highest probability. """
         return self.probs.argmax(dim=-1, keepdim=True)
 
 
@@ -75,13 +96,41 @@ class FixedNormal(torch.distributions.Normal):
     """
 
     def log_probs(self, actions):
+        """
+        Computes the log probability of ``actions``.
+        Note that ``super().log_prob()`` returns a tensor of the same shape as its
+        argument.
+
+        Parameters
+        ----------
+        actions : ``torch.Tensor``.
+            A single agent action tensor.
+            Shape: ``(config.num_processes, ...)``.
+
+        Returns
+        -------
+        log_prob : ``torch.Tensor``.
+            The log probabilties of ``actions``.
+            Shape: The same as ``actions`` but the last element is now ``1`` since we
+            summed over it.
+        """
         return super().log_prob(actions).sum(-1, keepdim=True)
 
     # pylint: disable=no-self-use
     def entrop(self):
+        """
+        Computes the entropy of the distribution. It's called ``entrop`` so we don't
+        override ``super.entropy()``.
+
+        Returns
+        -------
+        <entropy> : ``torch.FloatTensor``.
+            Shape: ``(,)``.
+        """
         return super.entropy().sum(-1)
 
     def mode(self):
+        """ Returns the mean as a scalar tensor. """
         return self.mean
 
 
