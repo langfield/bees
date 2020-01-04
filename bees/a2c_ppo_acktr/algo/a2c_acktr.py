@@ -1,21 +1,36 @@
+""" An implementation of A2C and ACTKR in one class. """
+from typing import Tuple, Optional
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from bees.a2c_ppo_acktr.model import Policy
+from bees.a2c_ppo_acktr.storage import RolloutStorage
 from bees.a2c_ppo_acktr.algo.kfac import KFACOptimizer
 
 
+# pylint: disable=invalid-name, too-few-public-methods
 class A2C_ACKTR:
+    """
+    Policy class for A2C and ACKTR.
+
+    Parameters
+    ----------
+    actor_critic : ``Policy``.
+        Policy object.
+    """
+    # TODO: Finish docstring.
     def __init__(
         self,
-        actor_critic,
-        value_loss_coef,
-        entropy_coef,
-        lr=None,
-        eps=None,
-        alpha=None,
-        max_grad_norm=None,
-        acktr=False,
+        actor_critic: Policy,
+        value_loss_coef: float,
+        entropy_coef: float,
+        lr: Optional[float] = None,
+        eps: Optional[float] = None,
+        alpha: Optional[float] = None,
+        max_grad_norm: Optional[float] = None,
+        acktr: Optional[bool] = False,
     ):
 
         self.actor_critic = actor_critic
@@ -33,7 +48,25 @@ class A2C_ACKTR:
                 actor_critic.parameters(), lr, eps=eps, alpha=alpha
             )
 
-    def update(self, rollouts):
+    def update(self, rollouts: RolloutStorage) -> Tuple[float, float, float]:
+        """
+        Performs weight update.
+
+        Parameters
+        ----------
+        rollouts : ``RolloutStorage``.
+            The rollout object containing experience.
+
+        Returns
+        -------
+        value_loss.item() : ``float``.
+            The value loss scalar torch.Tensor casted to a float.
+        action_loss.item() : ``float``.
+            The action loss scalar torch.Tensor casted to a float.
+        dist_entropy.item() : ``float``.
+            The distribution entropy scalar torch.Tensor casted to a float.
+        """
+        # TODO: Write detailed explanation of function in docstring and comment better.
         obs_shape = rollouts.obs.size()[2:]
         action_shape = rollouts.actions.size()[-1]
         num_steps, num_processes, _ = rollouts.rewards.size()
@@ -79,7 +112,7 @@ class A2C_ACKTR:
             - dist_entropy * self.entropy_coef
         ).backward()
 
-        if self.acktr == False:
+        if not self.acktr:
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
 
         self.optimizer.step()

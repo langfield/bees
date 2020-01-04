@@ -1,8 +1,6 @@
 """ Various functions for use in ``env.py``. """
 import os
-import re
 import inspect
-import datetime
 import argparse
 from typing import Tuple, Any
 
@@ -84,8 +82,8 @@ def get_token(save_root: str) -> str:
     tokens.sort()
     tokens = [word for word in tokens if len(word) > 5]
 
-    # TODO: Add warning when path doesn't exist.
     if not os.path.isdir(save_root):
+        print("Save root: '%s' does not exist. Creating directories." % save_root)
         os.makedirs(save_root)
 
     dirlist = os.listdir(save_root)
@@ -151,7 +149,7 @@ def DEBUG(var: Any) -> None:
     frame = inspect.currentframe()
     for key, val in frame.f_back.f_locals.items():
         if var is val:
-            name = key  
+            name = key
             found_name = True
 
     if not found_name:
