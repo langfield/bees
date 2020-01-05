@@ -145,7 +145,11 @@ def train(args: argparse.Namespace) -> None:
     env = Env(config)
 
     if not config.reuse_state_dicts:
-        print("Warning: this is slower, but with more diverse policies.")
+        print(
+            "Warning: this is slower, but bounds the number of unique policy "\
+            "initializations, i.e. policy initializations will be reused for "\
+            "multiple agents."
+        )
 
     torch.manual_seed(config.seed)
     torch.cuda.manual_seed_all(config.seed)
