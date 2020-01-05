@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from bees.utils import DEBUG
 from bees.a2c_ppo_acktr.distributions import (
     Bernoulli,
     Categorical,
@@ -67,9 +68,39 @@ class Policy(nn.Module):
     def forward(self, inputs, rnn_hxs, masks):
         raise NotImplementedError
 
-    def act(self, inputs, rnn_hxs, masks, deterministic=False):
+    def act(
+        self,
+        inputs: torch.Tensor,
+        rnn_hxs: torch.Tensor,
+        masks: torch.Tensor,
+        deterministic: bool = False,
+        return_action_distribution: bool = False,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Computes a forward pass by passing observation inputs and policy hidden state
+        (in the case that the policy is recurrent) to the policy, which subsequently
+        returns an action and some other things, which are returned along with the
+        log likelihood of that action.
+
+        Note that ``hidden_dim`` is 1 when num_layers is 1.
+
+        Parameters
+        ----------
+        inputs : ``torch.Tensor``.
+            Shape : ``(num_processes,) + obs.shape``.
+        rnn_hxs : ``torch.Tensor``.
+            Shape : ``(num_processes, hidden_dim)``. 
+        masks : ``torch.Tensor``.
+            Masks for GRU forward pass.
+            Shape : ``(num_processes, hidden_dim)``.
+        deterministic : ``bool``.
+            Whether to sample from or just take the mode of the action distribution.
+        """
         value, actor_features, rnn_hxs = self.base(inputs, rnn_hxs, masks)
         dist = self.dist(actor_features)
+        probs = dist.probs()
+        print("Type of probs: %s" % str(type(probs)))
+        print("Probs: %s" % str(probs))
 
         if deterministic:
             action = dist.mode()
@@ -80,10 +111,7 @@ class Policy(nn.Module):
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
 
-        """
-        if isinstance(self.dist, CategoricalProduct):
-            action = torch.cat(action)
-        """
+        # Return entire action distribution.
 
         return value, action, action_log_probs, rnn_hxs
 
@@ -216,6 +244,8 @@ class CNNBase(NNBase):
             m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
         )
 
+        # Output dimension is ``1`` because it's computing discounted future reward
+        # (i.e. value function).
         self.critic_linear = init_(nn.Linear(hidden_size, 1))
 
         self.main, self.critic_linear = CNNBase.init_weights(

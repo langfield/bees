@@ -1,12 +1,13 @@
 """ Modifies standard torch distributions so they are compatible with this library. """
 from typing import List
+from itertools import product
 
 import torch
 import torch.nn as nn
 from torch.distributions.distribution import Distribution
 
-from a2c_ppo_acktr.debug import DEBUG
-from a2c_ppo_acktr.utils import AddBias, init
+from bees.utils import DEBUG
+from bees.a2c_ppo_acktr.utils import AddBias, init
 
 # pylint: disable=bad-continuation, abstract-method, no-member
 
@@ -255,6 +256,44 @@ class FixedCategoricalProduct(Distribution):
         # Shape: ``(num_subactions,)``.
         log_probabilities = torch.sum(subaction_log_probs, dim=-1)
         return log_probabilities
+
+    def probs(self) -> torch.tensor:
+        """
+        Computes the probability of each action, that is, each tuple of subactions.
+
+        Returns
+        -------
+        probs : ``torch.Tensor``.
+            The probability of each each.
+            Shape: Same as the shape of the action space.
+            Example: If we have:
+            ```
+            action_space = gym.spaces.Tuple(
+                (gym.spaces.Discrete(5), gym.spaces.Discrete(2), gym.spaces.Discrete(2))
+            )
+            ```
+            Then the shape of ``probs`` will be (5, 2, 2), and ``probs[3][1][0]`` will
+            be the probability of taking action (3, 1, 0).
+        """
+
+        # Compute the shape of ``probs`` and initialize ``probs``.
+        probs_shape = [
+            len(categorical.probs) for categorical in self.fixed_categoricals
+        ]
+        probs = torch.zeros(probs_shape)
+
+        # Iterate over all actions by taking the product of subaction spaces.
+        for action in product(
+            *[list(range(subaction_size)) for subaction_size in probs_shape]
+        ):
+
+            # The probability of an action is the product of probabilities of its
+            # subactions.
+            probs[action] = 1.0
+            for i, categorical in enumerate(self.fixed_categoricals):
+                probs[action] *= categorical.probs[action[i]]
+
+        return probs
 
     def entropy(self) -> torch.Tensor:
         """
