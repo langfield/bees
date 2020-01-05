@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 from torch.distributions.distribution import Distribution
 
-from bees.utils import DEBUG
-from bees.a2c_ppo_acktr.utils import AddBias, init
+from a2c_ppo_acktr.debug import DEBUG
+from a2c_ppo_acktr.utils import AddBias, init
 
 # pylint: disable=bad-continuation, abstract-method, no-member
 
@@ -122,17 +122,14 @@ class FixedNormal(torch.distributions.Normal):
         ----------
         actions : ``torch.Tensor``.
             A single agent action tensor.
-            Shape: ``(num_processes, ...)``.
+            Shape: ``(num_processes, 1)``.
 
         Returns
         -------
         log_prob : ``torch.Tensor``.
             The log probabilties of ``actions``.
-            Shape: The same as ``actions`` but the last element is now ``1`` since we
-            summed over it.
+            Shape: ``(num_processes, 1)``.
         """
-        # TODO: Why does this have a weird shape? Try it on an environment.
-        DEBUG(actions)
         return super().log_prob(actions).sum(-1, keepdim=True)
 
     # pylint: disable=no-self-use
@@ -170,14 +167,14 @@ class FixedBernoulli(torch.distributions.Bernoulli):
     """
 
     # pylint: disable=no-self-use
-    def log_probs(self, actions):
+    def log_probs(self, actions: torch.Tensor) -> torch.Tensor:
         return super.log_prob(actions).view(actions.size(0), -1).sum(-1).unsqueeze(-1)
 
     # pylint: disable=no-self-use
-    def entropy(self):
+    def entropy(self) -> torch.Tensor:
         return super().entropy().sum(-1)
 
-    def mode(self):
+    def mode(self) -> torch.Tensor:
         return torch.gt(self.probs, 0.5).float()
 
 
@@ -199,7 +196,7 @@ class FixedCategoricalProduct(Distribution):
             FixedCategorical(logits=logits) for logits in logits_list
         ]
 
-    def mode(self):
+    def mode(self) -> torch.Tensor:
         """
         Returns a tensor of the means of each distribution.
 
@@ -213,7 +210,7 @@ class FixedCategoricalProduct(Distribution):
             dim=1,
         )
 
-    def sample(self):
+    def sample(self) -> torch.Tensor:
         """
         Returns a tensor of samples from each distribution.
 
@@ -230,7 +227,7 @@ class FixedCategoricalProduct(Distribution):
             dim=1,
         )
 
-    def log_probs(self, actions):
+    def log_probs(self, actions: torch.Tensor) -> torch.Tensor:
         """
         Computes the log likelihood of each subaction.
 
@@ -259,7 +256,7 @@ class FixedCategoricalProduct(Distribution):
         log_probabilities = torch.sum(subaction_log_probs, dim=-1)
         return log_probabilities
 
-    def entropy(self):
+    def entropy(self) -> torch.Tensor:
         """
         Computes the summed entropy of all distributions.
 
