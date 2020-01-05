@@ -6,7 +6,6 @@ from typing import List, Dict, Any
 from pprint import pprint, pformat
 
 
-# pylint: disable=no-member
 class Config:
     """ Configuration object. """
 
