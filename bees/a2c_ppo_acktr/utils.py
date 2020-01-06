@@ -4,7 +4,10 @@ import os
 import torch
 import torch.nn as nn
 
-from bees.a2c_ppo_acktr.envs import VecNormalize
+
+class VecNormalize:
+    """ Dummy class as a placeholder for Ikostrikov's ``envs.py``. """
+    pass
 
 
 # Get a render function

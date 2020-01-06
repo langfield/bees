@@ -178,7 +178,6 @@ class FixedBernoulli(torch.distributions.Bernoulli):
         return torch.gt(self.probs, 0.5).float()
 
 
-# TODO: Can this inherit from ``torch.distributions.Categorical`` instead?
 class FixedCategoricalProduct(Distribution):
     """
     A cartesian product of ``FixedProduct`` distributions.

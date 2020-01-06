@@ -1,12 +1,17 @@
+from typing import Tuple, Optional
+
+import gym
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 
-def _flatten_helper(T, N, _tensor):
+def _flatten_first_two_dims(T: int, N: int, _tensor: torch.Tensor) -> torch.Tensor:
+    """ Collapse the first two dimensions of ``_tensor``. """
     return _tensor.view(T * N, *_tensor.size()[2:])
 
 
-def get_action_shape(action_space):
+def get_action_shape(action_space: gym.spaces.space.Space) -> int:
+    """ Returns a flattened version of the action shape. """
     if action_space.__class__.__name__ == "Discrete":
         action_shape = 1
     elif action_space.__class__.__name__ == "Tuple":
@@ -17,14 +22,14 @@ def get_action_shape(action_space):
     return action_shape
 
 
-class RolloutStorage(object):
+class RolloutStorage:
     def __init__(
         self,
-        num_steps,
-        num_processes,
-        obs_shape,
-        action_space,
-        recurrent_hidden_state_size,
+        num_steps: int,
+        num_processes: int,
+        obs_shape: Tuple[int],
+        action_space: gym.spaces.space.Space,
+        recurrent_hidden_state_size: int,
     ):
         self.obs = torch.zeros(num_steps + 1, num_processes, *obs_shape)
         self.recurrent_hidden_states = torch.zeros(
@@ -47,7 +52,8 @@ class RolloutStorage(object):
         self.num_steps = num_steps
         self.step = 0
 
-    def to(self, device):
+    def to(self, device: torch.device) -> None:
+        """ Load all the state onto ``device``. """
         self.obs = self.obs.to(device)
         self.recurrent_hidden_states = self.recurrent_hidden_states.to(device)
         self.rewards = self.rewards.to(device)
@@ -60,15 +66,16 @@ class RolloutStorage(object):
 
     def insert(
         self,
-        obs,
-        recurrent_hidden_states,
-        actions,
-        action_log_probs,
-        value_preds,
-        rewards,
-        masks,
-        bad_masks,
-    ):
+        obs: torch.Tensor,
+        recurrent_hidden_states: torch.Tensor,
+        actions: torch.Tensor,
+        action_log_probs: torch.Tensor,
+        value_preds: torch.Tensor,
+        rewards: torch.Tensor,
+        masks: torch.Tensor,
+        bad_masks: torch.Tensor,
+    ) -> None:
+        """ Load all the tensors from an iteration into the storage tensors. """
         self.obs[self.step + 1].copy_(obs)
         self.recurrent_hidden_states[self.step + 1].copy_(recurrent_hidden_states)
         self.actions[self.step].copy_(actions)
@@ -81,14 +88,20 @@ class RolloutStorage(object):
         self.step = (self.step + 1) % self.num_steps
 
     def after_update(self):
+        """ Copy the latest element of storage objects into the first position. """
         self.obs[0].copy_(self.obs[-1])
         self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
         self.masks[0].copy_(self.masks[-1])
         self.bad_masks[0].copy_(self.bad_masks[-1])
 
     def compute_returns(
-        self, next_value, use_gae, gamma, gae_lambda, use_proper_time_limits=True
-    ):
+        self,
+        next_value,
+        use_gae: bool,
+        gamma: float,
+        gae_lambda: float,
+        use_proper_time_limits: bool = True,
+    ) -> None:
         if use_proper_time_limits:
             if use_gae:
                 self.value_preds[-1] = next_value
@@ -134,8 +147,11 @@ class RolloutStorage(object):
                     )
 
     def feed_forward_generator(
-        self, advantages, num_mini_batch=None, mini_batch_size=None
-    ):
+        self,
+        advantages: Optional[torch.Tensor],
+        num_mini_batch: Optional[int] = None,
+        mini_batch_size: Optional[int] = None,
+    ) -> Tuple[torch.Tensor, ...]:
         num_steps, num_processes = self.rewards.size()[0:2]
         batch_size = num_processes * num_steps
 
@@ -167,9 +183,21 @@ class RolloutStorage(object):
             else:
                 adv_targ = advantages.view(-1, 1)[indices]
 
-            yield obs_batch, recurrent_hidden_states_batch, actions_batch, value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
+            batch = (
+                obs_batch,
+                recurrent_hidden_states_batch,
+                actions_batch,
+                value_preds_batch,
+                return_batch,
+                masks_batch,
+                old_action_log_probs_batch,
+                adv_targ,
+            )
+            yield batch
 
-    def recurrent_generator(self, advantages, num_mini_batch):
+    def recurrent_generator(
+        self, advantages: torch.Tensor, num_mini_batch: int
+    ) -> Tuple[torch.Tensor, ...]:
         num_processes = self.rewards.size(1)
         assert num_processes >= num_mini_batch, (
             "PPO requires the number of processes ({}) "
@@ -202,7 +230,8 @@ class RolloutStorage(object):
                 adv_targ.append(advantages[:, ind])
 
             T, N = self.num_steps, num_envs_per_batch
-            # These are all tensors of size (T, N, -1)
+
+            # These are all tensors of size ``(T, N, -1)
             obs_batch = torch.stack(obs_batch, 1)
             actions_batch = torch.stack(actions_batch, 1)
             value_preds_batch = torch.stack(value_preds_batch, 1)
@@ -211,20 +240,31 @@ class RolloutStorage(object):
             old_action_log_probs_batch = torch.stack(old_action_log_probs_batch, 1)
             adv_targ = torch.stack(adv_targ, 1)
 
-            # States is just a (N, -1) tensor
+            # States is just a 2D tensor of shape ``(N, -1)``.
             recurrent_hidden_states_batch = torch.stack(
                 recurrent_hidden_states_batch, 1
             ).view(N, -1)
 
-            # Flatten the (T, N, ...) tensors to (T * N, ...)
-            obs_batch = _flatten_helper(T, N, obs_batch)
-            actions_batch = _flatten_helper(T, N, actions_batch)
-            value_preds_batch = _flatten_helper(T, N, value_preds_batch)
-            return_batch = _flatten_helper(T, N, return_batch)
-            masks_batch = _flatten_helper(T, N, masks_batch)
-            old_action_log_probs_batch = _flatten_helper(
+            # Flatten the ``(T, N, ...)`` tensors to ``(T * N, ...)``.
+            obs_batch = _flatten_first_two_dims(T, N, obs_batch)
+            actions_batch = _flatten_first_two_dims(T, N, actions_batch)
+            value_preds_batch = _flatten_first_two_dims(T, N, value_preds_batch)
+            return_batch = _flatten_first_two_dims(T, N, return_batch)
+            masks_batch = _flatten_first_two_dims(T, N, masks_batch)
+            old_action_log_probs_batch = _flatten_first_two_dims(
                 T, N, old_action_log_probs_batch
             )
-            adv_targ = _flatten_helper(T, N, adv_targ)
+            adv_targ = _flatten_first_two_dims(T, N, adv_targ)
 
-            yield obs_batch, recurrent_hidden_states_batch, actions_batch, value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
+            batch = (
+                obs_batch,
+                recurrent_hidden_states_batch,
+                actions_batch,
+                value_preds_batch,
+                return_batch,
+                masks_batch,
+                old_action_log_probs_batch,
+                adv_targ,
+            )
+
+            yield batch
