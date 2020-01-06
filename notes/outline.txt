@@ -290,6 +290,34 @@ Things to come back to:
         KL-divergence of these two distributions to determine how well-trained
         the agent is.
 
+    Reward network computes rewards for actions as a sum of rewards for
+    subactions. This is a problem because this imposes the constraint that
+    subaction rewards are independent.  We encountered a similar problem with
+    the action distribution. Since the action distribution is a product of
+    distributions over subactions, the agent can't choose distributions over
+    actions which have dependencies between subactions.
+
+    Learning rate scheduling should be better. Right now we anneal the learning
+    rate linearly towards a minimum learning rate, which will be assumed when
+    the agent has age 1.0 / config.aging_rate, which is the minimum agent
+    lifetime.
+
+    The distribution over the actions defined by the policy output exhibits
+    strange behavior. First of all, the action distribution is uniform at the
+    beginning of training, despite the fact that the policy network is randomly
+    initialized. There are two main possibilities. The first is that there is a
+    bug somewhere causing the value of the distribution to be reset, or
+    something like that. The other is that the individual output values of the
+    policy network are just too small (between 1e-3 and 1e-7 for CNNBase, and a
+    bit larger for MLPBase), so that taking the softmax over the logits
+    produces a near uniform distribution. The other strange thing about the
+    policy network is that the outputs don't change very much as the input
+    varies. This may be due to the fact that we observed this while the network
+    was trained to optimize a reward function which only takes the action as input,
+    meaning that the optimal policy will always output the same thing. Another
+    possibility is the same as above, that the softmax'd outputs of the policy
+    look very similar because the inputs to the softmax are too damn small.
+
 
 #===========================================================================================
 

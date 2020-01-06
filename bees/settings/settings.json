@@ -5,7 +5,7 @@
     "height": 10,
     "sight_len": 6,
     "num_obj_types": 2,
-    "num_agents": 5,
+    "num_agents": 1,
     "food_density": 0.2,
     "food_size_mean": 0.29,
     "food_size_stddev": 0.247,
@@ -52,7 +52,8 @@
     "6": "====================POLICY====================",
 
     "algo": "ppo",
-    "lr": 5e-5,
+    "lr": 1e-2,
+    "min_lr": 5e-6,
     "eps": 1e-5,
     "alpha": 1e-5,
     "gamma": 0.99,
@@ -64,7 +65,7 @@
     "seed": 1,
     "cuda_deterministic": false,
     "num_processes": 1,
-    "num_steps": 32,
+    "num_steps": 256,
     "ppo_epoch": 4,
     "num_mini_batch": 1,
     "clip_param": 0.3,
@@ -77,5 +78,5 @@
     "cuda": true,
     "use_proper_time_limits": false,
     "recurrent_policy": false,
-    "use_linear_lr_decay": false
+    "use_linear_lr_decay": true
 }
