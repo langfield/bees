@@ -21,7 +21,13 @@ class Flatten(nn.Module):
 
 
 class Policy(nn.Module):
-    def __init__(self, obs_shape, action_space, base=None, base_kwargs=None):
+    def __init__(
+        self,
+        obs_shape: Tuple[int],
+        action_space: gym.spaces.space.Space,
+        base: NNBase = None,
+        base_kwargs: Dict[str, Any] = None,
+    ):
         super(Policy, self).__init__()
         if base_kwargs is None:
             base_kwargs = {}
