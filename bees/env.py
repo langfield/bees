@@ -12,6 +12,7 @@ from typing import Tuple, Dict, Any, List, Set
 import pickle
 
 # Third-party imports.
+import torch
 import numpy as np
 
 # Package imports.
@@ -21,6 +22,7 @@ import gym
 from bees.agent import Agent
 from bees.genetics import get_child_reward_network
 from bees.config import Config
+from bees.utils import DEBUG
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
@@ -125,6 +127,14 @@ class Env:
         # Genetics config
         self.mut_sigma = config.mut_sigma
         self.mut_p = config.mut_p
+
+        # Trainer config
+        self.policy_score_frequency = config.policy_score_frequency
+
+        """
+        for attr in get_attrs(config):
+            setattr(self, attr, getattr(config, attr))
+        """
 
         # pylint: disable=invalid-name
         # Get constants.
@@ -716,6 +726,47 @@ class Env:
 
         return child_ids
 
+    # TODO: Remove from this class so that ``Env`` is framework-agnostic.
+    def _get_optimal_action_dists(
+        self, prev_health: Dict[int, float],
+    ) -> Dict[int, torch.Tensor]:
+        """
+        Iterates over the action space and compute the optimal action distribution for
+        each agent.
+
+        Parameters
+        ----------
+        prev_health : ``Dict[int, float]``.
+            A mapping from ``agent_id`` to the health of that agent on the previous
+            iteration.
+
+        Returns
+        -------
+        optimal_action_dists : ``Dict[int, torch.Tensor]``.
+            A mapping from ``agent_id`` to the optimal action distribution of that
+            agent.
+        """
+
+        if not isinstance(self.action_space, gym.spaces.Tuple):
+            raise NotImplementedError
+
+        optimal_action_dists: Dict[int, torch.Tensor] = {}
+
+        subaction_sizes = [subaction_space.n for subaction_space in self.action_space]
+        for agent_id, agent in self.agents.items():
+            action_rewards = torch.zeros(subaction_sizes)
+            for action in itertools.product(
+                *[list(range(subaction_size)) for subaction_size in subaction_sizes]
+            ):
+
+                action_rewards[action] = agent.compute_reward(
+                    prev_health[agent_id], action
+                )
+
+            optimal_action_dists[agent_id] = torch.nn.functional.softmax(action_rewards)
+
+        return optimal_action_dists
+
     def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
         """
         Returns an observation given an agent ``pos``.
@@ -819,6 +870,10 @@ class Env:
         done: Dict[int, bool] = {}
         info: Dict[int, Any] = {}
 
+        # Initialize ``info`` dicts.
+        for agent_id in self.agents:
+            info[agent_id] = {}
+
         # Execute actions (move, consume, and mate).
         prev_health = {
             agent_id: agent.health for agent_id, agent in self.agents.items()
@@ -839,6 +894,15 @@ class Env:
             # First reward for children is zero.
             elif agent_id in child_ids:
                 rew[agent_id] = 0
+
+        # Compute optimal action distribution for each agent for this timestep.
+        # This "+1" is here because we don't increment ``self.iteration`` until
+        # the end of this function, and the policy score is computed in trainer.py
+        # after this increment happens.
+        if (self.iteration + 1) % self.policy_score_frequency == 0:
+            optimal_action_dists = self._get_optimal_action_dists(prev_health)
+            for agent_id in self.agents:
+                info[agent_id]["optimal_action_dist"] = optimal_action_dists[agent_id]
 
         # Decrease agent health, compute observations and dones.
         killed_agent_ids = []
@@ -870,7 +934,7 @@ class Env:
 
             # Update agent ages and update info dictionary
             agent.age += 1
-            info[agent_id] = {"age": agent.age}
+            info[agent_id]["age"] = agent.age
 
         # Remove killed agents from self.agents
         for killed_agent_id in killed_agent_ids:
