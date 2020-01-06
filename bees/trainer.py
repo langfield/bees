@@ -22,7 +22,7 @@ from bees.a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
 from bees.a2c_ppo_acktr.storage import RolloutStorage
 
 from bees.env import Env
-from bees.utils import get_token, validate_args
+from bees.utils import get_token, validate_args, DEBUG
 from bees.config import Config
 
 # pylint: disable=bad-continuation
@@ -247,13 +247,24 @@ def train(args: argparse.Namespace) -> None:
     for j in range(num_updates):
 
         if config.use_linear_lr_decay:
+
             # decrease learning rate linearly.
-            utils.update_linear_schedule(
-                agent.optimizer,
-                j,
-                num_updates,
-                agent.optimizer.lr if config.algo == "acktr" else config.lr,
-            )
+            for agent_id, agent in agents.items():
+
+                # Compute age and minimum agent lifetime.
+                env_agent = env.agents[agent_id]
+                age = env_agent.age
+                min_agent_lifetime = 1.0 / config.aging_rate
+
+                lr = utils.update_linear_schedule(
+                    agent.optimizer,
+                    age,
+                    min_agent_lifetime,
+                    agent.optimizer.lr if config.algo == "acktr" else config.lr,
+                    config.min_lr,
+                )
+
+                agent.lr = lr
 
         for step in range(config.num_steps):
 
@@ -282,14 +293,12 @@ def train(args: argparse.Namespace) -> None:
                     print("Agent %d actions: %s" % (agent_id, ac_tuple[4]))
 
             print("Sample actions: %ss" % str(time.time() - t_actions))
-            # time.sleep(1)
 
             t_step = time.time()
             # Observe reward and next obs.
             obs, rewards, dones, infos = env.step(action_dict)
             env.log_state(env_log, visual_log)
             print("Env step: %ss" % str(time.time() - t_step))
-            # time.sleep(1)
 
             # NOTE: we assume ``config.num_processes`` is ``1``.
 
