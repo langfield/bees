@@ -170,3 +170,5 @@ def DEBUG(var: Any) -> None:
     else:
         print("'%s':" % name, var)
         print("Type of '%s':" % name, type(var))
+        if hasattr(var, "shape"):
+            print("Shape of '%s':" % name, var.shape)

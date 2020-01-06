@@ -279,6 +279,8 @@ def train(args: argparse.Namespace) -> None:
                     action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
+                    print("Agent %d actions: %s" % (agent_id, ac_tuple[4]))
+
             print("Sample actions: %ss" % str(time.time() - t_actions))
             # time.sleep(1)
 

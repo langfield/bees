@@ -30,7 +30,7 @@ class Policy(nn.Module):
                 base = CNNBase
             elif len(obs_shape) == 1:
                 base = MLPBase
-                obs_shape = obs_shape[0]
+                obs_shape = (obs_shape[0],)
             else:
                 raise NotImplementedError
 
@@ -74,8 +74,7 @@ class Policy(nn.Module):
         rnn_hxs: torch.Tensor,
         masks: torch.Tensor,
         deterministic: bool = False,
-        return_action_distribution: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, ...]:
         """
         Computes a forward pass by passing observation inputs and policy hidden state
         (in the case that the policy is recurrent) to the policy, which subsequently
@@ -96,11 +95,10 @@ class Policy(nn.Module):
         deterministic : ``bool``.
             Whether to sample from or just take the mode of the action distribution.
         """
+
         value, actor_features, rnn_hxs = self.base(inputs, rnn_hxs, masks)
         dist = self.dist(actor_features)
         probs = dist.probs()
-        print("Type of probs: %s" % str(type(probs)))
-        print("Probs: %s" % str(probs))
 
         if deterministic:
             action = dist.mode()
@@ -113,7 +111,7 @@ class Policy(nn.Module):
 
         # Return entire action distribution.
 
-        return value, action, action_log_probs, rnn_hxs
+        return value, action, action_log_probs, rnn_hxs, probs
 
     def get_value(self, inputs, rnn_hxs, masks):
         value, _, _ = self.base(inputs, rnn_hxs, masks)
@@ -216,13 +214,6 @@ class CNNBase(NNBase):
     def __init__(self, input_shape, recurrent=False, hidden_size=512):
         super(CNNBase, self).__init__(recurrent, hidden_size, hidden_size)
 
-        init_ = lambda m: init(
-            m,
-            nn.init.orthogonal_,
-            lambda x: nn.init.constant_(x, 0),
-            nn.init.calculate_gain("relu"),
-        )
-
         # ``input_shape`` is the shape of the input in CWH format.
         # ``inputs``, one of the params of forward call.
         kernel_size = 3
@@ -240,13 +231,9 @@ class CNNBase(NNBase):
             nn.ReLU(),
         )
 
-        init_ = lambda m: init(
-            m, nn.init.orthogonal_, lambda x: nn.init.constant_(x, 0)
-        )
-
         # Output dimension is ``1`` because it's computing discounted future reward
         # (i.e. value function).
-        self.critic_linear = init_(nn.Linear(hidden_size, 1))
+        self.critic_linear = nn.Linear(hidden_size, 1)
 
         self.main, self.critic_linear = CNNBase.init_weights(
             self.main, self.critic_linear
