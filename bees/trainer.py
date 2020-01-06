@@ -15,6 +15,7 @@ import pickle
 
 import gym
 import torch
+import torch.nn.functional as F
 import numpy as np
 
 from bees.a2c_ppo_acktr import algo, utils
@@ -146,8 +147,8 @@ def train(args: argparse.Namespace) -> None:
 
     if not config.reuse_state_dicts:
         print(
-            "Warning: this is slower, but bounds the number of unique policy "\
-            "initializations, i.e. policy initializations will be reused for "\
+            "Warning: this is slower, but bounds the number of unique policy "
+            "initializations, i.e. policy initializations will be reused for "
             "multiple agents."
         )
 
@@ -179,6 +180,7 @@ def train(args: argparse.Namespace) -> None:
         value_losses = trainer_state["value_losses"]
         action_losses = trainer_state["action_losses"]
         dist_entropies = trainer_state["dist_entropies"]
+        policy_scores = trainer_state["policy_scores"]
 
         # Load in dead objects.
         dead_critics = trainer_state["dead_critics"]
@@ -205,6 +207,7 @@ def train(args: argparse.Namespace) -> None:
         value_losses: Dict[int, float] = {}
         action_losses: Dict[int, float] = {}
         dist_entropies: Dict[int, float] = {}
+        policy_scores: Dict[int, float] = {}
 
         # Save dead objects to make creation faster.
         dead_critics: Set[Policy] = set()
@@ -244,6 +247,7 @@ def train(args: argparse.Namespace) -> None:
         // config.num_steps
         // config.num_processes
     )
+    timestep_score = float('inf')
     for j in range(num_updates):
 
         if config.use_linear_lr_decay:
@@ -290,17 +294,42 @@ def train(args: argparse.Namespace) -> None:
                     action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
+                    agent_action_dist = ac_tuple[4]
                     print("Agent %d actions: %s" % (agent_id, ac_tuple[4]))
 
             print("Sample actions: %ss" % str(time.time() - t_actions))
 
             t_step = time.time()
-            # Observe reward and next obs.
+
+            # Execute environment step.
             obs, rewards, dones, infos = env.step(action_dict)
             env.log_state(env_log, visual_log)
             print("Env step: %ss" % str(time.time() - t_step))
 
             # NOTE: we assume ``config.num_processes`` is ``1``.
+            # Update policy score estimates.
+            if env.iteration % config.policy_score_frequency == 0:
+                for agent_id in env.agents:
+                    optimal_action_dist = infos[agent_id]["optimal_action_dist"]
+                    timestep_score = float(
+                        F.kl_div(torch.log(agent_action_dist), optimal_action_dist)
+                    )
+
+                    # Update policy score with exponential moving average.
+                    if agent_id in policy_scores:
+                        policy_scores[agent_id] = (
+                            config.ema_alpha * policy_scores[agent_id]
+                            + (1.0 - config.ema_alpha) * timestep_score
+                        )
+                    else:
+                        policy_scores[agent_id] = timestep_score
+
+            for agent_id in agents:
+                if agent_id in policy_scores:
+                    print(
+                        "Agent %d current, average policy scores: %.6f, %.6f"
+                        % (agent_id, timestep_score, policy_scores[agent_id])
+                    )
 
             t_creation = time.time()
             # Agent creation and termination, rollout stacking.
@@ -501,6 +530,7 @@ def train(args: argparse.Namespace) -> None:
                 "value_losses": value_losses,
                 "action_losses": action_losses,
                 "dist_entropies": dist_entropies,
+                "policy_scores": policy_scores,
                 "dead_critics": dead_critics,
                 "dead_agents": dead_agents,
                 "state_dicts": state_dicts,
