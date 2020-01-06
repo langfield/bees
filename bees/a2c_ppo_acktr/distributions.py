@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 from torch.distributions.distribution import Distribution
 
-from bees.utils import DEBUG
 from bees.a2c_ppo_acktr.utils import AddBias, init
 
 # pylint: disable=bad-continuation, abstract-method, no-member
@@ -277,21 +276,23 @@ class FixedCategoricalProduct(Distribution):
         """
 
         # Compute the shape of ``probs`` and initialize ``probs``.
-        probs_shape = [
-            len(categorical.probs) for categorical in self.fixed_categoricals
-        ]
+        num_processes = self.fixed_categoricals[0].probs.shape[0]
+        subaction_sizes = [dist.probs.shape[-1] for dist in self.fixed_categoricals]
+        probs_shape = [num_processes] + subaction_sizes
         probs = torch.zeros(probs_shape)
 
         # Iterate over all actions by taking the product of subaction spaces.
         for action in product(
-            *[list(range(subaction_size)) for subaction_size in probs_shape]
+            *[list(range(subaction_size)) for subaction_size in subaction_sizes]
         ):
+            for process in range(num_processes):
 
-            # The probability of an action is the product of probabilities of its
-            # subactions.
-            probs[action] = 1.0
-            for i, categorical in enumerate(self.fixed_categoricals):
-                probs[action] *= categorical.probs[action[i]]
+                # The probability of an action is the product of probabilities of its
+                # subactions.
+                probs_index = (process,) + action
+                probs[probs_index] = 1.0
+                for i, categorical in enumerate(self.fixed_categoricals):
+                    probs[probs_index] *= categorical.probs[process][action[i]]
 
         return probs
 
