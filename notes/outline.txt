@@ -362,13 +362,11 @@ Things to come back to:
      - Tweak hyperparameters (especially reward network parameters) (DONE?)
      - Reward network analysis to determine rewarded behavior (DONE?)
 
-
    January sprint:
    - Reward engineering
-     - Constrain network weights to produce "less non-linear" reward functions
      - Compute policy score (DONE)
    - Write tests
-   - Run experiments
+   - Run experiments (multi-agent linear rewards (action), multi-agent linear rewards (action, obs))
    - Analyze results
    - Refactor
      - Universal config file (DONE)
