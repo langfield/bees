@@ -30,17 +30,3 @@ class Config:
         except TypeError:
             formatted = pformat(self.settings)
         return formatted
-
-
-def main() -> None:
-    """ Temporarily see if the class works. """
-    settings_path = sys.argv[1]
-    with open(settings_path, "r") as settings_file:
-        settings = json.load(settings_file)
-    config = Config(settings)
-    print(config.env.height)
-    print(config.keys)
-
-
-if __name__ == "__main__":
-    main()

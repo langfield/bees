@@ -318,6 +318,10 @@ Things to come back to:
     possibility is the same as above, that the softmax'd outputs of the policy
     look very similar because the inputs to the softmax are too damn small.
 
+    env._get_optimal_action_dists() can be made more efficient by parallelizing
+    calls to agent.compute_reward() across actions and agents, then using torch
+    operations to perform the softmax in parallel.
+
 
 #===========================================================================================
 
@@ -358,12 +362,11 @@ Things to come back to:
      - Tweak hyperparameters (especially reward network parameters) (DONE?)
      - Reward network analysis to determine rewarded behavior (DONE?)
 
-
    January sprint:
    - Reward engineering
-     - Constrain network weights to produce "less non-linear" reward functions
-     - Compute policy score
-   - Run experiments
+     - Compute policy score (DONE)
+   - Write tests
+   - Run experiments (multi-agent linear rewards (action), multi-agent linear rewards (action, obs))
    - Analyze results
    - Refactor
      - Universal config file (DONE)

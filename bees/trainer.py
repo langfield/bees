@@ -29,7 +29,7 @@ from bees.config import Config
 # pylint: disable=bad-continuation
 
 
-def train(args: argparse.Namespace) -> None:
+def train(args: argparse.Namespace) -> float:
     """
     Runs the environment.
 
@@ -142,14 +142,15 @@ def train(args: argparse.Namespace) -> None:
     # uses its own argument for the number of time steps, but the main bees pipeline
     # also has one. This is temporary.
     config.num_env_steps = config.time_steps
-    print("Arguments:", str(config))
+    if config.print_repr:
+        print("Arguments:", str(config))
     env = Env(config)
 
     if not config.reuse_state_dicts:
         print(
-            "Warning: this is slower, but bounds the number of unique policy "
-            "initializations, i.e. policy initializations will be reused for "
-            "multiple agents."
+            "Warning: ``config.reuse_state_dicts`` is False. This is slower, but the "
+            "alternative bounds the number of unique policy initializations, i.e. "
+            "policy initializations will be reused for multiple agents."
         )
 
     torch.manual_seed(config.seed)
@@ -219,6 +220,10 @@ def train(args: argparse.Namespace) -> None:
 
     # Initialize first policies.
     env_done = False
+
+    # Hyperparameter optimization loss.
+    policy_score_loss = 1
+
     for agent_id, agent_obs in obs.items():
         if agent_id not in agents:
             agent, actor_critic, rollouts = get_agent(
@@ -247,7 +252,7 @@ def train(args: argparse.Namespace) -> None:
         // config.num_steps
         // config.num_processes
     )
-    timestep_score = float('inf')
+    timestep_score = float("inf")
     for j in range(num_updates):
 
         if config.use_linear_lr_decay:
@@ -295,16 +300,17 @@ def train(args: argparse.Namespace) -> None:
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
                     agent_action_dist = ac_tuple[4]
-                    print("Agent %d actions: %s" % (agent_id, ac_tuple[4]))
 
-            print("Sample actions: %ss" % str(time.time() - t_actions))
+            if config.print_repr:
+                print("Sample actions: %ss" % str(time.time() - t_actions))
 
             t_step = time.time()
 
             # Execute environment step.
             obs, rewards, dones, infos = env.step(action_dict)
             env.log_state(env_log, visual_log)
-            print("Env step: %ss" % str(time.time() - t_step))
+            if config.print_repr:
+                print("Env step: %ss" % str(time.time() - t_step))
 
             # NOTE: we assume ``config.num_processes`` is ``1``.
             # Update policy score estimates.
@@ -325,11 +331,30 @@ def train(args: argparse.Namespace) -> None:
                         policy_scores[agent_id] = timestep_score
 
             for agent_id in agents:
-                if agent_id in policy_scores:
+                if agent_id in policy_scores and config.print_repr:
                     print(
-                        "Agent %d current, average policy scores: %.6f, %.6f"
-                        % (agent_id, timestep_score, policy_scores[agent_id])
+                        "Agent %d average policy score: %.6f"
+                        % (agent_id, policy_scores[agent_id])
                     )
+
+            # Compute policy score loss.
+            ages = {agent_id: env.agents[agent_id].age for agent_id in agents}
+            age_sum = sum(ages.values())
+            normalized_ages = {
+                agent_id: age / age_sum for agent_id, age in ages.items()
+            }
+            policy_score_loss = sum(
+                [
+                    policy_scores[agent_id] * normalized_ages[agent_id]
+                    for agent_id in policy_scores
+                ]
+            )
+            end = "\r" if not config.print_repr else "\n"
+            print(
+                "Iteration %d policy score loss: %.6f|||||"
+                % (env.iteration, policy_score_loss),
+                end=end,
+            )
 
             t_creation = time.time()
             # Agent creation and termination, rollout stacking.
@@ -459,7 +484,8 @@ def train(args: argparse.Namespace) -> None:
                         masks,
                         bad_masks,
                     )
-            print("Creation: %ss" % str(time.time() - t_creation))
+            if config.print_repr:
+                print("Creation: %ss" % str(time.time() - t_creation))
             # time.sleep(1)
 
             # Print out environment state.
@@ -469,7 +495,6 @@ def train(args: argparse.Namespace) -> None:
                 env_done = True
 
         # DEBUG
-        print("\n\n")
         t_0_list = []
         t_1_list = []
 
@@ -512,9 +537,9 @@ def train(args: argparse.Namespace) -> None:
 
                 rollouts.after_update()
 
-        print("Get value and compute returns:", np.sum(t_0_list))
-        print("Updates:", np.sum(t_1_list))
-        # time.sleep(1)
+        if config.print_repr:
+            print("Get value and compute returns:", np.sum(t_0_list))
+            print("Updates:", np.sum(t_1_list))
 
         # save for every interval-th episode or for the last epoch
         if (
@@ -620,6 +645,8 @@ def train(args: argparse.Namespace) -> None:
         env.iteration,
         config.num_env_steps,
     )
+
+    return policy_score_loss
 
 
 def get_agent(
