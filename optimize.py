@@ -32,7 +32,7 @@ def main() -> None:
 
     study = optuna.create_study()
     logging.getLogger().info("Start optimization.")
-    study.optimize(objective, n_trials=3)
+    study.optimize(objective, n_trials=3e9)
 
 
 def objective(trial: optuna.Trial) -> float:
@@ -92,7 +92,7 @@ def objective(trial: optuna.Trial) -> float:
     settings["print_repr"] = False
     # settings["trial"] = trial # Add back in for early pruning.
 
-    settings["time_steps"] = 5000
+    settings["time_steps"] = 51200
 
     temp_dir = tempfile.mkdtemp()
     settings_path = os.path.join(temp_dir, "settings.json")
