@@ -13,6 +13,7 @@ import pickle
 
 # Third-party imports.
 import torch
+import torch.nn.functional as F
 import numpy as np
 
 # Package imports.
@@ -763,7 +764,15 @@ class Env:
                     prev_health[agent_id], action
                 )
 
-            optimal_action_dists[agent_id] = torch.nn.functional.softmax(action_rewards)
+            # Flatten action_rewards, perform softmax, and return to original shape.
+            # This is because torch.nn.functional.softmax only computes softmax along
+            # a single dimension.
+            action_rewards = torch.reshape(action_rewards, (-1,))
+            optimal_action_dists[agent_id] = F.softmax(action_rewards, dim=0)
+            action_rewards = torch.reshape(action_rewards, subaction_sizes)
+            optimal_action_dists[agent_id] = torch.reshape(
+                optimal_action_dists[agent_id], subaction_sizes
+            )
 
         return optimal_action_dists
 
@@ -870,10 +879,6 @@ class Env:
         done: Dict[int, bool] = {}
         info: Dict[int, Any] = {}
 
-        # Initialize ``info`` dicts.
-        for agent_id in self.agents:
-            info[agent_id] = {}
-
         # Execute actions (move, consume, and mate).
         prev_health = {
             agent_id: agent.health for agent_id, agent in self.agents.items()
@@ -881,6 +886,12 @@ class Env:
         action_dict = self._move(action_dict)
         self._consume(action_dict)
         child_ids = self._mate(action_dict)
+
+        # Initialize ``info`` dicts. This must happen after the actions are
+        # executed so that agents which are born from the call to _mate() are included
+        # as keys in ``info``.
+        for agent_id in self.agents:
+            info[agent_id] = {}
 
         # Plant new food.
         self._plant()
