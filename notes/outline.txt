@@ -366,7 +366,8 @@ Things to come back to:
    January sprint:
    - Reward engineering
      - Constrain network weights to produce "less non-linear" reward functions
-     - Compute policy score
+     - Compute policy score (DONE)
+   - Write tests
    - Run experiments
    - Analyze results
    - Refactor
