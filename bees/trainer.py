@@ -333,8 +333,8 @@ def train(args: argparse.Namespace) -> float:
             for agent_id in agents:
                 if agent_id in policy_scores and config.print_repr:
                     print(
-                        "Env iteration: %d| Agent %d average policy score: %.6f"
-                        % (env.iteration, agent_id, policy_scores[agent_id])
+                        "Agent %d average policy score: %.6f"
+                        % (agent_id, policy_scores[agent_id])
                     )
 
             # Compute policy score loss.
@@ -350,7 +350,11 @@ def train(args: argparse.Namespace) -> float:
                 ]
             )
             end = "\r" if not config.print_repr else "\n"
-            print("Policy score loss: %.6f|||||" % policy_score_loss, end=end)
+            print(
+                "Iteration %d policy score loss: %.6f|||||"
+                % (env.iteration, policy_score_loss),
+                end=end,
+            )
 
             t_creation = time.time()
             # Agent creation and termination, rollout stacking.
