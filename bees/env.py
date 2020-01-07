@@ -879,10 +879,6 @@ class Env:
         done: Dict[int, bool] = {}
         info: Dict[int, Any] = {}
 
-        # Initialize ``info`` dicts.
-        for agent_id in self.agents:
-            info[agent_id] = {}
-
         # Execute actions (move, consume, and mate).
         prev_health = {
             agent_id: agent.health for agent_id, agent in self.agents.items()
@@ -890,6 +886,12 @@ class Env:
         action_dict = self._move(action_dict)
         self._consume(action_dict)
         child_ids = self._mate(action_dict)
+
+        # Initialize ``info`` dicts. This must happen after the actions are
+        # executed so that agents which are born from the call to _mate() are included
+        # as keys in ``info``.
+        for agent_id in self.agents:
+            info[agent_id] = {}
 
         # Plant new food.
         self._plant()

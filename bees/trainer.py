@@ -148,9 +148,9 @@ def train(args: argparse.Namespace) -> float:
 
     if not config.reuse_state_dicts:
         print(
-            "Warning: this is slower, but bounds the number of unique policy "
-            "initializations, i.e. policy initializations will be reused for "
-            "multiple agents."
+            "Warning: ``config.reuse_state_dicts`` is False. This is slower, but the "
+            "alternative bounds the number of unique policy initializations, i.e. "
+            "policy initializations will be reused for multiple agents."
         )
 
     torch.manual_seed(config.seed)
@@ -344,7 +344,13 @@ def train(args: argparse.Namespace) -> float:
                             % (env.iteration, agent_id, policy_scores[agent_id]),
                             end="\r",
                         )
-            policy_score_loss = np.mean(list(policy_scores.values()))
+
+            # Compute policy score loss.
+            ages = {agent_id: env.agents[agent_id].age for agent_id in agents}
+            age_sum = sum(ages.values())
+            normalized_ages = {agent_id: age / age_sum for agent_id, age in ages.items()}
+            policy_score_loss = sum([policy_scores[agent_id] * normalized_ages[agent_id] for agent_id in policy_scores])
+            print("Policy score loss: %.6f" % policy_score_loss)
 
             t_creation = time.time()
             # Agent creation and termination, rollout stacking.
