@@ -7,6 +7,7 @@ import torch.nn as nn
 
 class VecNormalize:
     """ Dummy class as a placeholder for Ikostrikov's ``envs.py``. """
+
     pass
 
 

@@ -318,6 +318,10 @@ Things to come back to:
     possibility is the same as above, that the softmax'd outputs of the policy
     look very similar because the inputs to the softmax are too damn small.
 
+    env._get_optimal_action_dists() can be made more efficient by parallelizing
+    calls to agent.compute_reward() across actions and agents, then using torch
+    operations to perform the softmax in parallel.
+
 
 #===========================================================================================
 

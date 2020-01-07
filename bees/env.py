@@ -13,6 +13,7 @@ import pickle
 
 # Third-party imports.
 import torch
+import torch.nn.functional as F
 import numpy as np
 
 # Package imports.
@@ -763,7 +764,15 @@ class Env:
                     prev_health[agent_id], action
                 )
 
-            optimal_action_dists[agent_id] = torch.nn.functional.softmax(action_rewards)
+            # Flatten action_rewards, perform softmax, and return to original shape.
+            # This is because torch.nn.functional.softmax only computes softmax along
+            # a single dimension.
+            action_rewards = torch.reshape(action_rewards, (-1,))
+            optimal_action_dists[agent_id] = F.softmax(action_rewards, dim=0)
+            action_rewards = torch.reshape(action_rewards, subaction_sizes)
+            optimal_action_dists[agent_id] = torch.reshape(
+                optimal_action_dists[agent_id], subaction_sizes
+            )
 
         return optimal_action_dists
 
