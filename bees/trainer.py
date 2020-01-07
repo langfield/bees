@@ -331,26 +331,26 @@ def train(args: argparse.Namespace) -> float:
                         policy_scores[agent_id] = timestep_score
 
             for agent_id in agents:
-                if agent_id in policy_scores:
-                    if config.print_repr:
-                        print(
-                            "Agent %d average policy score: %.6f"
-                            % (agent_id, policy_scores[agent_id])
-                        )
-                    else:
-                        print(" \t\t\t\t\t\t\t\t\t\t ", end="\r")
-                        print(
-                            "Env iteration: %d| Agent %d average policy score: %.6f"
-                            % (env.iteration, agent_id, policy_scores[agent_id]),
-                            end="\r",
-                        )
+                if agent_id in policy_scores and config.print_repr:
+                    print(
+                        "Env iteration: %d| Agent %d average policy score: %.6f"
+                        % (env.iteration, agent_id, policy_scores[agent_id])
+                    )
 
             # Compute policy score loss.
             ages = {agent_id: env.agents[agent_id].age for agent_id in agents}
             age_sum = sum(ages.values())
-            normalized_ages = {agent_id: age / age_sum for agent_id, age in ages.items()}
-            policy_score_loss = sum([policy_scores[agent_id] * normalized_ages[agent_id] for agent_id in policy_scores])
-            print("Policy score loss: %.6f" % policy_score_loss)
+            normalized_ages = {
+                agent_id: age / age_sum for agent_id, age in ages.items()
+            }
+            policy_score_loss = sum(
+                [
+                    policy_scores[agent_id] * normalized_ages[agent_id]
+                    for agent_id in policy_scores
+                ]
+            )
+            end = "\r" if not config.print_repr else "\n"
+            print("Policy score loss: %.6f|||||" % policy_score_loss, end=end)
 
             t_creation = time.time()
             # Agent creation and termination, rollout stacking.
