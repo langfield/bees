@@ -15,6 +15,7 @@ from bees.config import Config
 settings.register_profile("test_settings", deadline=None)
 settings.load_profile("test_settings")
 
+
 @st.composite
 def envs(draw) -> Dict[str, Any]:
     """ A hypothesis strategy for generating ``Env`` objects. """
@@ -40,9 +41,7 @@ def envs(draw) -> Dict[str, Any]:
     hidden_dim = draw(st.integers(min_value=1, max_value=512))
     reward_weight_mean = draw(st.floats())
     reward_weight_stddev = draw(st.floats(min_value=0.0, max_value=1.0))
-    reward_inputs = draw(
-        st.lists(st.from_regex(r"actions|obs|health", fullmatch=True), unique=True)
-    )
+    reward_inputs = draw(st.sampled_from(["actions", "obs", "health"]))
     mut_sigma = draw(st.floats(min_value=0.0, max_value=1.0))
     mut_p = draw(st.floats(min_value=0.0, max_value=1.0))
     algo = draw(st.lists(st.from_regex(r"ppo|a2c|acktr", fullmatch=True), unique=True))
@@ -90,3 +89,14 @@ def envs(draw) -> Dict[str, Any]:
     env = Env(config)
 
     return env
+
+
+@st.composite
+def grid_positions(draw, env: Env) -> Tuple[int, int]:
+    """ Strategy for grid positions in ``env``. """
+    return draw(
+        st.tuple(
+            st.integers(min_value=0, max_value=env.width - 1),
+            st.integers(min_value=0, max_value=env.height - 1),
+        )
+    )
