@@ -8,6 +8,7 @@ import os
 import math
 import random
 import itertools
+from pprint import pformat
 from typing import Tuple, Dict, Any, List, Set
 import pickle
 
@@ -606,6 +607,7 @@ class Env:
                 self._remove(self.obj_type_ids["food"], pos)
                 self.num_foods -= 1
                 food_size = np.random.normal(self.food_size_mean, self.food_size_stddev)
+                food_size = max(0, food_size)
                 agent.health = min(1, agent.health + food_size)
 
     def _mate(self, action_dict: Dict[int, Tuple[int, int, int]]) -> Set[int]:
@@ -992,6 +994,18 @@ class Env:
         Returns
         -------
         output : ``str``.
+            Formatted config file and state variable values.
+        """
+        output = pformat(self.config)
+        return output
+
+    def visual(self) -> str:
+        """
+        Returns a representation of the environment state.
+
+        Returns
+        -------
+        output : ``str``.
             ASCII image of grid along with various statistics and metrics.
         """
         output = "\n"
@@ -1050,7 +1064,7 @@ class Env:
         env_log.write(str(env_state) + "\n")
 
         # Write to visual log, and print visualization if settings["env"]["print"].
-        visual = self.__repr__()
+        visual = self.visual()
         if self.print_repr:
             os.system("clear")
             print(visual)

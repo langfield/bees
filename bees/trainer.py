@@ -324,7 +324,6 @@ def train(args: argparse.Namespace) -> float:
                     )
 
                     # Update policy score with exponential moving average.
-                    print("Adding/updating agent '%d' in policy_scores." % agent_id)
                     if agent_id in policy_scores:
                         policy_scores[agent_id] = (
                             config.ema_alpha * policy_scores[agent_id]
@@ -335,26 +334,21 @@ def train(args: argparse.Namespace) -> float:
 
                 # Compute policy score loss.
                 ages = {agent_id: agent.age for agent_id, agent in env.agents.items()}
-                print("Age keys:", ages.keys())
                 age_sum = sum(ages.values())
                 normalized_ages = {
                     agent_id: age / age_sum for agent_id, age in ages.items()
                 }
+                # For this sum, we iterate over ``env.agents``, not ``agents``. This
+                # is because env.agents has been updated in the call to env.step(), so
+                # that if any agents die during that step, they are removed from
+                # ``env.agents``. But they aren't removed from ``agents`` until after
+                # we compute the policy score loss, so we use env.agents instead.
                 policy_score_loss = sum(
                     [
                         policy_scores[agent_id] * normalized_ages[agent_id]
-                        for agent_id in policy_scores
+                        for agent_id in env.agents
                     ]
                 )
-
-                # NOTE: We need to be careful here whether iterating over ``agents`` or
-                # ``env.agents``. The former is not updated until "Update dicts" below.
-                for agent_id in env.agents:
-                    if agent_id in policy_scores and config.print_repr:
-                        print(
-                            "Agent %d average policy score: %.6f"
-                            % (agent_id, policy_scores[agent_id])
-                        )
 
             end = "\r" if not config.print_repr else "\n"
             print(
@@ -469,7 +463,6 @@ def train(args: argparse.Namespace) -> float:
                         dead_critics.add(actor_critic)
                         # TODO: should we remove from ``rollout_map``?
                         agent = agents.pop(agent_id)
-                        print("Popping agent '%d' from policy_scores." % agent_id)
                         policy_scores.pop(agent_id)
                         dead_agents.add(agent)
 

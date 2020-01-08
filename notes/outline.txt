@@ -322,7 +322,6 @@ Things to come back to:
     calls to agent.compute_reward() across actions and agents, then using torch
     operations to perform the softmax in parallel.
 
-
 #===========================================================================================
 
     October sprint:
@@ -375,6 +374,8 @@ Things to come back to:
      - Make arguments not positional
      - Minimize hardcoding
      - Clean up A2C code
+     - Make functionality more modular (separate training functionality and environment functionality)
+     - Make all RNG depend on seed
    - Merge
 
    Other things:
