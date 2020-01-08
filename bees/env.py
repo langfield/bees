@@ -160,7 +160,7 @@ class Env:
         self.initial_num_foods = math.floor(self.food_density * num_squares)
         self.num_foods = 0
 
-        # Construct ``self.grid``.
+        # Construct ``self.grid`` and ``self.id_map``.
         self.grid = np.zeros((self.width, self.height, self.num_obj_types))
         self.id_map: List[List[Dict[int, Set[int]]]] = [
             [{} for y in range(self.height)] for x in range(self.width)
@@ -220,9 +220,12 @@ class Env:
         """
         # TODO: Add updates from calls to ``self._place()``.
 
-        # Reset ``self.grid``.
+        # Reset ``self.grid`` and ``self.id_map``.
         self.grid = np.zeros((self.width, self.height, self.num_obj_types))
         self.id_map = [[{} for y in range(self.height)] for x in range(self.width)]
+        for obj_type_id in self.obj_type_ids.values():
+            for x, y in zip(range(self.width), range(self.height)):
+                self.id_map[x][y][obj_type_id] = set()
         self.num_foods = 0
 
         # Set unique agent positions.
@@ -242,7 +245,7 @@ class Env:
             self._place(self.obj_type_ids["food"], food_pos)
         self.num_foods = self.initial_num_foods
 
-    def reset(self) -> Dict[int, Tuple[Tuple[Tuple[int, ...], ...], ...]]:
+    def reset(self) -> Dict[int, np.ndarray]:
         """
         Reset the entire environment.
 

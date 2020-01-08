@@ -212,17 +212,18 @@ class Agent:
         action_array = np.array(action_vec)
         return action_array
 
-    def reset(self) -> Tuple[Tuple[Tuple[int, ...], ...], ...]:
+    def reset(self) -> np.ndarray:
         """
         Reset the agent.
 
         Returns
         -------
-        self.observation : ``Tuple[Tuple[Tuple[int, ...], ...], ...]``.
+        self.observation : ``np.ndarray``.
             The current agent observation.
             Shape: ``(obs_len, obs_len, num_obj_types)``.
         """
         self.health = self.initial_health
+        self.prev_health = self.initial_health
         self.total_reward = 0.0
         return self.observation
 
