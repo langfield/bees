@@ -153,6 +153,9 @@ def train(args: argparse.Namespace) -> float:
             "policy initializations will be reused for multiple agents."
         )
 
+    # Set random seed for all packages.
+    random.seed(config.seed)
+    np.random.seed(config.seed)
     torch.manual_seed(config.seed)
     torch.cuda.manual_seed_all(config.seed)
 
@@ -353,7 +356,7 @@ def train(args: argparse.Namespace) -> float:
                 # This block will run if train() was called with optuna for parameter
                 # optimization. If ``policy_score_loss`` explodes, end the training
                 # run early.
-                if args.trial:
+                if hasattr(args, "trial"):
                     args.trial.report(policy_score_loss, env.iteration)
                     if args.trial.should_prune() or policy_score_loss == float("inf"):
                         print("\nEnding training because ``policy_score_loss`` diverged.")
