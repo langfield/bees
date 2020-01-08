@@ -224,7 +224,7 @@ class Env:
         self.grid = np.zeros((self.width, self.height, self.num_obj_types))
         self.id_map = [[{} for y in range(self.height)] for x in range(self.width)]
         for obj_type_id in self.obj_type_ids.values():
-            for x, y in zip(range(self.width), range(self.height)):
+            for x, y in itertools.product(range(self.width), range(self.height)):
                 self.id_map[x][y][obj_type_id] = set()
         self.num_foods = 0
 
