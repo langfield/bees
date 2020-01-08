@@ -386,7 +386,7 @@ def train(args: argparse.Namespace) -> float:
                             agent.optimizer.load_state_dict(optim_state_dict)
                         else:
 
-                            # Reinitialize the policy of actor_critic
+                            # Reinitialize the policy of actor_critic.
                             if isinstance(actor_critic.base, CNNBase):
                                 (
                                     actor_critic.base.main,
@@ -462,6 +462,7 @@ def train(args: argparse.Namespace) -> float:
                         dead_critics.add(actor_critic)
                         # TODO: should we remove from ``rollout_map``?
                         agent = agents.pop(agent_id)
+                        policy_scores.pop(agent_id)
                         dead_agents.add(agent)
 
                     # Shape correction and casting.
