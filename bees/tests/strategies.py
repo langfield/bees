@@ -2,16 +2,18 @@ import json
 import pytest
 from pprint import pprint
 from typing import Dict, List, Any
+from datetime import timedelta
 
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import given, settings
 
 from bees.env import Env
 from bees.utils import DEBUG
 from bees.config import Config
 
-DEBUG = False
 
+settings.register_profile("test_settings", deadline=None)
+settings.load_profile("test_settings")
 
 @st.composite
 def envs(draw) -> Dict[str, Any]:
@@ -83,10 +85,6 @@ def envs(draw) -> Dict[str, Any]:
         if arg == "draw":
             continue
         settings[arg] = eval(arg)
-
-    if DEBUG:
-        print("Settings:")
-        pprint(settings)
 
     config = Config(settings)
     env = Env(config)

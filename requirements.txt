@@ -6,3 +6,4 @@ psutil
 pandas
 opencv-python
 deap
+hypothesis

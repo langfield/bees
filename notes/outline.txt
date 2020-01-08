@@ -376,6 +376,7 @@ Things to come back to:
      - Clean up A2C code
      - Make functionality more modular (separate training functionality and environment functionality)
      - Make all RNG depend on seed
+     - Add setup.py?
    - Merge
 
    Other things:
