@@ -77,6 +77,7 @@ class Agent:
         self.initial_health = initial_health
         self.mating_cooldown = self.mating_cooldown_len
         self.health = self.initial_health
+        self.prev_health = self.initial_health
 
         # Set initial agent observation.
         self.obs_width = 2 * config.sight_len + 1
@@ -137,14 +138,12 @@ class Agent:
                 output_dim = 1
             self.reward_biases.append(np.zeros((output_dim,)))
 
-    def compute_reward(self, prev_health: float, action: Tuple[int, int, int]) -> float:
+    def compute_reward(self, action: Tuple[int, int, int]) -> float:
         """
         Computes agent reward given health value before consumption.
 
         Parameters
         ----------
-        prev_health : ``float``.
-            Health on previous timestep.
         action : ``Tuple[int, int, int]``.
             The current chosen action.
 
@@ -169,7 +168,7 @@ class Agent:
             flat_action = self.get_flat_action(action)
             input_arrays.append(flat_action)
         if "health" in self.reward_inputs:
-            flat_healths = np.array([prev_health, self.health])
+            flat_healths = np.array([self.prev_health, self.health])
             input_arrays.append(flat_healths)
 
         inputs = np.concatenate(input_arrays)

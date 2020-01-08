@@ -351,8 +351,8 @@ def train(args: argparse.Namespace) -> float:
             )
             end = "\r" if not config.print_repr else "\n"
             print(
-                "Iteration %d policy score loss: %.6f|||||"
-                % (env.iteration, policy_score_loss),
+                "Iteration: %d| Num agents: %d| Policy score loss: %.6f|||||"
+                % (env.iteration, len(agents), policy_score_loss),
                 end=end,
             )
 

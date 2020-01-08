@@ -728,18 +728,10 @@ class Env:
         return child_ids
 
     # TODO: Remove from this class so that ``Env`` is framework-agnostic.
-    def _get_optimal_action_dists(
-        self, prev_health: Dict[int, float],
-    ) -> Dict[int, torch.Tensor]:
+    def _get_optimal_action_dists(self) -> Dict[int, torch.Tensor]:
         """
         Iterates over the action space and compute the optimal action distribution for
         each agent.
-
-        Parameters
-        ----------
-        prev_health : ``Dict[int, float]``.
-            A mapping from ``agent_id`` to the health of that agent on the previous
-            iteration.
 
         Returns
         -------
@@ -760,9 +752,13 @@ class Env:
                 *[list(range(subaction_size)) for subaction_size in subaction_sizes]
             ):
 
-                action_rewards[action] = agent.compute_reward(
-                    prev_health[agent_id], action
-                )
+                # DEBUG
+                try:
+                    action_rewards[action] = agent.compute_reward(action)
+                except KeyError as key_error:
+                    agent_age = agent.age
+                    DEBUG(agent_age)
+                    raise key_error
 
             # Flatten action_rewards, perform softmax, and return to original shape.
             # This is because torch.nn.functional.softmax only computes softmax along
@@ -879,10 +875,11 @@ class Env:
         done: Dict[int, bool] = {}
         info: Dict[int, Any] = {}
 
+        # Set previous health values.
+        for agent_id, agent in self.agents.items():
+            agent.prev_health = agent.health
+
         # Execute actions (move, consume, and mate).
-        prev_health = {
-            agent_id: agent.health for agent_id, agent in self.agents.items()
-        }
         action_dict = self._move(action_dict)
         self._consume(action_dict)
         child_ids = self._mate(action_dict)
@@ -899,9 +896,7 @@ class Env:
         # Compute reward.
         for agent_id, agent in self.agents.items():
             if agent_id not in child_ids:
-                rew[agent_id] = agent.compute_reward(
-                    prev_health[agent_id], action_dict[agent_id]
-                )
+                rew[agent_id] = agent.compute_reward(action_dict[agent_id])
             # First reward for children is zero.
             elif agent_id in child_ids:
                 rew[agent_id] = 0
@@ -911,7 +906,7 @@ class Env:
         # the end of this function, and the policy score is computed in trainer.py
         # after this increment happens.
         if (self.iteration + 1) % self.policy_score_frequency == 0:
-            optimal_action_dists = self._get_optimal_action_dists(prev_health)
+            optimal_action_dists = self._get_optimal_action_dists()
             for agent_id in self.agents:
                 info[agent_id]["optimal_action_dist"] = optimal_action_dists[agent_id]
 
