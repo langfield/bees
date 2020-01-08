@@ -70,7 +70,7 @@ def objective(trial: optuna.Trial) -> float:
 
     # Suggestions for policy hyperparameters.
     settings["algo"] = trial.suggest_categorical("algo", ["a2c"])
-    settings["lr"] = trial.suggest_loguniform("lr", 1e-6, 1e-1)
+    settings["lr"] = trial.suggest_loguniform("lr", 5e-4, 5e-3)
     settings["eps"] = trial.suggest_loguniform("eps", 1e-6, 1e-4)
     settings["alpha"] = trial.suggest_loguniform("alpha", 1e-6, 1e-4)
     settings["gamma"] = trial.suggest_uniform("gamma", 0.98, 0.999)

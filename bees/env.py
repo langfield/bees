@@ -132,6 +132,7 @@ class Env:
 
         # Trainer config
         self.policy_score_frequency = config.policy_score_frequency
+        self.greedy_temperature = config.greedy_temperature
 
         """
         for attr in get_attrs(config):
@@ -753,23 +754,23 @@ class Env:
         subaction_sizes = [subaction_space.n for subaction_space in self.action_space]
         for agent_id, agent in self.agents.items():
             action_rewards = torch.zeros(subaction_sizes)
+            # This loop iterates over the action space, and each action is represented
+            # as Tuple[int, int, int].
             for action in itertools.product(
                 *[list(range(subaction_size)) for subaction_size in subaction_sizes]
             ):
 
-                # DEBUG
-                try:
-                    action_rewards[action] = agent.compute_reward(action)
-                except KeyError as key_error:
-                    agent_age = agent.age
-                    DEBUG(agent_age)
-                    raise key_error
+                action_rewards[action] = agent.compute_reward(action)
 
             # Flatten action_rewards, perform softmax, and return to original shape.
             # This is because torch.nn.functional.softmax only computes softmax along
             # a single dimension.
             action_rewards = torch.reshape(action_rewards, (-1,))
-            optimal_action_dists[agent_id] = F.softmax(action_rewards, dim=0)
+
+            # ``self.greedy_temperature`` is used to vary how greedy the target
+            # action distribution is. As ``self.greedy_temperature`` goes to 0, the
+            # optimal distribution becomes more greedy.
+            optimal_action_dists[agent_id] = F.softmax(action_rewards / self.greedy_temperature, dim=0)
             action_rewards = torch.reshape(action_rewards, subaction_sizes)
             optimal_action_dists[agent_id] = torch.reshape(
                 optimal_action_dists[agent_id], subaction_sizes
