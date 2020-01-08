@@ -1,7 +1,8 @@
 """ Test that ``Env.fill()`` works correctly. """
 import itertools
 
-from hypothesis import given
+from hypothesis import given, settings
+from hypothesis import HealthCheck as hc
 
 from bees.env import Env
 from bees.tests import strategies
@@ -19,6 +20,7 @@ def test_env_fill_places_correct_number_of_agents(env: Env) -> None:
     assert num_grid_agents == len(env.agents)
 
 
+@settings(suppress_health_check=[hc.too_slow])
 @given(strategies.envs())
 def test_env_fill_sets_all_agent_positions_correctly(env: Env) -> None:
     """ Tests that ``agent.pos`` is set correctly. """
@@ -31,6 +33,7 @@ def test_env_fill_sets_all_agent_positions_correctly(env: Env) -> None:
             assert pos in agent_positions
 
 
+@settings(suppress_health_check=[hc.too_slow])
 @given(strategies.envs())
 def test_env_fill_places_correct_num_foods(env: Env) -> None:
     """ Tests that we get exactly ``self.initial_num_foods`` in the grid. """

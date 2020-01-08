@@ -350,6 +350,15 @@ def train(args: argparse.Namespace) -> float:
                     ]
                 )
 
+                # This block will run if train() was called with optuna for parameter
+                # optimization. If ``policy_score_loss`` explodes, end the training
+                # run early.
+                if args.trial:
+                    args.trial.report(policy_score_loss, env.iteration)
+                    if args.trial.should_prune() or policy_score_loss == float("inf"):
+                        print("\nEnding training because ``policy_score_loss`` diverged.")
+                        return policy_score_loss
+
             end = "\r" if not config.print_repr else "\n"
             print(
                 "Iteration: %d| Num agents: %d| Policy score loss: %.6f|||||"

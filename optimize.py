@@ -30,7 +30,7 @@ def main() -> None:
     optuna.logging.enable_propagation()  # Propagate logs to the root logger.
     # optuna.logging.disable_default_handler()  # Stop showing logs in stderr.
 
-    study = optuna.create_study()
+    study = optuna.create_study(pruner=optuna.pruners.MedianPruner())
     logging.getLogger().info("Start optimization.")
     study.optimize(objective, n_trials=3e9)
 
@@ -70,7 +70,7 @@ def objective(trial: optuna.Trial) -> float:
 
     # Suggestions for policy hyperparameters.
     settings["algo"] = trial.suggest_categorical("algo", ["a2c"])
-    settings["lr"] = trial.suggest_loguniform("lr", 1e-7, 1e-1)
+    settings["lr"] = trial.suggest_loguniform("lr", 1e-6, 1e-1)
     settings["eps"] = trial.suggest_loguniform("eps", 1e-6, 1e-4)
     settings["alpha"] = trial.suggest_loguniform("alpha", 1e-6, 1e-4)
     settings["gamma"] = trial.suggest_uniform("gamma", 0.98, 0.999)
@@ -89,16 +89,20 @@ def objective(trial: optuna.Trial) -> float:
 
     logging.getLogger().info("Settings: " + str(settings))
 
+    # Hardcoded settings for optimization runs.
     settings["print_repr"] = False
     # settings["trial"] = trial # Add back in for early pruning.
-
     settings["time_steps"] = 51200
+    settings["aging_rate"] = 0.0001
+    settings["mating_cooldown_len"] = 4000
 
+    # Print out settings to temp file.
     temp_dir = tempfile.mkdtemp()
     settings_path = os.path.join(temp_dir, "settings.json")
     with open(settings_path, "w") as settings_file:
         json.dump(settings, settings_file)
 
+    # Get ``args`` object to pass to train().
     parser = argparse.ArgumentParser()
     parser.add_argument("--load-from", default="", help="Saved directory to load from.")
     parser.add_argument("--settings", default="", help="Settings file to use.")
@@ -109,10 +113,15 @@ def objective(trial: optuna.Trial) -> float:
     )
     args = parser.parse_args()
     args.settings = settings_path
+    args.trial = trial
 
+    # Print settings and run training.
+    print(settings)
     loss = train(args)
 
+    # Cleanup
     shutil.rmtree(temp_dir)
+    shutil.rmtree(args.save_root)
 
     return loss
 
