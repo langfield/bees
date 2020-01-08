@@ -14,8 +14,7 @@ DEBUG = False
 
 
 @st.composite
-def envs(draw
-) -> Dict[str, Any]:
+def envs(draw) -> Dict[str, Any]:
     """ A hypothesis strategy for generating ``Env`` objects. """
 
     width = draw(st.integers(min_value=1, max_value=15))
@@ -39,7 +38,9 @@ def envs(draw
     hidden_dim = draw(st.integers(min_value=1))
     reward_weight_mean = draw(st.floats())
     reward_weight_stddev = draw(st.floats(min_value=0.0))
-    reward_inputs = draw(st.lists(st.from_regex(r"actions|obs|health", fullmatch=True), unique=True))
+    reward_inputs = draw(
+        st.lists(st.from_regex(r"actions|obs|health", fullmatch=True), unique=True)
+    )
     mut_sigma = draw(st.floats(min_value=0.0))
     mut_p = draw(st.floats(min_value=0.0, max_value=1.0))
     algo = draw(st.lists(st.from_regex(r"ppo|a2c|acktr", fullmatch=True), unique=True))
