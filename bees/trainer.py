@@ -308,6 +308,8 @@ def train(args: argparse.Namespace) -> float:
 
             # Execute environment step.
             obs, rewards, dones, infos = env.step(action_dict)
+
+            # Write env state to log.
             env.log_state(env_log, visual_log)
             if config.print_repr:
                 print("Env step: %ss" % str(time.time() - t_step))
@@ -322,6 +324,7 @@ def train(args: argparse.Namespace) -> float:
                     )
 
                     # Update policy score with exponential moving average.
+                    print("Adding/updating agent '%d' in policy_scores." % agent_id)
                     if agent_id in policy_scores:
                         policy_scores[agent_id] = (
                             config.ema_alpha * policy_scores[agent_id]
@@ -330,25 +333,29 @@ def train(args: argparse.Namespace) -> float:
                     else:
                         policy_scores[agent_id] = timestep_score
 
-            for agent_id in agents:
-                if agent_id in policy_scores and config.print_repr:
-                    print(
-                        "Agent %d average policy score: %.6f"
-                        % (agent_id, policy_scores[agent_id])
-                    )
+                # Compute policy score loss.
+                ages = {agent_id: agent.age for agent_id, agent in env.agents.items()}
+                print("Age keys:", ages.keys())
+                age_sum = sum(ages.values())
+                normalized_ages = {
+                    agent_id: age / age_sum for agent_id, age in ages.items()
+                }
+                policy_score_loss = sum(
+                    [
+                        policy_scores[agent_id] * normalized_ages[agent_id]
+                        for agent_id in policy_scores
+                    ]
+                )
 
-            # Compute policy score loss.
-            ages = {agent_id: env.agents[agent_id].age for agent_id in agents}
-            age_sum = sum(ages.values())
-            normalized_ages = {
-                agent_id: age / age_sum for agent_id, age in ages.items()
-            }
-            policy_score_loss = sum(
-                [
-                    policy_scores[agent_id] * normalized_ages[agent_id]
-                    for agent_id in policy_scores
-                ]
-            )
+                # NOTE: We need to be careful here whether iterating over ``agents`` or
+                # ``env.agents``. The former is not updated until "Update dicts" below.
+                for agent_id in env.agents:
+                    if agent_id in policy_scores and config.print_repr:
+                        print(
+                            "Agent %d average policy score: %.6f"
+                            % (agent_id, policy_scores[agent_id])
+                        )
+
             end = "\r" if not config.print_repr else "\n"
             print(
                 "Iteration: %d| Num agents: %d| Policy score loss: %.6f|||||"
@@ -462,6 +469,7 @@ def train(args: argparse.Namespace) -> float:
                         dead_critics.add(actor_critic)
                         # TODO: should we remove from ``rollout_map``?
                         agent = agents.pop(agent_id)
+                        print("Popping agent '%d' from policy_scores." % agent_id)
                         policy_scores.pop(agent_id)
                         dead_agents.add(agent)
 
