@@ -94,7 +94,7 @@ def objective(trial: optuna.Trial) -> float:
     # settings["trial"] = trial # Add back in for early pruning.
     settings["time_steps"] = 51200
     settings["aging_rate"] = 0.0001
-    settings["mating_cooldown_len"] = 4000
+    settings["mating_cooldown_len"] = 51200
 
     # Print out settings to temp file.
     temp_dir = tempfile.mkdtemp()
