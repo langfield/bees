@@ -5,7 +5,7 @@
     "height": 10,
     "sight_len": 6,
     "num_obj_types": 2,
-    "num_agents": 7,
+    "num_agents": 1,
     "food_density": 0.2,
     "food_size_mean": 0.29,
     "food_size_stddev": 0.247,
@@ -16,15 +16,15 @@
     "mating_cooldown_len": 4000,
     "min_mating_health": 0.112,
     "target_agent_density": 0.08,
-    "print_repr": true,
+    "print_repr": false,
 
     "2": "====================TRAINER====================",
 
-    "time_steps": 1000000,
+    "time_steps": 25600,
     "reuse_state_dicts": true,
     "policy_score_frequency": 8,
     "ema_alpha": 0.9,
-    "greedy_temperature": 0.25,
+    "greedy_temperature": 1e-4,
 
     "3": "====================REWARD====================",
 
@@ -55,14 +55,14 @@
     "6": "====================POLICY====================",
 
     "algo": "ppo",
-    "lr": 1e-2,
+    "lr": 3e-4,
     "min_lr": 5e-6,
     "eps": 1e-5,
     "alpha": 1e-5,
     "gamma": 0.99,
     "use_gae": false,
-    "gae_lambda": 1.0,
-    "entropy_coef": 0.0,
+    "gae_lambda": 0.95,
+    "entropy_coef": 0.01,
     "value_loss_coef": 1.0,
     "max_grad_norm": 0.5,
     "seed": 1,
@@ -81,5 +81,5 @@
     "cuda": true,
     "use_proper_time_limits": false,
     "recurrent_policy": false,
-    "use_linear_lr_decay": true
+    "use_linear_lr_decay": false
 }

@@ -69,7 +69,7 @@ def objective(trial: optuna.Trial) -> float:
     """
 
     # Suggestions for policy hyperparameters.
-    settings["algo"] = trial.suggest_categorical("algo", ["a2c"])
+    settings["algo"] = trial.suggest_categorical("algo", ["ppo"])
     settings["lr"] = trial.suggest_loguniform("lr", 5e-4, 5e-3)
     settings["eps"] = trial.suggest_loguniform("eps", 1e-6, 1e-4)
     settings["alpha"] = trial.suggest_loguniform("alpha", 1e-6, 1e-4)
@@ -79,9 +79,8 @@ def objective(trial: optuna.Trial) -> float:
     settings["entropy_coef"] = trial.suggest_loguniform("entropy_coef", 1e-4, 0.1)
     settings["value_loss_coef"] = trial.suggest_uniform("value_loss_coef", 0.5, 1.0)
     settings["seed"] = trial.suggest_int("seed", 1, 3)
-    settings["num_steps"] = trial.suggest_int("num_steps", 32, 1024)
+    settings["num_steps"] = trial.suggest_int("num_steps", 32, 512)
     settings["ppo_epoch"] = trial.suggest_int("ppo_epoch", 2, 8)
-    settings["num_mini_batch"] = trial.suggest_int("num_mini_batch", 1, 4)
     settings["clip_param"] = trial.suggest_categorical("clip_param", [0.1, 0.2, 0.3])
     settings["recurrent_policy"] = trial.suggest_categorical(
         "recurrent_policy", [True, False]
@@ -92,7 +91,7 @@ def objective(trial: optuna.Trial) -> float:
     # Hardcoded settings for optimization runs.
     settings["print_repr"] = False
     # settings["trial"] = trial # Add back in for early pruning.
-    settings["time_steps"] = 51200
+    settings["time_steps"] = 20480
     settings["aging_rate"] = 0.0001
     settings["mating_cooldown_len"] = 51200
 
