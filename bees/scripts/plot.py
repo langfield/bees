@@ -2,16 +2,15 @@
 import os
 import time
 import argparse
-import multiprocessing as mp
 from typing import List, Dict, Any
 
 import pandas as pd
-from numba import jit
 
 from plotplotplot.draw import graph
 
 
-@jit(nopython=True)
+EMA_ALPHA = 0.9
+
 def parse_agent_data(steps: List[Dict[str, Any]]) -> Dict[int, Dict[str, List[Any]]]:
     """ Parse log data to be indexed by agent instead of by step. """
 
@@ -40,7 +39,23 @@ def parse_agent_data(steps: List[Dict[str, Any]]) -> Dict[int, Dict[str, List[An
     return agent_data
 
 
-@jit
+def get_EMA(seq: List[float]) -> List[float]:
+    """ Computes and returns the EMA of a list of floats. """
+
+    ema = []
+    current_avg = 0.0
+    for i, element in enumerate(seq):
+        if i == 0:
+            current_avg = element
+        else:
+            current_avg = EMA_ALPHA * current_avg + (1.0 - EMA_ALPHA) * element
+
+        ema.append(current_avg)
+
+    print(ema)
+    print(len(ema))
+    return ema
+
 def get_rewards(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFrame:
     """ Parses ``agent_data`` into a DataFrame with rewards for each agent. """
 
@@ -51,6 +66,10 @@ def get_rewards(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFrame:
     for agent_id, value_list_dict in agent_data.items():
         max_length = max(max_length, len(value_list_dict[reward_key]))
         reward_log_map[agent_id] = value_list_dict[reward_key]
+
+    # Replace ``reward_log_map[agent_id]`` with EMA of itself.
+    for agent_id in agent_data:
+        reward_log_map[agent_id] = get_EMA(reward_log_map[agent_id])
 
     # Add padding to each list so they all have length ``max_length``.
     for agent_id in reward_log_map:
@@ -92,7 +111,6 @@ def main(args: argparse.Namespace) -> None:
         """ Strip and eval. """
         return eval(line.strip())
 
-    @jit(nopython=True)
     def readlines(log_file) -> List[str]:
         """ Construct steps. """
         steps: List[Dict[str, Any]] = []
@@ -100,18 +118,14 @@ def main(args: argparse.Namespace) -> None:
             steps.append(eval(line.strip()))
         return steps
 
-    t_0 = time.time()
     with open(args.log_path, "r") as log_file:
         steps = readlines(log_file)
 
-    print("Jit read: %fs" % (time.time - t_0))
-
     # Read and parse log.
-    t_0 = time.time()
-    pool = mp.Pool()
+    """
     with open(args.log_path, "r") as log_file:
-        steps: List[Dict[str, Any]] = pool.map(preprocess_line, log_file.readlines())
-    print("MP read: %fs" % (time.time - t_0))
+        steps: List[Dict[str, Any]] = [eval(line.strip()) for line in log_file.readlines()]
+    """
     agent_data = parse_agent_data(steps)
 
     # Get individual metrics from parsed data.
