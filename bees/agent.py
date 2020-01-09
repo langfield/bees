@@ -128,6 +128,13 @@ class Agent:
             )
             input_dim = output_dim
 
+        # DEBUG
+        temp = np.zeros((9, 1))
+        temp[0][0] = 1.0
+        temp[5][0] = 1.0
+        temp[7][0] = 1.0
+        self.reward_weights = [temp]
+
     def initialize_reward_biases(self) -> None:
         """ Initializes the biases of the reward function. """
 
@@ -137,6 +144,9 @@ class Agent:
             if i == self.n_layers - 1:
                 output_dim = 1
             self.reward_biases.append(np.zeros((output_dim,)))
+
+        # DEBUG
+        self.reward_biases = [np.array([0.0])]
 
     def compute_reward(self, action: Tuple[int, int, int]) -> float:
         """

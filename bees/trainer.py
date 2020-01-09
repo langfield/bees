@@ -185,6 +185,7 @@ def train(args: argparse.Namespace) -> float:
         action_losses = trainer_state["action_losses"]
         dist_entropies = trainer_state["dist_entropies"]
         policy_scores = trainer_state["policy_scores"]
+        agent_action_dists = trainer_state["agent_action_dists"]
 
         # Load in dead objects.
         dead_critics = trainer_state["dead_critics"]
@@ -212,6 +213,7 @@ def train(args: argparse.Namespace) -> float:
         action_losses: Dict[int, float] = {}
         dist_entropies: Dict[int, float] = {}
         policy_scores: Dict[int, float] = {}
+        agent_action_dists: Dict[int, torch.Tensor] = {}
 
         # Save dead objects to make creation faster.
         dead_critics: Set[Policy] = set()
@@ -226,6 +228,8 @@ def train(args: argparse.Namespace) -> float:
 
     # Hyperparameter optimization loss.
     policy_score_loss = 1
+    first_policy_score_loss = float("inf")
+    saved_first_policy_score_loss = False
 
     for agent_id, agent_obs in obs.items():
         if agent_id not in agents:
@@ -302,7 +306,7 @@ def train(args: argparse.Namespace) -> float:
                     action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
-                    agent_action_dist = ac_tuple[4]
+                    agent_action_dists[agent_id] = ac_tuple[4]
 
             if config.print_repr:
                 print("Sample actions: %ss" % str(time.time() - t_actions))
@@ -323,7 +327,9 @@ def train(args: argparse.Namespace) -> float:
                 for agent_id in env.agents:
                     optimal_action_dist = infos[agent_id]["optimal_action_dist"]
                     timestep_score = float(
-                        F.kl_div(torch.log(agent_action_dist), optimal_action_dist)
+                        F.kl_div(
+                            torch.log(agent_action_dists[agent_id]), optimal_action_dist
+                        )
                     )
 
                     # Update policy score with exponential moving average.
@@ -352,6 +358,9 @@ def train(args: argparse.Namespace) -> float:
                         for agent_id in env.agents
                     ]
                 )
+                if not saved_first_policy_score_loss:
+                    first_policy_score_loss = policy_score_loss
+                    saved_first_policy_score_loss = True
 
                 # This block will run if train() was called with optuna for parameter
                 # optimization. If ``policy_score_loss`` explodes, end the training
@@ -359,15 +368,38 @@ def train(args: argparse.Namespace) -> float:
                 if hasattr(args, "trial"):
                     args.trial.report(policy_score_loss, env.iteration)
                     if args.trial.should_prune() or policy_score_loss == float("inf"):
-                        print("\nEnding training because ``policy_score_loss`` diverged.")
+                        print(
+                            "\nEnding training because ``policy_score_loss`` diverged."
+                        )
                         return policy_score_loss
 
+            # Print losses for each agent.
+            if config.print_repr:
+                for agent_id in action_losses:
+                    action_loss = action_losses[agent_id]
+                    value_loss = value_losses[agent_id]
+                    dist_entropy = dist_entropies[agent_id]
+                    loss = value_loss * config.value_loss_coef + action_loss - dist_entropy * config.entropy_coef
+                    print("Agent '%d' loss: %.6f" % (agent_id, loss))
+
+
             end = "\r" if not config.print_repr else "\n"
-            print(
-                "Iteration: %d| Num agents: %d| Policy score loss: %.6f|||||"
-                % (env.iteration, len(agents), policy_score_loss),
-                end=end,
-            )
+            if env.iteration > config.num_steps:
+                action_loss = action_losses[0]
+                value_loss = value_losses[0]
+                dist_entropy = dist_entropies[0]
+                loss = value_loss * config.value_loss_coef + action_loss - dist_entropy * config.entropy_coef
+                print(
+                    "Iteration: %d| Num agents: %d| Policy score loss: %.6f/%.6f|Loss: %.6f|||||"
+                    % (
+                        env.iteration,
+                        len(agents),
+                        policy_score_loss,
+                        first_policy_score_loss,
+                        loss,
+                    ),
+                    end=end,
+                )
 
             t_creation = time.time()
             # Agent creation and termination, rollout stacking.
