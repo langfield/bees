@@ -302,7 +302,13 @@ def train(args: argparse.Namespace) -> float:
                         rollouts.masks[step],
                     )
                     value_dict[agent_id] = ac_tuple[0]
-                    action_dict[agent_id] = tuple(ac_tuple[1][0].tolist())
+
+                    # We index at ``0`` because of process dimension.
+                    # action_dict[agent_id] = tuple(ac_tuple[1][0].tolist())
+
+                    # Flat action space version of ``action_dict``.
+                    action_dict[agent_id] = int(ac_tuple[1][0])
+
                     action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
