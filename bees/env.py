@@ -172,8 +172,10 @@ class Env:
         self.action_space = gym.spaces.Tuple(
             (gym.spaces.Discrete(5), gym.spaces.Discrete(2), gym.spaces.Discrete(2))
         )
+        self.action_space = gym.spaces.Discrete(5 * 2 * 2)
 
         num_actions = 5 + 2 + 2
+        num_actions = self.action_space.n
         self.num_actions = num_actions
 
         # Each observation is a k * k matrix with values from a discrete
@@ -860,7 +862,7 @@ class Env:
 
         Parameters
         ----------
-        action_array_dict : ``Dict[int, np.ndarray]``.
+        action_dict : ``Dict[int, Tuple[int, int, int]]``.
             Maps agent ids to actions as multibinary numpy arrays.
 
         Returns
@@ -874,6 +876,9 @@ class Env:
         info : ``Dict[int, Any]``.
             Maps agent ids to various per-agent info.
         """
+
+        # Convert flat action_dict to tuple.
+
 
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
