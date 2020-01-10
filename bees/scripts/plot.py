@@ -53,8 +53,6 @@ def get_EMA(seq: List[float]) -> List[float]:
 
         ema.append(current_avg)
 
-    print(ema)
-    print(len(ema))
     return ema
 
 

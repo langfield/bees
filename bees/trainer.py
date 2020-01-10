@@ -398,12 +398,15 @@ def train(args: argparse.Namespace) -> float:
                     - dist_entropy * config.entropy_coef
                 )
                 print(
-                    "Iteration: %d| Num agents: %d| Policy score loss: %.6f/%.6f|Loss: %.6f|||||"
+                    "Iteration: %d| Num agents: %d| Policy score loss: %.6f/%.6f|Losses (action, value, entropy, total): %.6f, %.6f, %.6f, %.6f|||||"
                     % (
                         env.iteration,
                         len(agents),
                         policy_score_loss,
                         first_policy_score_loss,
+                        action_loss,
+                        value_loss,
+                        dist_entropy,
                         loss,
                     ),
                     end=end,

@@ -13,18 +13,18 @@
     "plant_foods_stddev": 0.2,
     "food_plant_retries": 3,
     "aging_rate": 0.0001,
-    "mating_cooldown_len": 4000,
+    "mating_cooldown_len": 1000000,
     "min_mating_health": 0.112,
     "target_agent_density": 0.08,
     "print_repr": false,
 
     "2": "====================TRAINER====================",
 
-    "time_steps": 25600,
+    "time_steps": 2560000,
     "reuse_state_dicts": true,
     "policy_score_frequency": 8,
     "ema_alpha": 0.9,
-    "greedy_temperature": 1.0,
+    "greedy_temperature": 1e-7,
 
     "3": "====================REWARD====================",
 
@@ -68,7 +68,7 @@
     "seed": 1,
     "cuda_deterministic": false,
     "num_processes": 1,
-    "num_steps": 256,
+    "num_steps": 4096,
     "ppo_epoch": 4,
     "num_mini_batch": 1,
     "clip_param": 0.3,

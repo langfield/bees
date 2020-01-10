@@ -365,6 +365,7 @@ Things to come back to:
    - Reward engineering
      - Compute policy score (DONE)
    - Write tests
+   - Convert action space to discrete (DONE)
    - Run experiments (multi-agent linear rewards (action), multi-agent linear rewards (action, obs))
    - Analyze results
    - Refactor
