@@ -1,7 +1,6 @@
 """ PyTorch environment trainer. """
 import os
 import json
-import time
 import copy
 import random
 import shutil
@@ -15,7 +14,6 @@ import pickle
 
 import gym
 import torch
-import torch.nn.functional as F
 import numpy as np
 
 from bees.a2c_ppo_acktr import algo, utils
@@ -25,9 +23,10 @@ from bees.a2c_ppo_acktr.storage import RolloutStorage
 from bees.env import Env
 from bees.utils import get_token, validate_args, DEBUG
 from bees.config import Config
-from bees.analysis import live_analysis
+from bees.analysis import update_policy_score, update_losses, Metrics
 
-# pylint: disable=bad-continuation
+# pylint: disable=bad-continuation, too-many-branches
+# pylint: disable=too-many-statements, too-many-locals
 
 
 def train(args: argparse.Namespace) -> float:
@@ -182,10 +181,7 @@ def train(args: argparse.Namespace) -> float:
         rollout_map = trainer_state["rollout_map"]
         episode_rewards = trainer_state["episode_rewards"]
         minted_agents = trainer_state["minted_agents"]
-        value_losses = trainer_state["value_losses"]
-        action_losses = trainer_state["action_losses"]
-        dist_entropies = trainer_state["dist_entropies"]
-        policy_scores = trainer_state["policy_scores"]
+        metrics = trainer_state["metrics"]
         agent_action_dists = trainer_state["agent_action_dists"]
 
         # Load in dead objects.
@@ -210,10 +206,7 @@ def train(args: argparse.Namespace) -> float:
         rollout_map: Dict[int, RolloutStorage] = {}
         episode_rewards: Dict[int, collections.deque] = {}
         minted_agents: Set[int] = set()
-        value_losses: Dict[int, float] = {}
-        action_losses: Dict[int, float] = {}
-        dist_entropies: Dict[int, float] = {}
-        policy_scores: Dict[int, float] = {}
+        metrics = Metrics()
         agent_action_dists: Dict[int, torch.Tensor] = {}
 
         # Save dead objects to make creation faster.
@@ -228,11 +221,6 @@ def train(args: argparse.Namespace) -> float:
     env_done = False
 
     # Hyperparameter optimization loss.
-    policy_score_loss = 1
-    loss = float("inf")
-    first_policy_score_loss = float("inf")
-    saved_first_policy_score_loss = False
-
     for agent_id, agent_obs in obs.items():
         if agent_id not in agents:
             agent, actor_critic, rollouts = get_agent(
@@ -254,14 +242,11 @@ def train(args: argparse.Namespace) -> float:
         rollouts.obs[0].copy_(obs_tensor)
         rollouts.to(device)
 
-    start = time.time()
-    # MOD
     num_updates = (
         int(config.num_env_steps - env.iteration)
         // config.num_steps
         // config.num_processes
     )
-    timestep_score = float("inf")
     for j in range(num_updates):
 
         if config.use_linear_lr_decay:
@@ -274,7 +259,7 @@ def train(args: argparse.Namespace) -> float:
                 age = env_agent.age
                 min_agent_lifetime = 1.0 / config.aging_rate
 
-                lr = utils.update_linear_schedule(
+                learning_rate = utils.update_linear_schedule(
                     agent.optimizer,
                     age,
                     min_agent_lifetime,
@@ -282,7 +267,7 @@ def train(args: argparse.Namespace) -> float:
                     config.min_lr,
                 )
 
-                agent.lr = lr
+                agent.lr = learning_rate
 
         for step in range(config.num_steps):
 
@@ -293,7 +278,6 @@ def train(args: argparse.Namespace) -> float:
             action_log_prob_dict: Dict[int, float] = {}
             recurrent_hidden_states_dict: Dict[int, float] = {}
 
-            t_actions = time.time()
             # Sample actions.
             with torch.no_grad():
                 for agent_id, actor_critic in actor_critics.items():
@@ -310,58 +294,48 @@ def train(args: argparse.Namespace) -> float:
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
                     agent_action_dists[agent_id] = ac_tuple[4]
 
-            if config.print_repr:
-                print("Sample actions: %ss" % str(time.time() - t_actions))
-
-            t_step = time.time()
-
             # Execute environment step.
             obs, rewards, dones, infos = env.step(action_dict)
 
             # Write env state to log.
             env.log_state(env_log, visual_log)
-            if config.print_repr:
-                print("Env step: %ss" % str(time.time() - t_step))
 
-            # TODO: Call ``live_analysis()``.
-            policy_score_tuple = live_analysis(
-                env=env,
-                config=config,
-                infos=infos,
-                agents=agents,
-                policy_scores=policy_scores,
-                value_losses=value_losses,
-                action_losses=action_losses,
-                dist_entropies=dist_entropies,
-                agent_action_dists=agent_action_dists,
-                first_policy_score_loss=first_policy_score_loss,
-                policy_score_loss=policy_score_loss,
-                loss=loss,
-            )
-            updated_policy_scores = policy_score_tuple[0]
-            policy_score_loss = policy_score_tuple[1]
-            loss = policy_score_tuple[2]
+            # Update the policy score.
+            if env.iteration % config.policy_score_frequency == 0:
+                metrics = update_policy_score(
+                    env=env,
+                    config=config,
+                    infos=infos,
+                    agent_action_dists=agent_action_dists,
+                    metrics=metrics,
+                )
 
-            if env.iteration % config.policy_score_frequency:
-                if first_policy_score_loss == float("inf"):
-                    first_policy_score_loss = policy_score_loss
+                # This block will run if train() was called with optuna for parameter
+                # optimization. If policy score loss explodes, end the training run
+                # early.
+                if hasattr(args, "trial"):
+                    args.trial.report(metrics.policy_score, env.iteration)
+                    if args.trial.should_prune() or metrics.policy_score == float(
+                        "inf"
+                    ):
+                        print(
+                            "\nEnding training because ``policy_score_loss`` diverged."
+                        )
+                        return metrics.policy_score
 
-            # For sanity.
-            for agent_id in policy_scores:
-                assert agent_id in updated_policy_scores
+            # Print debug output.
+            end = "\n" if config.print_repr else "\r"
+            print("Iteration: %d| " % env.iteration, end="")
+            print("Num agents: %d| " % len(agents), end="")
+            print("Policy score loss: %.6f" % metrics.policy_score, end="")
+            print("/%.6f| " % metrics.initial_policy_score, end="")
+            print("Losses (action, value, entropy, total): ", end="")
+            print("%.6f, " % metrics.action_loss, end="")
+            print("%.6f, " % metrics.value_loss, end="")
+            print("%.6f, " % metrics.dist_entropy, end="")
+            print("%.6f" % metrics.total_loss, end="")
+            print("||||||", end=end)
 
-            policy_scores = updated_policy_scores
-
-            # This block will run if train() was called with optuna for parameter
-            # optimization. If policy score loss explodes, end the training run
-            # early.
-            if hasattr(args, "trial"):
-                args.trial.report(policy_score_loss, env.iteration)
-                if args.trial.should_prune() or policy_score_loss == float("inf"):
-                    print("\nEnding training because ``policy_score_loss`` diverged.")
-                    return policy_score_loss
-
-            t_creation = time.time()
             # Agent creation and termination, rollout stacking.
             for agent_id in obs:
                 agent_obs = obs[agent_id]
@@ -467,7 +441,6 @@ def train(args: argparse.Namespace) -> float:
                         dead_critics.add(actor_critic)
                         # TODO: should we remove from ``rollout_map``?
                         agent = agents.pop(agent_id)
-                        policy_scores.pop(agent_id)
                         dead_agents.add(agent)
 
                     # Shape correction and casting.
@@ -490,8 +463,6 @@ def train(args: argparse.Namespace) -> float:
                         masks,
                         bad_masks,
                     )
-            if config.print_repr:
-                print("Creation: %ss" % str(time.time() - t_creation))
 
             # Print out environment state.
             if all(dones.values()):
@@ -499,6 +470,9 @@ def train(args: argparse.Namespace) -> float:
                     print("All agents have died.")
                 env_done = True
 
+        value_losses: Dict[int, float] = {}
+        action_losses: Dict[int, float] = {}
+        dist_entropies: Dict[int, float] = {}
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
 
@@ -520,13 +494,19 @@ def train(args: argparse.Namespace) -> float:
                     config.use_proper_time_limits,
                 )
 
+                # This is a tuple of floats.
                 value_loss, action_loss, dist_entropy = agent.update(rollouts)
-
                 value_losses[agent_id] = value_loss
                 action_losses[agent_id] = action_loss
                 dist_entropies[agent_id] = dist_entropy
-
                 rollouts.after_update()
+
+        metrics = update_losses(
+            env=env,
+            config=config,
+            losses=(value_losses, action_losses, dist_entropies),
+            metrics=metrics,
+        )
 
         # save for every interval-th episode or for the last epoch
         if (
@@ -539,10 +519,7 @@ def train(args: argparse.Namespace) -> float:
                 "rollout_map": rollout_map,
                 "episode_rewards": episode_rewards,
                 "minted_agents": minted_agents,
-                "value_losses": value_losses,
-                "action_losses": action_losses,
-                "dist_entropies": dist_entropies,
-                "policy_scores": policy_scores,
+                "metrics": metrics,
                 "dead_critics": dead_critics,
                 "dead_agents": dead_agents,
                 "state_dicts": state_dicts,
@@ -551,24 +528,6 @@ def train(args: argparse.Namespace) -> float:
             trainer_state_path = os.path.join(save_dir, "%s_trainer.pkl" % codename)
             with open(trainer_state_path, "wb") as trainer_file:
                 pickle.dump(trainer_state, trainer_file)
-
-            # TODO: ``ob_rms``.
-            # Commented out because all of the information in actor_critics is
-            # saved in "agents", so there is no need to double save.
-            """
-            for agent_id, agent in agents.items():
-                if agent_id not in minted_agents:
-                    actor_critic = actor_critics[agent_id]
-                    save_path = os.path.join(save_dir, str(agent_id))
-                    if not os.path.isdir(save_path):
-                        os.makedirs(save_path)
-
-                    # TODO: implement ``ob_rms`` from ``VecNormalize`` in baselines in our env.
-                    torch.save(
-                        [actor_critic, getattr(env, "ob_rms", None)],
-                        os.path.join(save_path, config.env_name + ".pt"),
-                    )
-            """
 
             # Save out environment state.
             state_path = os.path.join(save_dir, "%s_env.pkl" % codename)
@@ -579,51 +538,6 @@ def train(args: argparse.Namespace) -> float:
             with open(settings_path, "w") as settings_file:
                 json.dump(settings, settings_file)
 
-        for agent_id, agent in agents.items():
-            if agent_id not in minted_agents:
-                agent_episode_rewards = episode_rewards[agent_id]
-                if j % config.log_interval == 0 and len(agent_episode_rewards) > 1:
-                    total_num_steps = (j + 1) * config.num_processes * config.num_steps
-                    end = time.time()
-                    print(
-                        "Updates {}, num timesteps {}, FPS {} \n Last {} ".format(
-                            j,
-                            total_num_steps,
-                            int(total_num_steps / (end - start)),
-                            len(agent_episode_rewards),
-                        )
-                        + "training episodes: mean/median reward "
-                        + "{:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".format(
-                            np.mean(agent_episode_rewards),
-                            np.median(agent_episode_rewards),
-                            np.min(agent_episode_rewards),
-                            np.max(agent_episode_rewards),
-                        )
-                        + "Dist entropy: {} Value loss: {} Action loss: {}.".format(
-                            dist_entropies[agent_id],
-                            value_losses[agent_id],
-                            action_losses[agent_id],
-                        )
-                    )
-
-                """
-                if (
-                    config.eval_interval is not None
-                    and len(agent_episode_rewards) > 1
-                    and j % config.eval_interval == 0
-                ):
-                    ob_rms = utils.get_vec_normalize(env).ob_rms
-                    evaluate(
-                        actor_critic,
-                        ob_rms,
-                        config.env_name,
-                        config.seed,
-                        config.num_processes,
-                        eval_log_dir,
-                        device,
-                    )
-                """
-
         if env_done:
             break
 
@@ -633,7 +547,7 @@ def train(args: argparse.Namespace) -> float:
         config.num_env_steps,
     )
 
-    return policy_score_loss
+    return metrics.policy_score
 
 
 def get_agent(
