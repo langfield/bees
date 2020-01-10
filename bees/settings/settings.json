@@ -5,7 +5,7 @@
     "height": 10,
     "sight_len": 6,
     "num_obj_types": 2,
-    "num_agents": 1,
+    "num_agents": 5,
     "food_density": 0.2,
     "food_size_mean": 0.29,
     "food_size_stddev": 0.247,

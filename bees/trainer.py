@@ -25,6 +25,7 @@ from bees.a2c_ppo_acktr.storage import RolloutStorage
 from bees.env import Env
 from bees.utils import get_token, validate_args, DEBUG
 from bees.config import Config
+from bees.analysis import live_analysis
 
 # pylint: disable=bad-continuation
 
@@ -228,6 +229,7 @@ def train(args: argparse.Namespace) -> float:
 
     # Hyperparameter optimization loss.
     policy_score_loss = 1
+    loss = float("inf")
     first_policy_score_loss = float("inf")
     saved_first_policy_score_loss = False
 
@@ -321,96 +323,40 @@ def train(args: argparse.Namespace) -> float:
             if config.print_repr:
                 print("Env step: %ss" % str(time.time() - t_step))
 
-            # NOTE: we assume ``config.num_processes`` is ``1``.
-            # Update policy score estimates.
-            if env.iteration % config.policy_score_frequency == 0:
-                for agent_id in env.agents:
-                    optimal_action_dist = infos[agent_id]["optimal_action_dist"]
-                    agent_action_dist = agent_action_dists[agent_id]
-                    agent_action_dist = agent_action_dist.cpu()
+            # TODO: Call ``live_analysis()``.
+            updated_policy_scores, policy_score_loss, loss = live_analysis(
+                env,
+                config,
+                infos,
+                agents,
+                policy_scores,
+                value_losses,
+                action_losses,
+                dist_entropies,
+                agent_action_dists,
+                first_policy_score_loss,
+                policy_score_loss,
+                loss,
+            )
 
-                    timestep_score = float(
-                        F.kl_div(torch.log(agent_action_dist), optimal_action_dist)
-                    )
+            # For sanity.
+            for agent_id in policy_scores:
+                assert agent_id in updated_policy_scores
 
-                    # Update policy score with exponential moving average.
-                    if agent_id in policy_scores:
-                        policy_scores[agent_id] = (
-                            config.ema_alpha * policy_scores[agent_id]
-                            + (1.0 - config.ema_alpha) * timestep_score
-                        )
-                    else:
-                        policy_scores[agent_id] = timestep_score
+            policy_scores = updated_policy_scores
 
-                # Compute policy score loss.
-                ages = {agent_id: agent.age for agent_id, agent in env.agents.items()}
-                age_sum = sum(ages.values())
-                normalized_ages = {
-                    agent_id: age / age_sum for agent_id, age in ages.items()
-                }
-                # For this sum, we iterate over ``env.agents``, not ``agents``. This
-                # is because env.agents has been updated in the call to env.step(), so
-                # that if any agents die during that step, they are removed from
-                # ``env.agents``. But they aren't removed from ``agents`` until after
-                # we compute the policy score loss, so we use env.agents instead.
-                policy_score_loss = sum(
-                    [
-                        policy_scores[agent_id] * normalized_ages[agent_id]
-                        for agent_id in env.agents
-                    ]
-                )
-                if not saved_first_policy_score_loss:
-                    first_policy_score_loss = policy_score_loss
-                    saved_first_policy_score_loss = True
+            if not saved_first_policy_score_loss:
+                first_policy_score_loss = policy_score_loss
+                saved_first_policy_score_loss = True
 
-                # This block will run if train() was called with optuna for parameter
-                # optimization. If ``policy_score_loss`` explodes, end the training
-                # run early.
-                if hasattr(args, "trial"):
-                    args.trial.report(policy_score_loss, env.iteration)
-                    if args.trial.should_prune() or policy_score_loss == float("inf"):
-                        print(
-                            "\nEnding training because ``policy_score_loss`` diverged."
-                        )
-                        return policy_score_loss
-
-            # Print losses for each agent.
-            if config.print_repr:
-                for agent_id in action_losses:
-                    action_loss = action_losses[agent_id]
-                    value_loss = value_losses[agent_id]
-                    dist_entropy = dist_entropies[agent_id]
-                    loss = (
-                        value_loss * config.value_loss_coef
-                        + action_loss
-                        - dist_entropy * config.entropy_coef
-                    )
-                    print("Agent '%d' loss: %.6f" % (agent_id, loss))
-
-            end = "\r" if not config.print_repr else "\n"
-            if env.iteration > config.num_steps:
-                action_loss = action_losses[0]
-                value_loss = value_losses[0]
-                dist_entropy = dist_entropies[0]
-                loss = (
-                    value_loss * config.value_loss_coef
-                    + action_loss
-                    - dist_entropy * config.entropy_coef
-                )
-                print(
-                    "Iteration: %d| Num agents: %d| Policy score loss: %.6f/%.6f|Losses (action, value, entropy, total): %.6f, %.6f, %.6f, %.6f|||||"
-                    % (
-                        env.iteration,
-                        len(agents),
-                        policy_score_loss,
-                        first_policy_score_loss,
-                        action_loss,
-                        value_loss,
-                        dist_entropy,
-                        loss,
-                    ),
-                    end=end,
-                )
+            # This block will run if train() was called with optuna for parameter
+            # optimization. If policy score loss explodes, end the training run
+            # early.
+            if hasattr(args, "trial"):
+                args.trial.report(policy_score_loss, env.iteration)
+                if args.trial.should_prune() or policy_score_loss == float("inf"):
+                    print("\nEnding training because ``policy_score_loss`` diverged.")
+                    return policy_score_loss
 
             t_creation = time.time()
             # Agent creation and termination, rollout stacking.
@@ -543,7 +489,6 @@ def train(args: argparse.Namespace) -> float:
                     )
             if config.print_repr:
                 print("Creation: %ss" % str(time.time() - t_creation))
-            # time.sleep(1)
 
             # Print out environment state.
             if all(dones.values()):
@@ -551,15 +496,8 @@ def train(args: argparse.Namespace) -> float:
                     print("All agents have died.")
                 env_done = True
 
-        # DEBUG
-        t_0_list = []
-        t_1_list = []
-
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
-
-                # DEBUG
-                t_0 = time.time()
 
                 actor_critic = actor_critics[agent_id]
                 rollouts = rollout_map[agent_id]
@@ -579,24 +517,13 @@ def train(args: argparse.Namespace) -> float:
                     config.use_proper_time_limits,
                 )
 
-                # DEBUG
-                t_0_list.append(time.time() - t_0)
-                t_1 = time.time()
-
                 value_loss, action_loss, dist_entropy = agent.update(rollouts)
-
-                # DEBUG
-                t_1_list.append(time.time() - t_1)
 
                 value_losses[agent_id] = value_loss
                 action_losses[agent_id] = action_loss
                 dist_entropies[agent_id] = dist_entropy
 
                 rollouts.after_update()
-
-        if config.print_repr:
-            print("Get value and compute returns:", np.sum(t_0_list))
-            print("Updates:", np.sum(t_1_list))
 
         # save for every interval-th episode or for the last epoch
         if (
