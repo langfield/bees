@@ -3,6 +3,7 @@ import os
 import inspect
 import argparse
 from typing import Tuple, Any
+import functools
 
 import numpy as np
 
@@ -172,3 +173,40 @@ def DEBUG(var: Any) -> None:
         print("Type of '%s':" % name, type(var))
         if hasattr(var, "shape"):
             print("Shape of '%s':" % name, var.shape)
+
+
+def flat_action_to_tuple(flat_action: int, subaction_sizes: Tuple[int, ...]) -> Tuple[int, ...]:
+    """
+    Converts a flat action to a tuple action. Example: If action space is made up of
+    three categorical action spaces of sizes (5, 2, 2), then a flat action is an
+    int between 0 and 20 (5 * 2 * 2). 0 will be converted to (0, 0, 0), 1 will be
+    converted to (0, 0, 1), 4 will be converted to (1, 0, 0), 19 will be converted to
+    (4, 1, 1).
+
+    Parameters
+    ----------
+    flat_action : ``int``.
+        Integer index of action sampled from a categorical distribution.
+    subaction_sizes : ``Tuple[int, ...]``.
+        Sizes of subaction spaces whose product makes up the action space.
+
+    Returns
+    -------
+    action_tuple : ``Tuple[int, ...]``.
+        Representation of ``flat_action`` in the equivalent tuple action space.
+    """
+
+    current_flat_action = flat_action
+    action_list = []
+
+    for i, subaction_size in enumerate(subaction_sizes):
+        if i == len(subaction_sizes) - 1:
+            subspace_size = 1
+        else:
+            subspace_size = functools.reduce(lambda a, b: a * b, subaction_sizes[i + 1:])
+
+        action_list.append(current_flat_action // subspace_size)
+        current_flat_action = current_flat_action % subspace_size
+
+    action_tuple = tuple(action_list)
+    return action_tuple
