@@ -21,7 +21,9 @@ def test_flat_action_to_tuple_is_bijection(subaction_size_list: List[int]) -> No
 
 
 @given(st.lists(st.integers(min_value=1, max_value=10), min_size=1, max_size=5))
-def test_flat_action_to_tuple_generates_valid_tuples(subaction_size_list: List[int]) -> None:
+def test_flat_action_to_tuple_generates_valid_tuples(
+    subaction_size_list: List[int],
+) -> None:
     """ Make sure this function generates tuples inside of the given action space. """
 
     subaction_sizes = tuple(subaction_size_list)

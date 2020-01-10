@@ -9,8 +9,8 @@ from bees.utils import DEBUG
 
 
 # TODO: Everything.
-@given(strategies.grid_positions.flatmap(strategies.envs())
-def test_env_update_pos(env: Env) -> None:
+@given()
+def env_update_pos(env: Env) -> None:
     """ Tests that each observation has the corret number of each object type. """
 
     env.reset()

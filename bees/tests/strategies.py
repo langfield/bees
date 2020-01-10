@@ -1,7 +1,7 @@
 import json
 import pytest
 from pprint import pprint
-from typing import Dict, List, Any
+from typing import Dict, List, Tuple, Any
 from datetime import timedelta
 
 import hypothesis.strategies as st
@@ -95,7 +95,7 @@ def envs(draw) -> Dict[str, Any]:
 def grid_positions(draw, env: Env) -> Tuple[int, int]:
     """ Strategy for grid positions in ``env``. """
     return draw(
-        st.tuple(
+        st.tuples(
             st.integers(min_value=0, max_value=env.width - 1),
             st.integers(min_value=0, max_value=env.height - 1),
         )
