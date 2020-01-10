@@ -1,11 +1,11 @@
 """ Analyzes the reward network of an agent. """
 import os
-import glob
-import argparse
 import json
+import glob
 import random
 import pickle
-from itertools import product
+import argparse
+import functools
 from pprint import pprint
 
 import numpy as np
@@ -91,9 +91,8 @@ def main(args):
     # health vary.
     distributions = {}
 
-    for action in product(
-        *[list(range(subaction_size)) for subaction_size in subaction_sizes]
-    ):
+    num_actions = functools.reduce(lambda a, b: a * b, subaction_sizes)
+    for action in range(num_actions):
         rewards = []
 
         # HARDCODE
@@ -131,7 +130,7 @@ def main(args):
             agent.observation = observation
 
             # Compute reward.
-            rewards.append(agent.compute_reward(prev_health, action))
+            rewards.append(agent.compute_reward(action))
 
         mean = np.mean(rewards)
         std = np.std(rewards)

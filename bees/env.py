@@ -7,6 +7,7 @@ from __future__ import print_function
 import os
 import math
 import random
+import functools
 import itertools
 from pprint import pformat
 from typing import Tuple, Dict, Any, List, Set
@@ -24,7 +25,7 @@ import gym
 from bees.agent import Agent
 from bees.genetics import get_child_reward_network
 from bees.config import Config
-from bees.utils import DEBUG
+from bees.utils import DEBUG, flat_action_to_tuple
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
@@ -169,14 +170,9 @@ class Env:
 
         # Construct observation and action spaces.
         # HARDCODE
-        self.action_space = gym.spaces.Tuple(
-            (gym.spaces.Discrete(5), gym.spaces.Discrete(2), gym.spaces.Discrete(2))
-        )
-        self.action_space = gym.spaces.Discrete(5 * 2 * 2)
-
-        num_actions = 5 + 2 + 2
-        num_actions = self.action_space.n
-        self.num_actions = num_actions
+        self.subaction_sizes = [5, 2, 2]
+        self.num_actions = functools.reduce(lambda a, b: a * b, self.subaction_sizes)
+        self.action_space = gym.spaces.Discrete(self.num_actions)
 
         # Each observation is a k * k matrix with values from a discrete
         # space of size self.num_obj_types, where k = 2 * self.sight_len + 1
@@ -748,20 +744,11 @@ class Env:
             agent.
         """
 
-        if not isinstance(self.action_space, gym.spaces.Tuple):
-            raise NotImplementedError
-
         optimal_action_dists: Dict[int, torch.Tensor] = {}
 
-        subaction_sizes = [subaction_space.n for subaction_space in self.action_space]
         for agent_id, agent in self.agents.items():
-            action_rewards = torch.zeros(subaction_sizes)
-            # This loop iterates over the action space, and each action is represented
-            # as Tuple[int, int, int].
-            for action in itertools.product(
-                *[list(range(subaction_size)) for subaction_size in subaction_sizes]
-            ):
-
+            action_rewards = torch.zeros((self.num_actions,))
+            for action in range(self.num_actions):
                 action_rewards[action] = agent.compute_reward(action)
 
             # Flatten action_rewards, perform softmax, and return to original shape.
@@ -772,10 +759,12 @@ class Env:
             # ``self.greedy_temperature`` is used to vary how greedy the target
             # action distribution is. As ``self.greedy_temperature`` goes to 0, the
             # optimal distribution becomes more greedy.
-            optimal_action_dists[agent_id] = F.softmax(action_rewards / self.greedy_temperature, dim=0)
-            action_rewards = torch.reshape(action_rewards, subaction_sizes)
+            optimal_action_dists[agent_id] = F.softmax(
+                action_rewards / self.greedy_temperature, dim=0
+            )
+            action_rewards = torch.reshape(action_rewards, (self.num_actions,))
             optimal_action_dists[agent_id] = torch.reshape(
-                optimal_action_dists[agent_id], subaction_sizes
+                optimal_action_dists[agent_id], (self.num_actions,)
             )
 
         return optimal_action_dists
@@ -830,24 +819,6 @@ class Env:
 
         return obs
 
-    def get_action_dict(self) -> Dict[int, np.ndarray]:
-        """
-        Constructs ``action_dict`` by querying individual agents for their actions
-        based on their observations. Used only for dummy training runs.
-
-        Returns
-        -------
-        action_dict: ``Dict[int, np.ndarray]``.
-            A dictionary from ``agent_id`` to the action, represented by a
-            5D Multi-Binary numpy array.
-        """
-        action_dict = {}
-
-        for agent_id, agent in self.agents.items():
-            action_dict[agent_id] = agent.get_action()
-
-        return action_dict
-
     def step(
         self, action_dict: Dict[int, Tuple[int, int, int]]
     ) -> Tuple[
@@ -878,7 +849,10 @@ class Env:
         """
 
         # Convert flat action_dict to tuple.
-
+        tuple_action_dict = {
+            agent_id: flat_action_to_tuple(action, self.subaction_sizes)
+            for agent_id, action in action_dict.items()
+        }
 
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
@@ -891,9 +865,9 @@ class Env:
             agent.prev_health = agent.health
 
         # Execute actions (move, consume, and mate).
-        action_dict = self._move(action_dict)
-        self._consume(action_dict)
-        child_ids = self._mate(action_dict)
+        tuple_action_dict = self._move(tuple_action_dict)
+        self._consume(tuple_action_dict)
+        child_ids = self._mate(tuple_action_dict)
 
         # Initialize ``info`` dicts. This must happen after the actions are
         # executed so that agents which are born from the call to _mate() are included
@@ -907,6 +881,8 @@ class Env:
         # Compute reward.
         for agent_id, agent in self.agents.items():
             if agent_id not in child_ids:
+                # Note that ``compute_reward`` takes the action in integer form, so we
+                # use ``action_dict`` here instead of ``tuple_action_dict``.
                 rew[agent_id] = agent.compute_reward(action_dict[agent_id])
             # First reward for children is zero.
             elif agent_id in child_ids:

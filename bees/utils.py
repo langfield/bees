@@ -156,14 +156,20 @@ def DEBUG(var: Any) -> None:
     if not found_name:
         raise ValueError("DEBUG() was not able to find the name of the variable.")
 
+    def printattrs(var: Any, name: str) -> None:
+        """ Print those attrs. """
+        if hasattr(var, "shape"):
+            print("||Shape for '%s':" % name, var.shape)
+        if hasattr(var, "device"):
+            print("||Device for '%s':" % name, var.device)
+
     if delimit:
         print(
             "vvvvvvvvvv||VARIABLE NAME: '%s' | TYPE: '%s'||vvvvvvvvvv"
             % (name, type(var))
         )
         print(var)
-        if hasattr(var, "shape"):
-            print("||Shape:", var.shape)
+        printattrs(var, name)
         print(
             "^^^^^^^^^^||VARIABLE NAME: '%s' | TYPE: '%s'||^^^^^^^^^^"
             % (name, type(var))
@@ -171,11 +177,12 @@ def DEBUG(var: Any) -> None:
     else:
         print("'%s':" % name, var)
         print("Type of '%s':" % name, type(var))
-        if hasattr(var, "shape"):
-            print("Shape of '%s':" % name, var.shape)
+        printattrs(var, name)
 
 
-def flat_action_to_tuple(flat_action: int, subaction_sizes: Tuple[int, ...]) -> Tuple[int, ...]:
+def flat_action_to_tuple(
+    flat_action: int, subaction_sizes: Tuple[int, ...]
+) -> Tuple[int, ...]:
     """
     Converts a flat action to a tuple action. Example: If action space is made up of
     three categorical action spaces of sizes (5, 2, 2), then a flat action is an
@@ -203,7 +210,9 @@ def flat_action_to_tuple(flat_action: int, subaction_sizes: Tuple[int, ...]) -> 
         if i == len(subaction_sizes) - 1:
             subspace_size = 1
         else:
-            subspace_size = functools.reduce(lambda a, b: a * b, subaction_sizes[i + 1:])
+            subspace_size = functools.reduce(
+                lambda a, b: a * b, subaction_sizes[i + 1 :]
+            )
 
         action_list.append(current_flat_action // subspace_size)
         current_flat_action = current_flat_action % subspace_size

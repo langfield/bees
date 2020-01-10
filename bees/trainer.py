@@ -302,13 +302,7 @@ def train(args: argparse.Namespace) -> float:
                         rollouts.masks[step],
                     )
                     value_dict[agent_id] = ac_tuple[0]
-
-                    # We index at ``0`` because of process dimension.
-                    # action_dict[agent_id] = tuple(ac_tuple[1][0].tolist())
-
-                    # Flat action space version of ``action_dict``.
                     action_dict[agent_id] = int(ac_tuple[1][0])
-
                     action_tensor_dict[agent_id] = ac_tuple[1]
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
@@ -332,10 +326,11 @@ def train(args: argparse.Namespace) -> float:
             if env.iteration % config.policy_score_frequency == 0:
                 for agent_id in env.agents:
                     optimal_action_dist = infos[agent_id]["optimal_action_dist"]
+                    agent_action_dist = agent_action_dists[agent_id]
+                    agent_action_dist = agent_action_dist.cpu()
+
                     timestep_score = float(
-                        F.kl_div(
-                            torch.log(agent_action_dists[agent_id]), optimal_action_dist
-                        )
+                        F.kl_div(torch.log(agent_action_dist), optimal_action_dist)
                     )
 
                     # Update policy score with exponential moving average.
@@ -385,16 +380,23 @@ def train(args: argparse.Namespace) -> float:
                     action_loss = action_losses[agent_id]
                     value_loss = value_losses[agent_id]
                     dist_entropy = dist_entropies[agent_id]
-                    loss = value_loss * config.value_loss_coef + action_loss - dist_entropy * config.entropy_coef
+                    loss = (
+                        value_loss * config.value_loss_coef
+                        + action_loss
+                        - dist_entropy * config.entropy_coef
+                    )
                     print("Agent '%d' loss: %.6f" % (agent_id, loss))
-
 
             end = "\r" if not config.print_repr else "\n"
             if env.iteration > config.num_steps:
                 action_loss = action_losses[0]
                 value_loss = value_losses[0]
                 dist_entropy = dist_entropies[0]
-                loss = value_loss * config.value_loss_coef + action_loss - dist_entropy * config.entropy_coef
+                loss = (
+                    value_loss * config.value_loss_coef
+                    + action_loss
+                    - dist_entropy * config.entropy_coef
+                )
                 print(
                     "Iteration: %d| Num agents: %d| Policy score loss: %.6f/%.6f|Loss: %.6f|||||"
                     % (

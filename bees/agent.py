@@ -5,6 +5,7 @@ from typing import Tuple, List, Dict, Any
 import numpy as np
 
 from bees.config import Config
+from bees.utils import one_hot, DEBUG
 
 # pylint: disable=bad-continuation, too-many-arguments, too-many-instance-attributes
 
@@ -128,13 +129,6 @@ class Agent:
             )
             input_dim = output_dim
 
-        # DEBUG
-        temp = np.zeros((9, 1))
-        temp[0][0] = 1.0
-        temp[5][0] = 1.0
-        temp[7][0] = 1.0
-        self.reward_weights = [temp]
-
     def initialize_reward_biases(self) -> None:
         """ Initializes the biases of the reward function. """
 
@@ -145,17 +139,14 @@ class Agent:
                 output_dim = 1
             self.reward_biases.append(np.zeros((output_dim,)))
 
-        # DEBUG
-        self.reward_biases = [np.array([0.0])]
-
-    def compute_reward(self, action: Tuple[int, int, int]) -> float:
+    def compute_reward(self, action: int) -> float:
         """
         Computes agent reward given health value before consumption.
 
         Parameters
         ----------
-        action : ``Tuple[int, int, int]``.
-            The current chosen action.
+        action : ``int``.
+            The current chosen action, represented in integer form (not a tuple).
 
         Updates
         -------
@@ -175,7 +166,7 @@ class Agent:
             flat_obs = np.array(self.observation).flatten()
             input_arrays.append(flat_obs)
         if "actions" in self.reward_inputs:
-            flat_action = self.get_flat_action(action)
+            flat_action = one_hot(action, self.num_actions)
             input_arrays.append(flat_action)
         if "health" in self.reward_inputs:
             flat_healths = np.array([self.prev_health, self.health])

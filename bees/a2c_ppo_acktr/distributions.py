@@ -195,6 +195,9 @@ class FixedCategoricalProduct(Distribution):
             FixedCategorical(logits=logits) for logits in logits_list
         ]
 
+        # If the logits are changed, this object will break!
+        self.probs = self.compute_probs()
+
     def mode(self) -> torch.Tensor:
         """
         Returns a tensor of the means of each distribution.
@@ -255,7 +258,7 @@ class FixedCategoricalProduct(Distribution):
         log_probabilities = torch.sum(subaction_log_probs, dim=-1)
         return log_probabilities
 
-    def probs(self) -> torch.tensor:
+    def compute_probs(self) -> torch.Tensor:
         """
         Computes the probability of each action, that is, each tuple of subactions.
 
@@ -278,7 +281,10 @@ class FixedCategoricalProduct(Distribution):
         num_processes = self.fixed_categoricals[0].probs.shape[0]
         subaction_sizes = [dist.probs.shape[-1] for dist in self.fixed_categoricals]
         probs_shape = [num_processes] + subaction_sizes
-        probs = torch.zeros(probs_shape)
+
+        # HARDCODE
+        device = torch.device("cuda:0")
+        probs = torch.zeros(probs_shape).to(device)
 
         # Iterate over all actions by taking the product of subaction spaces.
         for action in product(

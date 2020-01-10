@@ -11,6 +11,7 @@ from plotplotplot.draw import graph
 
 EMA_ALPHA = 0.9
 
+
 def parse_agent_data(steps: List[Dict[str, Any]]) -> Dict[int, Dict[str, List[Any]]]:
     """ Parse log data to be indexed by agent instead of by step. """
 
@@ -55,6 +56,7 @@ def get_EMA(seq: List[float]) -> List[float]:
     print(ema)
     print(len(ema))
     return ema
+
 
 def get_rewards(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFrame:
     """ Parses ``agent_data`` into a DataFrame with rewards for each agent. """
