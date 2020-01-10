@@ -324,30 +324,33 @@ def train(args: argparse.Namespace) -> float:
                 print("Env step: %ss" % str(time.time() - t_step))
 
             # TODO: Call ``live_analysis()``.
-            updated_policy_scores, policy_score_loss, loss = live_analysis(
-                env,
-                config,
-                infos,
-                agents,
-                policy_scores,
-                value_losses,
-                action_losses,
-                dist_entropies,
-                agent_action_dists,
-                first_policy_score_loss,
-                policy_score_loss,
-                loss,
+            policy_score_tuple = live_analysis(
+                env=env,
+                config=config,
+                infos=infos,
+                agents=agents,
+                policy_scores=policy_scores,
+                value_losses=value_losses,
+                action_losses=action_losses,
+                dist_entropies=dist_entropies,
+                agent_action_dists=agent_action_dists,
+                first_policy_score_loss=first_policy_score_loss,
+                policy_score_loss=policy_score_loss,
+                loss=loss,
             )
+            updated_policy_scores = policy_score_tuple[0]
+            policy_score_loss = policy_score_tuple[1]
+            loss = policy_score_tuple[2]
+
+            if env.iteration % config.policy_score_frequency:
+                if first_policy_score_loss == float("inf"):
+                    first_policy_score_loss = policy_score_loss
 
             # For sanity.
             for agent_id in policy_scores:
                 assert agent_id in updated_policy_scores
 
             policy_scores = updated_policy_scores
-
-            if not saved_first_policy_score_loss:
-                first_policy_score_loss = policy_score_loss
-                saved_first_policy_score_loss = True
 
             # This block will run if train() was called with optuna for parameter
             # optimization. If policy score loss explodes, end the training run
