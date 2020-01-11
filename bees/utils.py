@@ -148,7 +148,7 @@ def DEBUG(var: Any) -> None:
 
     found_name = False
     frame = inspect.currentframe()
-    for key, val in frame.f_back.f_locals.items():
+    for key, val in frame.f_back.f_locals.items(): # type: ignore
         if var is val:
             name = key
             found_name = True
