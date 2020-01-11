@@ -3,13 +3,11 @@ import os
 import json
 import copy
 import random
-import shutil
 import logging
-import datetime
 import argparse
 import collections
 from collections import deque, OrderedDict
-from typing import Dict, Tuple, Set, List
+from typing import Dict, Tuple, Set, List, Any, TextIO
 import pickle
 
 import gym
@@ -21,9 +19,9 @@ from bees.a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
 from bees.a2c_ppo_acktr.storage import RolloutStorage
 
 from bees.env import Env
-from bees.utils import get_token, validate_args, DEBUG
 from bees.config import Config
 from bees.analysis import update_policy_score, update_losses, Metrics
+from bees.initialization import Setup
 
 # pylint: disable=bad-continuation, too-many-branches
 # pylint: disable=too-many-statements, too-many-locals
@@ -66,76 +64,17 @@ def train(args: argparse.Namespace) -> float:
         Contains arguments as described above.
     """
 
-    # Validate arguments.
-    validate_args(args)
-
-    # TODO: Convert everything to abspaths.
-    # Resume from previous run.
-    if args.load_from:
-
-        # Construct new codename.
-        # NOTE: we were going to have the basename be just the token, but this seems
-        # ill-advised since you'd have to go into each folder to determine which is
-        # newest.
-        codename = os.path.basename(os.path.abspath(args.load_from))
-        token = codename.split("_")[0]
-
-        # Construct paths.
-        env_filename = codename + "_env.pkl"
-        trainer_filename = codename + "_trainer.pkl"
-        settings_filename = codename + "_settings.json"
-        env_state_path = os.path.join(args.load_from, env_filename)
-        trainer_state_path = os.path.join(args.load_from, trainer_filename)
-        settings_path = os.path.join(args.load_from, settings_filename)
-
-        # Load trainer state.
-        with open(trainer_state_path, "rb") as trainer_file:
-            trainer_state = pickle.load(trainer_file)
-
-    # New training run.
-    elif args.settings:
-        token = get_token(args.save_root)
-        date = str(datetime.datetime.now())
-        date = date.replace(" ", "_")
-        codename = "%s_%s" % (token, date)
-        settings_path = args.settings
-
-    else:
-        raise ValueError("You must pass a value for ``--settings``.")
-
-    # Load settings dict into Config object.
-    with open(settings_path, "r") as settings_file:
-        settings = json.load(settings_file)
-    config = Config(settings)
-
-    # Construct a new ``save_dir`` in either case.
-    save_dir = os.path.join(args.save_root, codename)
-    if not os.path.isdir(save_dir):
-        os.makedirs(save_dir)
-
-    # Construct log paths.
-    env_log_filename = codename + "_env_log.txt"
-    visual_log_filename = codename + "_visual_log.txt"
-    env_log_path = os.path.join(save_dir, env_log_filename)
-    visual_log_path = os.path.join(save_dir, visual_log_filename)
-
-    # If ``save_dir`` is not the same as ``load_from`` we must copy the existing logs
-    # into the new save directory, then contine to append to them.
-    if args.load_from and os.path.abspath(save_dir) not in os.path.abspath(
-        env_log_path
-    ):
-        new_env_log_filename = codename + "_env_log.txt"
-        new_visual_log_filename = codename + "_visual_log.txt"
-        new_env_log_path = os.path.join(save_dir, new_env_log_filename)
-        new_visual_log_path = os.path.join(save_dir, new_visual_log_filename)
-        shutil.copyfile(env_log_path, new_env_log_path)
-        shutil.copyfile(visual_log_path, new_visual_log_path)
-        env_log_path = new_env_log_path
-        visual_log_path = new_visual_log_path
-
-    # Open logs.
-    env_log = open(env_log_path, "a+")
-    visual_log = open(visual_log_path, "a+")
+    # TODO: Replace instances of these locals with ``setup.<var_name>``.
+    setup = Setup(args)
+    config: Config = setup.config
+    trainer_state: Dict[str, Any] = setup.trainer_state
+    env_log: TextIO = setup.env_log
+    visual_log: TextIO = setup.visual_log
+    save_dir: str = setup.save_dir
+    settings_path: str = setup.settings_path
+    trainer_state_path: str = setup.trainer_state_path
+    env_state_path: str = setup.env_state_path
+    codename: str = setup.codename
 
     # Create environment.
     # The next line is here to account for the fact that the A2C implementation
@@ -251,7 +190,7 @@ def train(args: argparse.Namespace) -> float:
 
         if config.use_linear_lr_decay:
 
-            # decrease learning rate linearly.
+            # Decrease learning rate linearly.
             for agent_id, agent in agents.items():
 
                 # Compute age and minimum agent lifetime.
@@ -536,7 +475,7 @@ def train(args: argparse.Namespace) -> float:
             # Save out settings, removing log files (not paths) from object.
             settings_path = os.path.join(save_dir, "%s_settings.json" % codename)
             with open(settings_path, "w") as settings_file:
-                json.dump(settings, settings_file)
+                json.dump(config.settings, settings_file)
 
         if env_done:
             break
