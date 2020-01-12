@@ -10,6 +10,7 @@ from bees.config import Config
 
 # pylint: disable=too-few-public-methods
 
+
 class Metrics:
     """ Struct-like object to hold metric values for analysis of training. """
 
