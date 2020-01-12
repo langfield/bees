@@ -64,7 +64,6 @@ def envs(draw) -> Dict[str, Any]:
     log_interval = draw(st.integers(min_value=1, max_value=1e9))
     save_interval = draw(st.integers(min_value=1, max_value=1e9))
     eval_interval = draw(st.integers(min_value=1, max_value=1e9))
-    num_env_steps = draw(st.integers(min_value=1, max_value=1e9))
     cuda = draw(st.booleans())
     use_proper_time_limits = draw(st.booleans())
     recurrent_policy = draw(st.booleans())

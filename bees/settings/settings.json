@@ -75,7 +75,6 @@
     "log_interval": 10,
     "save_interval": 100,
     "eval_interval": 100,
-    "num_env_steps": 10e6,
     "env_name": "bees",
     "log_dir": "/tmp/gym/",
     "cuda": true,

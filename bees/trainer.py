@@ -17,6 +17,7 @@ import numpy as np
 from bees.a2c_ppo_acktr import algo, utils
 from bees.a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
 from bees.a2c_ppo_acktr.storage import RolloutStorage
+from bees.a2c.ppo_acktr.algo.algo import Algo
 
 from bees.env import Env
 from bees.config import Config
@@ -77,10 +78,6 @@ def train(args: argparse.Namespace) -> float:
     codename: str = setup.codename
 
     # Create environment.
-    # The next line is here to account for the fact that the A2C implementation
-    # uses its own argument for the number of time steps, but the main bees pipeline
-    # also has one. This is temporary.
-    config.num_env_steps = config.time_steps
     if config.print_repr:
         print("Arguments:", str(config))
     env = Env(config)
@@ -141,7 +138,7 @@ def train(args: argparse.Namespace) -> float:
 
         # Create multiagent maps.
         actor_critics: Dict[int, Policy] = {}
-        agents: Dict[int, "AgentAlgo"] = {}
+        agents: Dict[int, Algo] = {}
         rollout_map: Dict[int, RolloutStorage] = {}
         episode_rewards: Dict[int, collections.deque] = {}
         minted_agents: Set[int] = set()
@@ -150,7 +147,7 @@ def train(args: argparse.Namespace) -> float:
 
         # Save dead objects to make creation faster.
         dead_critics: Set[Policy] = set()
-        dead_agents: Set["AgentAlgo"] = set()
+        dead_agents: Set[Algo] = set()
         state_dicts: List[OrderedDict] = []
         optim_state_dicts: List[OrderedDict] = []
 
@@ -182,7 +179,7 @@ def train(args: argparse.Namespace) -> float:
         rollouts.to(device)
 
     num_updates = (
-        int(config.num_env_steps - env.iteration)
+        int(config.time_steps - env.iteration)
         // config.num_steps
         // config.num_processes
     )
@@ -212,10 +209,11 @@ def train(args: argparse.Namespace) -> float:
 
             minted_agents = set()
             value_dict: Dict[int, float] = {}
-            action_dict: Dict[int, Tuple[int, int, int]] = {}
+            # action_dict: Dict[int, Tuple[int, int, int]] = {}
+            action_dict: Dict[int, int] = {}
             action_tensor_dict: Dict[int, torch.Tensor] = {}
-            action_log_prob_dict: Dict[int, float] = {}
-            recurrent_hidden_states_dict: Dict[int, float] = {}
+            action_log_prob_dict: Dict[int, torch.Tensor] = {}
+            recurrent_hidden_states_dict: Dict[int, torch.Tensor] = {}
 
             # Sample actions.
             with torch.no_grad():
@@ -483,7 +481,7 @@ def train(args: argparse.Namespace) -> float:
     logging.getLogger().info(
         "Steps completed during episode out of total: %d / %d",
         env.iteration,
-        config.num_env_steps,
+        config.time_steps,
     )
 
     return metrics.policy_score
@@ -491,7 +489,7 @@ def train(args: argparse.Namespace) -> float:
 
 def get_agent(
     config: Config, obs_space: gym.Space, act_space: gym.Space, device: torch.device,
-) -> Tuple["AgentAlgo", Policy, RolloutStorage]:
+) -> Tuple[Algo, Policy, RolloutStorage]:
     """
     Spins up a new agent/policy.
 
@@ -508,7 +506,7 @@ def get_agent(
 
     Returns
     -------
-    agent : ``AgentAlgo``.
+    agent : ``Algo``.
         Agent object from a2c-ppo-acktr.
     actor_critic : ``Policy``.
         The policy object.
