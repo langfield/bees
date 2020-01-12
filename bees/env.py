@@ -820,7 +820,7 @@ class Env:
         return obs
 
     def step(
-        self, action_dict: Dict[int, Tuple[int, int, int]]
+        self, action_dict: Dict[int, int]
     ) -> Tuple[
         Dict[int, np.ndarray], Dict[int, float], Dict[Any, bool], Dict[int, Any]
     ]:

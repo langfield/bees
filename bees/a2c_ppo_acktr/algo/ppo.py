@@ -3,8 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from bees.a2c.ppo_acktr.algo.algo import Algo
 
-class PPO:
+
+class PPO(Algo):
     def __init__(
         self,
         actor_critic,
