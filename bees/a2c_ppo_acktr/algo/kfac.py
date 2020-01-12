@@ -7,6 +7,8 @@ import torch.optim as optim
 
 from bees.a2c_ppo_acktr.utils import AddBias
 
+# pylint: disable=too-many-arguments
+
 # TODO: In order to make this code faster:
 # 1) Implement _extract_patches as a single cuda kernel
 # 2) Compute QR decomposition in a separate process
@@ -45,7 +47,7 @@ def compute_cov_a(a, classname, layer_info, fast_cnn):
     return a.t() @ (a / batch_size)
 
 
-def compute_cov_g(g, classname, layer_info, fast_cnn):
+def compute_cov_g(g, classname, _layer_info, fast_cnn):
     batch_size = g.size(0)
 
     if classname == "Conv2d":
@@ -77,8 +79,8 @@ class SplitBias(nn.Module):
         self.add_bias = AddBias(module.bias.data)
         self.module.bias = None
 
-    def forward(self, input):
-        x = self.module(input)
+    def forward(self, bias_input):
+        x = self.module(bias_input)
         x = self.add_bias(x)
         return x
 
@@ -102,6 +104,8 @@ class KFACOptimizer(optim.Optimizer):
         def split_bias(module):
             for mname, child in module.named_children():
                 if hasattr(child, "bias") and child.bias is not None:
+
+                    # pylint: disable=protected-access
                     module._modules[mname] = SplitBias(child)
                 else:
                     split_bias(child)
@@ -141,14 +145,14 @@ class KFACOptimizer(optim.Optimizer):
             model.parameters(), lr=self.lr * (1 - self.momentum), momentum=self.momentum
         )
 
-    def _save_input(self, module, input):
+    def _save_input(self, module, kfac_input):
         if torch.is_grad_enabled() and self.steps % self.Ts == 0:
             classname = module.__class__.__name__
             layer_info = None
             if classname == "Conv2d":
                 layer_info = (module.kernel_size, module.stride, module.padding)
 
-            aa = compute_cov_a(input[0].data, classname, layer_info, self.fast_cnn)
+            aa = compute_cov_a(kfac_input[0].data, classname, layer_info, self.fast_cnn)
 
             # Initialize buffers
             if self.steps == 0:
@@ -156,7 +160,7 @@ class KFACOptimizer(optim.Optimizer):
 
             update_running_stat(aa, self.m_aa[module], self.stat_decay)
 
-    def _save_grad_output(self, module, grad_input, grad_output):
+    def _save_grad_output(self, module, _grad_input, grad_output):
         # Accumulate statistics for Fisher matrices
         if self.acc_stats:
             classname = module.__class__.__name__
@@ -174,7 +178,7 @@ class KFACOptimizer(optim.Optimizer):
 
             update_running_stat(gg, self.m_gg[module], self.stat_decay)
 
-    def _prepare_model(self):
+    def _prepare_model(self) -> None:
         for module in self.model.modules():
             classname = module.__class__.__name__
             if classname in self.known_modules:
@@ -186,14 +190,14 @@ class KFACOptimizer(optim.Optimizer):
                 module.register_forward_pre_hook(self._save_input)
                 module.register_backward_hook(self._save_grad_output)
 
-    def step(self):
+    def step(self) -> None:
         # Add weight decay
         if self.weight_decay > 0:
             for p in self.model.parameters():
                 p.grad.data.add_(self.weight_decay, p.data)
 
         updates = {}
-        for i, m in enumerate(self.modules):
+        for _, m in enumerate(self.modules):
             assert (
                 len(list(m.parameters())) == 1
             ), "Can handle only one parameter at the moment"

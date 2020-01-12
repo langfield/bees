@@ -3,7 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from bees.a2c.ppo_acktr.algo.algo import Algo
+from bees.a2c_ppo_acktr.algo.algo import Algo
+
+# pylint: disable=duplicate-code
 
 
 class PPO(Algo):

@@ -17,7 +17,7 @@ import numpy as np
 from bees.a2c_ppo_acktr import algo, utils
 from bees.a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
 from bees.a2c_ppo_acktr.storage import RolloutStorage
-from bees.a2c.ppo_acktr.algo.algo import Algo
+from bees.a2c_ppo_acktr.algo.algo import Algo
 
 from bees.env import Env
 from bees.config import Config
@@ -107,6 +107,21 @@ def train(args: argparse.Namespace) -> float:
     torch.set_num_threads(2)
     device = torch.device("cuda:0" if config.cuda else "cpu")
 
+    # Create multiagent maps.
+    actor_critics: Dict[int, Policy] = {}
+    agents: Dict[int, Algo] = {}
+    rollout_map: Dict[int, RolloutStorage] = {}
+    episode_rewards: Dict[int, collections.deque] = {}
+    minted_agents: Set[int] = set()
+    metrics = Metrics()
+    agent_action_dists: Dict[int, torch.Tensor] = {}
+
+    # Save dead objects to make creation faster.
+    dead_critics: Set[Policy] = set()
+    dead_agents: Set[Algo] = set()
+    state_dicts: List[OrderedDict] = []
+    optim_state_dicts: List[OrderedDict] = []
+
     if args.load_from:
 
         # Load the environment state from file.
@@ -135,21 +150,6 @@ def train(args: argparse.Namespace) -> float:
         obs = {agent_id: agent.observation for agent_id, agent in env.agents.items()}
 
     else:
-
-        # Create multiagent maps.
-        actor_critics: Dict[int, Policy] = {}
-        agents: Dict[int, Algo] = {}
-        rollout_map: Dict[int, RolloutStorage] = {}
-        episode_rewards: Dict[int, collections.deque] = {}
-        minted_agents: Set[int] = set()
-        metrics = Metrics()
-        agent_action_dists: Dict[int, torch.Tensor] = {}
-
-        # Save dead objects to make creation faster.
-        dead_critics: Set[Policy] = set()
-        dead_agents: Set[Algo] = set()
-        state_dicts: List[OrderedDict] = []
-        optim_state_dicts: List[OrderedDict] = []
 
         obs = env.reset()
 
@@ -208,7 +208,7 @@ def train(args: argparse.Namespace) -> float:
         for step in range(config.num_steps):
 
             minted_agents = set()
-            value_dict: Dict[int, float] = {}
+            value_dict: Dict[int, torch.Tensor] = {}
             # action_dict: Dict[int, Tuple[int, int, int]] = {}
             action_dict: Dict[int, int] = {}
             action_tensor_dict: Dict[int, torch.Tensor] = {}
@@ -518,6 +518,7 @@ def get_agent(
         obs_space.shape, act_space, base_kwargs={"recurrent": config.recurrent_policy}
     )
     actor_critic.to(device)
+    agent: Algo
 
     if config.algo == "a2c":
         agent = algo.A2C_ACKTR(

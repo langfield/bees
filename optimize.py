@@ -56,18 +56,6 @@ def objective(trial: optuna.Trial) -> float:
     with open(settings_file, "r") as json_file:
         settings = json.load(json_file)
 
-    """
-    settings["sight_len"] = trial.suggest_int("sight_len", 2, 10)
-    settings["num_agents"] = trial.suggest_int("num_agents", 2, 30)
-    settings["food_density"] = trial.suggest_uniform("food_density", 0.05, 0.3)
-    settings["food_size_mean"] = trial.suggest_uniform("foodsz_mean", 0.01, 0.3)
-    settings["food_size_stddev"] = trial.suggest_uniform("foodsz_std", 0.01, 0.3)
-    settings["plant_foods_mean"] = trial.suggest_uniform("plant_mean", -0.2, 1)
-    settings["plant_foods_stddev"] = trial.suggest_uniform("plant_std", 0.0, 1)
-    settings["mating_cooldown_len"] = trial.suggest_int("mate_cooldown", 2, 40)
-    settings["min_mating_health"] = trial.suggest_uniform("min_mate_hth", 0.0, 1)
-    """
-
     # Suggestions for policy hyperparameters.
     settings["algo"] = trial.suggest_categorical("algo", ["ppo"])
     settings["lr"] = trial.suggest_loguniform("lr", 5e-4, 5e-3)
@@ -86,7 +74,7 @@ def objective(trial: optuna.Trial) -> float:
         "recurrent_policy", [True, False]
     )
 
-    logging.getLogger().info("Settings: " + str(settings))
+    logging.getLogger().info("Settings: %s", str(settings))
 
     # Hardcoded settings for optimization runs.
     settings["print_repr"] = False

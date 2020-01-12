@@ -1,5 +1,5 @@
+""" Run the environment. """
 import argparse
-
 from bees.trainer import train
 
 

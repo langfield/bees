@@ -1,11 +1,7 @@
 """ Test that ``Env.reset()`` works correctly. """
-from itertools import product
-
 from hypothesis import given
 
 from bees.env import Env
-from bees.tests import strategies
-from bees.utils import DEBUG
 
 
 # TODO: Everything.

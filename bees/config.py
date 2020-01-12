@@ -6,6 +6,7 @@ from pprint import pformat
 
 class Config:
     """ Configuration object. """
+
     # TODO: Needs testing.
 
     def __init__(self, settings: Dict[str, Any]) -> None:

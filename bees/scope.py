@@ -18,7 +18,7 @@ OBS_DENSITY = 0.3
 REWARD_SAMPLE_SIZE = 3200
 
 
-def one_hot(n, k):
+def one_hot(n: int, k: int) -> np.ndarray:
     """ Get one-hot vector of length n with k-th bit set as numpy array. """
 
     vec = np.zeros((n,))
@@ -26,18 +26,18 @@ def one_hot(n, k):
     return vec
 
 
-def search_model_dir(modelDir, template):
+def search_model_dir(model_dir, template):
     """ Search model results directory for results file. """
 
-    results = glob.glob(os.path.join(modelDir, template))
+    results = glob.glob(os.path.join(model_dir, template))
     if len(results) == 0:
         raise ValueError(
-            "No files matching template '%s' in %s." % (template, modelDir)
+            "No files matching template '%s' in %s." % (template, model_dir)
         )
     elif len(results) > 1:
         raise ValueError(
             "More than one file matching template '%s' in %s"
-            % (template, args.modelDir)
+            % (template, args.model_dir)
         )
     return results[0]
 
@@ -45,7 +45,7 @@ def search_model_dir(modelDir, template):
 def main(args):
 
     # Read in env.pkl.
-    env_path = search_model_dir(args.modelDir, "*_env.pkl")
+    env_path = search_model_dir(args.model_dir, "*_env.pkl")
     with open(env_path, "rb") as env_file:
         env = pickle.load(env_file)
 
@@ -56,7 +56,7 @@ def main(args):
         agent_id = random.choice(list(env["agents"].keys()))
 
     # Construct agent parameters from settings file and environment.
-    settings_path = search_model_dir(args.modelDir, "*_settings.json")
+    settings_path = search_model_dir(args.model_dir, "*_settings.json")
     with open(settings_path, "r") as settings_file:
         settings = json.load(settings_file)
     action_space = env["action_space"]
@@ -106,11 +106,6 @@ def main(args):
 
             # Sample and set health.
             health = random.random()
-            prev_health = (
-                max(health - get_food(), 0.0)
-                if random.random() < EAT_PROB
-                else min(health + aging_rate, 1.0)
-            )
             agent.health = health
 
             # Sample and set observation.
@@ -142,7 +137,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "modelDir", type=str, help="Directory containing environment state and logs."
+        "model_dir", type=str, help="Directory containing environment state and logs."
     )
     parser.add_argument(
         "--agent",

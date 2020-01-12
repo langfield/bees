@@ -112,7 +112,7 @@ class FixedNormal(torch.distributions.Normal):
         equivalent to a default of ``False``).
     """
 
-    def log_probs(self, actions: torch.Tensor):
+    def log_probs(self, actions: torch.Tensor) -> torch.Tensor:
         """
         Computes the log probability of ``actions``.
         Note that ``super().log_prob()`` returns a tensor of the same shape as its
@@ -133,7 +133,7 @@ class FixedNormal(torch.distributions.Normal):
         return super().log_prob(actions).sum(-1, keepdim=True)
 
     # pylint: disable=no-self-use
-    def entrop(self):
+    def entrop(self) -> torch.Tensor:
         """
         Computes the entropy of the distribution. It's called ``entrop`` so we don't
         override ``super.entropy()``.
@@ -145,7 +145,7 @@ class FixedNormal(torch.distributions.Normal):
         """
         return super.entropy().sum(-1)
 
-    def mode(self):
+    def mode(self) -> torch.Tensor:
         """ Returns the mean as a scalar tensor. """
         return self.mean
 
@@ -318,7 +318,7 @@ class FixedCategoricalProduct(Distribution):
 
 
 class Categorical(nn.Module):
-    def __init__(self, num_inputs, num_outputs):
+    def __init__(self, num_inputs: int, num_outputs: int):
         super(Categorical, self).__init__()
 
         init_ = lambda m: init(
@@ -333,7 +333,7 @@ class Categorical(nn.Module):
 
 
 class DiagGaussian(nn.Module):
-    def __init__(self, num_inputs, num_outputs):
+    def __init__(self, num_inputs: int, num_outputs: int):
         super(DiagGaussian, self).__init__()
 
         init_ = lambda m: init(
@@ -356,7 +356,7 @@ class DiagGaussian(nn.Module):
 
 
 class Bernoulli(nn.Module):
-    def __init__(self, num_inputs, num_outputs):
+    def __init__(self, num_inputs: int, num_outputs: int):
         super(Bernoulli, self).__init__()
 
         init_ = lambda m: init(
@@ -371,7 +371,7 @@ class Bernoulli(nn.Module):
 
 
 class CategoricalProduct(nn.Module):
-    def __init__(self, num_inputs, num_outputs_list):
+    def __init__(self, num_inputs: int, num_outputs_list: List[int]):
 
         super(CategoricalProduct, self).__init__()
         self.num_inputs = num_inputs
@@ -389,5 +389,5 @@ class CategoricalProduct(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> Distribution:
-        logits_list = [linear(x) for linear in self.linears]
+        logits_list = [linear(x) for linear in self.linears]  # type: ignore
         return FixedCategoricalProduct(logits_list=logits_list)

@@ -206,7 +206,7 @@ def flat_action_to_tuple(
     current_flat_action = flat_action
     action_list = []
 
-    for i, subaction_size in enumerate(subaction_sizes):
+    for i, _subaction_size in enumerate(subaction_sizes):
         if i == len(subaction_sizes) - 1:
             subspace_size = 1
         else:
