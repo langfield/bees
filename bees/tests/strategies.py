@@ -1,77 +1,82 @@
+""" Custom hypothesis strategies for bees. """
 import json
-import pytest
-from pprint import pprint
-from typing import Dict, List, Tuple, Any
-from datetime import timedelta
+from typing import Dict, Tuple, Any
 
+import hypothesis
 import hypothesis.strategies as st
-from hypothesis import given, settings
 
 from bees.env import Env
-from bees.utils import DEBUG
 from bees.config import Config
 
 
-settings.register_profile("test_settings", deadline=None)
-settings.load_profile("test_settings")
+hypothesis.settings.register_profile("test_settings", deadline=None)
+hypothesis.settings.load_profile("test_settings")
 
 
 @st.composite
 def envs(draw) -> Dict[str, Any]:
     """ A hypothesis strategy for generating ``Env`` objects. """
 
-    width = draw(st.integers(min_value=1, max_value=9))
-    height = draw(st.integers(min_value=1, max_value=9))
-    sight_len = draw(st.integers(min_value=1, max_value=4))
-    num_agents = draw(st.integers(min_value=1, max_value=width * height))
-    food_density = draw(st.floats(min_value=0.0, max_value=1.0))
-    food_size_mean = draw(st.floats(min_value=0.0, max_value=1.0))
-    food_size_stddev = draw(st.floats(min_value=0.0, max_value=1.0))
-    food_plant_retries = draw(st.integers(min_value=0, max_value=5))
-    aging_rate = draw(st.floats(min_value=1e-6, max_value=1.0))
-    mating_cooldown_len = draw(st.integers(min_value=0))
-    min_mating_health = draw(st.floats(min_value=0.0, max_value=1.0))
-    target_agent_density = draw(st.floats(min_value=0.0, max_value=1.0))
-    print_repr = draw(st.booleans())
-    time_steps = draw(st.integers(min_value=0, max_value=1e9))
-    reuse_state_dicts = draw(st.booleans())
-    policy_score_frequency = draw(st.integers(min_value=1, max_value=1e9))
-    ema_alpha = draw(st.floats(min_value=0.0, max_value=1.0))
-    n_layers = draw(st.integers(min_value=1, max_value=3))
-    hidden_dim = draw(st.integers(min_value=1, max_value=512))
-    reward_weight_mean = draw(st.floats())
-    reward_weight_stddev = draw(st.floats(min_value=0.0, max_value=1.0))
-    reward_inputs = draw(st.sampled_from(["actions", "obs", "health"]))
-    mut_sigma = draw(st.floats(min_value=0.0, max_value=1.0))
-    mut_p = draw(st.floats(min_value=0.0, max_value=1.0))
-    algo = draw(st.lists(st.from_regex(r"ppo|a2c|acktr", fullmatch=True), unique=True))
-    lr = draw(st.floats(min_value=1e-7, max_value=1.0))
-    min_lr = draw(st.floats(min_value=1e-7, max_value=1.0))
-    eps = draw(st.floats(min_value=0.0, max_value=1e-2))
-    alpha = draw(st.floats(min_value=0.0, max_value=1e-2))
-    gamma = draw(st.floats(min_value=0.0, max_value=1.0))
-    use_gae = draw(st.booleans())
-    gae_lambda = draw(st.floats(min_value=0.0, max_value=1.0))
-    value_loss_coef = draw(st.floats(min_value=0.0, max_value=1.0))
-    max_grad_norm = draw(st.floats(min_value=0.0, max_value=1.0))
-    seed = draw(st.integers(min_value=0, max_value=1e6))
-    cuda_deterministic = draw(st.booleans())
-    num_processes = draw(st.integers(min_value=1, max_value=10))
-    num_steps = draw(st.integers(min_value=1, max_value=1e9))
-    ppo_epoch = draw(st.integers(min_value=1, max_value=8))
-    num_mini_batch = draw(st.integers(min_value=1, max_value=8))
-    clip_param = draw(st.floats(min_value=0.0, max_value=1.0))
-    log_interval = draw(st.integers(min_value=1, max_value=1e9))
-    save_interval = draw(st.integers(min_value=1, max_value=1e9))
-    eval_interval = draw(st.integers(min_value=1, max_value=1e9))
-    cuda = draw(st.booleans())
-    use_proper_time_limits = draw(st.booleans())
-    recurrent_policy = draw(st.booleans())
-    use_linear_lr_decay = draw(st.booleans())
+    sample: Dict[str, Any] = {}
+
+    sample["width"] = draw(st.integers(min_value=1, max_value=9))
+    sample["height"] = draw(st.integers(min_value=1, max_value=9))
+    sample["sight_len"] = draw(st.integers(min_value=1, max_value=4))
+    sample["num_agents"] = draw(
+        st.integers(min_value=1, max_value=sample["width"] * sample["height"])
+    )
+    sample["food_density"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["food_size_mean"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["food_size_stddev"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["food_plant_retries"] = draw(st.integers(min_value=0, max_value=5))
+    sample["aging_rate"] = draw(st.floats(min_value=1e-6, max_value=1.0))
+    sample["mating_cooldown_len"] = draw(st.integers(min_value=0))
+    sample["min_mating_health"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["target_agent_density"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["print_repr"] = draw(st.booleans())
+    sample["time_steps"] = draw(st.integers(min_value=0, max_value=int(1e9)))
+    sample["reuse_state_dicts"] = draw(st.booleans())
+    sample["policy_score_frequency"] = draw(
+        st.integers(min_value=1, max_value=int(1e9))
+    )
+    sample["ema_alpha"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["n_layers"] = draw(st.integers(min_value=1, max_value=3))
+    sample["hidden_dim"] = draw(st.integers(min_value=1, max_value=512))
+    sample["reward_weight_mean"] = draw(st.floats())
+    sample["reward_weight_stddev"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["reward_inputs"] = draw(st.sampled_from(["actions", "obs", "health"]))
+    sample["mut_sigma"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["mut_p"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["algo"] = draw(
+        st.lists(st.from_regex(r"ppo|a2c|acktr", fullmatch=True), unique=True)
+    )
+    sample["lr"] = draw(st.floats(min_value=1e-7, max_value=1.0))
+    sample["min_lr"] = draw(st.floats(min_value=1e-7, max_value=1.0))
+    sample["eps"] = draw(st.floats(min_value=0.0, max_value=1e-2))
+    sample["alpha"] = draw(st.floats(min_value=0.0, max_value=1e-2))
+    sample["gamma"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["use_gae"] = draw(st.booleans())
+    sample["gae_lambda"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["value_loss_coef"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["max_grad_norm"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["seed"] = draw(st.integers(min_value=0, max_value=int(1e6)))
+    sample["cuda_deterministic"] = draw(st.booleans())
+    sample["num_processes"] = draw(st.integers(min_value=1, max_value=10))
+    sample["num_steps"] = draw(st.integers(min_value=1, max_value=int(1e9)))
+    sample["ppo_epoch"] = draw(st.integers(min_value=1, max_value=8))
+    sample["num_mini_batch"] = draw(st.integers(min_value=1, max_value=8))
+    sample["clip_param"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["log_interval"] = draw(st.integers(min_value=1, max_value=int(1e9)))
+    sample["save_interval"] = draw(st.integers(min_value=1, max_value=int(1e9)))
+    sample["eval_interval"] = draw(st.integers(min_value=1, max_value=int(1e9)))
+    sample["cuda"] = draw(st.booleans())
+    sample["use_proper_time_limits"] = draw(st.booleans())
+    sample["recurrent_policy"] = draw(st.booleans())
+    sample["use_linear_lr_decay"] = draw(st.booleans())
 
     # Get variable names. It is important that the call to locals() stays at the top
     # of this function, before any other local variables are made.
-    arg_names = list(locals())
+    # arg_names = list(locals())
 
     # Read settings file for defaults.
     settings_path = "bees/settings/settings.json"
@@ -79,10 +84,8 @@ def envs(draw) -> Dict[str, Any]:
         settings = json.load(settings_file)
 
     # Fill settings with values from arguments.
-    for arg in arg_names:
-        if arg == "draw":
-            continue
-        settings[arg] = eval(arg)
+    for key, value in sample.items():
+        settings[key] = value
 
     config = Config(settings)
     env = Env(config)

@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Type, Optional
 
 import gym
 import torch
@@ -19,23 +19,24 @@ class Policy(nn.Module):
         self,
         obs_shape: Tuple[int],
         action_space: gym.spaces.space.Space,
-        base: NNBase = None,
-        base_kwargs: Dict[str, Any] = None,
+        base_kwargs: Optional[Dict[str, Any]] = None,
     ):
         super(Policy, self).__init__()
         if base_kwargs is None:
             base_kwargs = {}
-        if base is None:
-            if len(obs_shape) == 3:
-                base = CNNBase
-            elif len(obs_shape) == 1:
-                base = MLPBase
-                obs_shape = (obs_shape[0],)
-            else:
-                raise NotImplementedError
+
+        base: Type[NNBase]
+        if len(obs_shape) == 3:
+            base = CNNBase
+        elif len(obs_shape) == 1:
+            base = MLPBase
+            obs_shape = (obs_shape[0],)
+        else:
+            raise NotImplementedError
 
         self.base = base(obs_shape, **base_kwargs)
 
+        self.dist: nn.Module
         if action_space.__class__.__name__ == "Discrete":
             num_outputs = action_space.n
             self.dist = Categorical(self.base.output_size, num_outputs)
@@ -57,11 +58,11 @@ class Policy(nn.Module):
             raise NotImplementedError
 
     @property
-    def is_recurrent(self):
+    def is_recurrent(self) -> bool:
         return self.base.is_recurrent
 
     @property
-    def recurrent_hidden_state_size(self):
+    def recurrent_hidden_state_size(self) -> int:
         """Size of rnn_hx."""
         return self.base.recurrent_hidden_state_size
 
@@ -114,11 +115,19 @@ class Policy(nn.Module):
 
         return value, action, action_log_probs, rnn_hxs, probs
 
-    def get_value(self, inputs, rnn_hxs, masks):
+    def get_value(
+        self, inputs: torch.Tensor, rnn_hxs: torch.Tensor, masks: torch.Tensor
+    ) -> torch.Tensor:
         value, _, _ = self.base(inputs, rnn_hxs, masks)
         return value
 
-    def evaluate_actions(self, inputs, rnn_hxs, masks, action):
+    def evaluate_actions(
+        self,
+        inputs: torch.Tensor,
+        rnn_hxs: torch.Tensor,
+        masks: torch.Tensor,
+        action: torch.Tensor,
+    ) -> Tuple[torch.Tensor, ...]:
         value, actor_features, rnn_hxs = self.base(inputs, rnn_hxs, masks)
         dist = self.dist(actor_features)
 

@@ -2,7 +2,7 @@
 import os
 import time
 import argparse
-from typing import List, Dict, Any
+from typing import List, Dict, Any, TextIO
 
 import pandas as pd
 
@@ -107,25 +107,18 @@ def get_child_count_map(agent_data: Dict[int, Dict[str, List[Any]]]) -> Dict[int
 def main(args: argparse.Namespace) -> None:
     """ Plot rewards from a log. """
 
-    def preprocess_line(line: str) -> str:
-        """ Strip and eval. """
-        return eval(line.strip())
-
-    def readlines(log_file) -> List[str]:
+    def readlines(log_file: TextIO) -> List[Dict[str, Any]]:
         """ Construct steps. """
         steps: List[Dict[str, Any]] = []
         for line in log_file:
-            steps.append(eval(line.strip()))
+            stripped: Dict[str, Any] = eval(line.strip())
+            steps.append(stripped)
         return steps
 
     with open(args.log_path, "r") as log_file:
         steps = readlines(log_file)
 
     # Read and parse log.
-    """
-    with open(args.log_path, "r") as log_file:
-        steps: List[Dict[str, Any]] = [eval(line.strip()) for line in log_file.readlines()]
-    """
     agent_data = parse_agent_data(steps)
 
     # Get individual metrics from parsed data.

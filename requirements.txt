@@ -7,3 +7,4 @@ pandas
 opencv-python
 deap
 hypothesis
+optuna

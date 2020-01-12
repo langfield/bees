@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from bees.a2c_ppo_acktr.model import Policy
 from bees.a2c_ppo_acktr.storage import RolloutStorage
-from bees.a2c.ppo_acktr.algo.algo import Algo
+from bees.a2c_ppo_acktr.algo.algo import Algo
 from bees.a2c_ppo_acktr.algo.kfac import KFACOptimizer
 
 

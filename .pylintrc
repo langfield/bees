@@ -139,7 +139,8 @@ disable=print-statement,
         deprecated-sys-function,
         exception-escape,
         comprehension-escape,
-        bad-continuation
+        bad-continuation,
+        duplicate-code,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -251,7 +252,27 @@ good-names=i,
            x,
            y,
            f,
-           df
+           df,
+           a,
+           g,
+           g_,
+           aa,
+           gg,
+           p,
+           m,
+           la,
+           lr,
+           nu,
+           v1,
+           v2,
+           v,
+           Q_a,
+           Q_g,
+           Ts,
+           Tf,
+           dx,
+           dy,
+           n,
 
 # Include a hint for the correct naming format with invalid-name.
 include-naming-hint=no

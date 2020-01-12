@@ -1,9 +1,10 @@
 """ Run to animate an environment log. """
+from typing import List
 import argparse
 import time
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     """ Plays a log file of environment states as an animation. """
 
     # Read in log file
@@ -12,7 +13,7 @@ def main(args):
 
     # Parse log file into separate timesteps
     timesteps = []
-    timestep = []
+    timestep: List[str] = []
     for line in log_lines:
         if line == ",":
             timesteps.append(list(timestep))
