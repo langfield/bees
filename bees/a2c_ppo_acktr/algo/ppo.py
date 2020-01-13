@@ -2,7 +2,6 @@ from typing import Tuple, Optional
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from bees.a2c_ppo_acktr.model import Policy
@@ -27,6 +26,7 @@ class PPO(Algo):
         use_clipped_value_loss: bool = True,
     ):
 
+        super(PPO, self).__init__()
         self.actor_critic = actor_critic
 
         self.clip_param = clip_param

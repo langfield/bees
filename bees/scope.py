@@ -9,7 +9,6 @@ import functools
 from pprint import pprint
 
 import numpy as np
-from numpy.random import normal
 
 from bees.agent import Agent
 
@@ -37,12 +36,12 @@ def search_model_dir(model_dir: str, template: str) -> str:
     elif len(results) > 1:
         raise ValueError(
             "More than one file matching template '%s' in %s"
-            % (template, args.model_dir)
+            % (template, model_dir)
         )
     return results[0]
 
 
-def main(args: argparse.Namespace) -> None:
+def scope(args: argparse.Namespace) -> None:
 
     # Read in env.pkl.
     env_path = search_model_dir(args.model_dir, "*_env.pkl")
@@ -130,7 +129,7 @@ def main(args: argparse.Namespace) -> None:
     pprint(distributions)
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "model_dir", type=str, help="Directory containing environment state and logs."
@@ -144,4 +143,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(args)
+    scope(args)
+
+
+if __name__ == "__main__":
+    main()

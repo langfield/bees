@@ -35,6 +35,7 @@ class A2C_ACKTR(Algo):
         acktr: Optional[bool] = False,
     ):
 
+        super(A2C_ACKTR, self).__init__()
         self.actor_critic = actor_critic
         self.acktr = acktr
 
