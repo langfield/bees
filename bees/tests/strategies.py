@@ -1,12 +1,13 @@
 """ Custom hypothesis strategies for bees. """
 import json
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Callable, Any
 
 import hypothesis
 import hypothesis.strategies as st
 
 from bees.env import Env
 from bees.config import Config
+from bees.utils import DEBUG
 
 
 hypothesis.settings.register_profile("test_settings", deadline=None)
@@ -14,7 +15,7 @@ hypothesis.settings.load_profile("test_settings")
 
 
 @st.composite
-def envs(draw) -> Dict[str, Any]:
+def envs(draw: Callable[[st.SearchStrategy], Any]) -> Env:
     """ A hypothesis strategy for generating ``Env`` objects. """
 
     sample: Dict[str, Any] = {}
@@ -94,11 +95,14 @@ def envs(draw) -> Dict[str, Any]:
 
 
 @st.composite
-def grid_positions(draw, env: Env) -> Tuple[int, int]:
+def grid_positions(
+    draw: Callable[[st.SearchStrategy], Any], env: Env
+) -> Tuple[int, int]:
     """ Strategy for grid positions in ``env``. """
-    return draw(
+    coords: Tuple[int, int] = draw(
         st.tuples(
             st.integers(min_value=0, max_value=env.width - 1),
             st.integers(min_value=0, max_value=env.height - 1),
         )
     )
+    return coords

@@ -10,7 +10,7 @@ import random
 import functools
 import itertools
 from pprint import pformat
-from typing import Tuple, Dict, Any, List, Set
+from typing import Tuple, Dict, Any, List, Set, TextIO, Optional
 import pickle
 
 # Third-party imports.
@@ -320,7 +320,7 @@ class Env:
         return new_pos  # type: ignore
 
     def _remove(
-        self, obj_type_id: int, pos: Tuple[int, int], obj_id: int = None
+        self, obj_type_id: int, pos: Tuple[int, int], obj_id: Optional[int] = None
     ) -> None:
         """
         Remove an object of type ``obj_type_id`` from the grid at ``pos``.
@@ -369,7 +369,7 @@ class Env:
             self.id_map[x][y][obj_type_id].remove(obj_id)
 
     def _place(
-        self, obj_type_id: int, pos: Tuple[int, int], obj_id: int = None
+        self, obj_type_id: int, pos: Tuple[int, int], obj_id: Optional[int] = None
     ) -> None:
         """
         Place an object of type ``obj_type_id`` at the grid at ``pos``.
@@ -439,7 +439,7 @@ class Env:
 
         # Check grid.
         grid_idx = pos + (obj_type_id,)
-        in_grid = self.grid[grid_idx] == 1
+        in_grid: bool = self.grid[grid_idx] == 1
 
         # HARDCODE: foods do not have unique identifiers, not in ``id_map``.
         if obj_type_id == self.obj_type_ids["food"]:
@@ -635,7 +635,7 @@ class Env:
         child_ids : ``Set[int]``.
             Ids of the newly created child agents.
         """
-        child_ids = set()
+        child_ids: Set[int] = set()
 
         # HARDCODE
         wants = lambda x: True if x == self.MATE else False
@@ -849,8 +849,8 @@ class Env:
         """
 
         # Convert flat action_dict to tuple.
-        tuple_action_dict = {
-            agent_id: flat_action_to_tuple(action, self.subaction_sizes)
+        tuple_action_dict: Dict[int, Tuple[int, int, int]] = {
+            agent_id: flat_action_to_tuple(action, self.subaction_sizes)  # type: ignore
             for agent_id, action in action_dict.items()
         }
 
@@ -1038,7 +1038,7 @@ class Env:
 
         return output
 
-    def log_state(self, env_log, visual_log) -> None:
+    def log_state(self, env_log: TextIO, visual_log: TextIO) -> None:
         """
         Logs the state of the environment as a string to a
         prespecified log file path.
@@ -1079,7 +1079,7 @@ class Env:
         Returns a state of the environment as a json-style dictionary.
         """
 
-        state = {}
+        state: Dict[str, Any] = {}
         state["iteration"] = self.iteration
         state["agents"] = {
             agent_id: agent.agent_state() for agent_id, agent in self.agents.items()

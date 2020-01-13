@@ -13,7 +13,7 @@ class Flatten(nn.Module):
 
 
 class NNBase(nn.Module):
-    def __init__(self, recurrent, recurrent_input_size, hidden_size):
+    def __init__(self, recurrent: bool, recurrent_input_size: int, hidden_size: int):
         super(NNBase, self).__init__()
 
         self._hidden_size = hidden_size
@@ -28,20 +28,22 @@ class NNBase(nn.Module):
                     nn.init.orthogonal_(param)
 
     @property
-    def is_recurrent(self):
+    def is_recurrent(self) -> bool:
         return self._recurrent
 
     @property
-    def recurrent_hidden_state_size(self):
+    def recurrent_hidden_state_size(self) -> int:
         if self._recurrent:
             return self._hidden_size
         return 1
 
     @property
-    def output_size(self):
+    def output_size(self) -> int:
         return self._hidden_size
 
-    def _forward_gru(self, x, hxs, masks):
+    def _forward_gru(
+        self, x: torch.Tensor, hxs: torch.Tensor, masks: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         if x.size(0) == hxs.size(0):
             x, hxs = self.gru(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
             x = x.squeeze(0)
@@ -96,7 +98,12 @@ class NNBase(nn.Module):
 
 
 class CNNBase(NNBase):
-    def __init__(self, input_shape, recurrent=False, hidden_size=512):
+    def __init__(
+        self,
+        input_shape: Tuple[int, ...],
+        recurrent: bool = False,
+        hidden_size: int = 512,
+    ):
         super(CNNBase, self).__init__(recurrent, hidden_size, hidden_size)
 
         # ``input_shape`` is the shape of the input in CWH format.
@@ -154,7 +161,9 @@ class CNNBase(NNBase):
 
         return new_main, new_critic_linear
 
-    def forward(self, inputs, rnn_hxs, masks):
+    def forward(
+        self, inputs: torch.Tensor, rnn_hxs: torch.Tensor, masks: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x = self.main(inputs / 255.0)
 
         if self.is_recurrent:
@@ -164,7 +173,12 @@ class CNNBase(NNBase):
 
 
 class MLPBase(NNBase):
-    def __init__(self, input_shape, recurrent=False, hidden_size=64):
+    def __init__(
+        self,
+        input_shape: Tuple[int, ...],
+        recurrent: bool = False,
+        hidden_size: int = 64,
+    ):
         num_inputs = input_shape[0]
         super(MLPBase, self).__init__(recurrent, num_inputs, hidden_size)
 
@@ -211,7 +225,7 @@ class MLPBase(NNBase):
                 layers.append(module)
         new_actor = nn.Sequential(*layers)
 
-        layers: List[nn.Module] = []
+        layers = []
         for module in critic.modules():
             if isinstance(module, nn.Linear):
                 layers.append(init_(module))
@@ -223,7 +237,9 @@ class MLPBase(NNBase):
 
         return new_actor, new_critic, new_critic_linear
 
-    def forward(self, inputs, rnn_hxs, masks):
+    def forward(
+        self, inputs: torch.Tensor, rnn_hxs: torch.Tensor, masks: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x = inputs
 
         if self.is_recurrent:

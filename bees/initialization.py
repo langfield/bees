@@ -11,6 +11,7 @@ from bees.config import Config
 
 # pylint: disable=too-few-public-methods
 
+
 class Setup:
     def __init__(self, args: argparse.Namespace) -> None:
         validate_args(args)

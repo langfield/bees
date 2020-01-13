@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Generator
 
 import gym
 import torch
@@ -87,7 +87,7 @@ class RolloutStorage:
 
         self.step = (self.step + 1) % self.num_steps
 
-    def after_update(self):
+    def after_update(self) -> None:
         """ Copy the latest element of storage objects into the first position. """
         self.obs[0].copy_(self.obs[-1])
         self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
@@ -151,7 +151,7 @@ class RolloutStorage:
         advantages: Optional[torch.Tensor],
         num_mini_batch: Optional[int] = None,
         mini_batch_size: Optional[int] = None,
-    ) -> Tuple[torch.Tensor, ...]:
+    ) -> Generator[Tuple[torch.Tensor, ...], None, None]:
         num_steps, num_processes = self.rewards.size()[0:2]
         batch_size = num_processes * num_steps
 
@@ -197,7 +197,7 @@ class RolloutStorage:
 
     def recurrent_generator(
         self, advantages: torch.Tensor, num_mini_batch: int
-    ) -> Tuple[torch.Tensor, ...]:
+    ) -> Generator[Tuple[torch.Tensor, ...], None, None]:
         num_processes = self.rewards.size(1)
         assert num_processes >= num_mini_batch, (
             "PPO requires the number of processes ({}) "

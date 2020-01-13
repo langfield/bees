@@ -14,7 +14,7 @@ from bees.config import Config
 class Metrics:
     """ Struct-like object to hold metric values for analysis of training. """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """ __init__ function for metrics class. """
 
         self.policy_scores: Dict[int, float] = {}
@@ -49,7 +49,7 @@ def aggregate_loss(env: Env, losses: Dict[int, float]) -> float:
     valid_ids = set(env.agents.keys()).intersection(set(losses.keys()))
 
     # Sum the weighted losses.
-    loss = 0
+    loss: float = 0.0
     for agent_id in valid_ids:
         loss += losses[agent_id] * normalized_ages[agent_id]
 
@@ -152,7 +152,7 @@ def update_losses(
     new_metrics.dist_entropies = dict(losses[2])
 
     # Compute total loss as a function of training losses.
-    new_metrics.total_losses: Dict[int, float] = {}
+    new_metrics.total_losses = {}
     for agent_id in env.agents:
         new_metrics.total_losses[agent_id] = (
             new_metrics.value_losses[agent_id] * config.value_loss_coef
