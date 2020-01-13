@@ -34,7 +34,7 @@ class Policy(nn.Module):
         else:
             raise NotImplementedError
 
-        self.base = base(obs_shape, **base_kwargs) # type: ignore
+        self.base = base(obs_shape, **base_kwargs)  # type: ignore
 
         self.dist: nn.Module
         if action_space.__class__.__name__ == "Discrete":

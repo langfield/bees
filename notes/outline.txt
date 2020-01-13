@@ -322,6 +322,16 @@ Things to come back to:
     calls to agent.compute_reward() across actions and agents, then using torch
     operations to perform the softmax in parallel.
 
+    Consider a constrained zero-to-food setting in which the food density is 100%
+    and agents are guaranteed a health increase whenever they choose an action
+    which includes ``EAT``. We will attempt to get the agents' reward networks to
+    propagate towards the optimal action distribution in this setting, which is
+    a uniform, maximum probability mass for each action which includes ``EAT`` and
+    a zero probability mass for all others. We will compare the distribution given
+    by the reward networks of the evolved agents to the optimal distribution using
+    our existing KL divergence function, where the greedy temperature is set to
+    ``1``, i.e. minimally greedy.
+
 #===========================================================================================
 
     October sprint:
