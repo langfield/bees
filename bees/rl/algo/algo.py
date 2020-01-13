@@ -3,8 +3,8 @@ from typing import Tuple
 
 from torch import optim
 
-from bees.a2c_ppo_acktr.model import Policy
-from bees.a2c_ppo_acktr.storage import RolloutStorage
+from bees.rl.model import Policy
+from bees.rl.storage import RolloutStorage
 
 
 class Algo(ABC):

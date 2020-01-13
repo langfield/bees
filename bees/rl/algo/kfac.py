@@ -6,8 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from bees.a2c_ppo_acktr.model import Policy
-from bees.a2c_ppo_acktr.utils import AddBias
+from bees.rl.model import Policy
+from bees.rl.utils import AddBias
 
 # pylint: disable=too-many-arguments
 
