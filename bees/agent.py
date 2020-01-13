@@ -47,8 +47,6 @@ class Agent:
         How long agent must wait in between mate actions.
     """
 
-    # TODO: Remove default values from ``__init__`` parameters.
-
     def __init__(
         self,
         config: Config,

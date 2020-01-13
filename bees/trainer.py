@@ -14,10 +14,10 @@ import gym
 import torch
 import numpy as np
 
-from bees.a2c_ppo_acktr import algo, utils
-from bees.a2c_ppo_acktr.model import Policy, CNNBase, MLPBase
-from bees.a2c_ppo_acktr.storage import RolloutStorage
-from bees.a2c_ppo_acktr.algo.algo import Algo
+from bees.rl import algo, utils
+from bees.rl.model import Policy, CNNBase, MLPBase
+from bees.rl.storage import RolloutStorage
+from bees.rl.algo.algo import Algo
 
 from bees.env import Env
 from bees.config import Config

@@ -6,15 +6,9 @@ import torch
 import torch.nn as nn
 from torch.distributions.distribution import Distribution
 
-from bees.a2c_ppo_acktr.utils import AddBias, init
+from bees.rl.utils import AddBias, init
 
 # pylint: disable=bad-continuation, abstract-method, no-member
-
-
-#
-# Standardize distribution interfaces
-#
-
 
 class FixedCategorical(torch.distributions.Categorical):
     r"""
@@ -136,14 +130,14 @@ class FixedNormal(torch.distributions.Normal):
     def entrop(self) -> torch.Tensor:
         """
         Computes the entropy of the distribution. It's called ``entrop`` so we don't
-        override ``super.entropy()``.
+        override ``super().entropy()``.
 
         Returns
         -------
         <entropy> : ``torch.FloatTensor``.
             Shape: ``(,)``.
         """
-        return super.entropy().sum(-1)
+        return super().entropy().sum(-1)
 
     def mode(self) -> torch.Tensor:
         """ Returns the mean as a scalar tensor. """
@@ -168,7 +162,7 @@ class FixedBernoulli(torch.distributions.Bernoulli):
 
     # pylint: disable=no-self-use
     def log_probs(self, actions: torch.Tensor) -> torch.Tensor:
-        return super.log_prob(actions).view(actions.size(0), -1).sum(-1).unsqueeze(-1)
+        return super().log_prob(actions).view(actions.size(0), -1).sum(-1).unsqueeze(-1)
 
     # pylint: disable=no-self-use
     def entropy(self) -> torch.Tensor:

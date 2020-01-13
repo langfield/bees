@@ -5,13 +5,13 @@ import torch
 import torch.nn as nn
 
 from bees.utils import DEBUG
-from bees.a2c_ppo_acktr.distributions import (
+from bees.rl.distributions import (
     Bernoulli,
     Categorical,
     DiagGaussian,
     CategoricalProduct,
 )
-from bees.a2c_ppo_acktr.base import NNBase, MLPBase, CNNBase
+from bees.rl.base import NNBase, MLPBase, CNNBase
 
 
 class Policy(nn.Module):
@@ -34,7 +34,7 @@ class Policy(nn.Module):
         else:
             raise NotImplementedError
 
-        self.base = base(obs_shape, **base_kwargs)
+        self.base = base(obs_shape, **base_kwargs) # type: ignore
 
         self.dist: nn.Module
         if action_space.__class__.__name__ == "Discrete":
