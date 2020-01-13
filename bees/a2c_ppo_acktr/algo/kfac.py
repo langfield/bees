@@ -1,10 +1,12 @@
 import math
+from typing import List, Dict, Any, Tuple, Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from bees.a2c_ppo_acktr.model import Policy
 from bees.a2c_ppo_acktr.utils import AddBias
 
 # pylint: disable=too-many-arguments
@@ -15,7 +17,12 @@ from bees.a2c_ppo_acktr.utils import AddBias
 # 3) Actually make a general KFAC optimizer so it fits PyTorch
 
 
-def _extract_patches(x, kernel_size, stride, padding):
+def _extract_patches(
+    x: torch.Tensor,
+    kernel_size: Tuple[int, ...],
+    stride: Tuple[int, ...],
+    padding: Tuple[int, ...],
+) -> torch.Tensor:
     if padding[0] + padding[1] > 0:
         x = F.pad(
             x, (padding[1], padding[1], padding[0], padding[0])
@@ -27,16 +34,21 @@ def _extract_patches(x, kernel_size, stride, padding):
     return x
 
 
-def compute_cov_a(a, classname, layer_info, fast_cnn):
+def compute_cov_a(
+    a: torch.Tensor,
+    classname: str,
+    layer_info: Optional[Tuple[Tuple[int, ...], ...]],
+    fast_cnn: bool,
+) -> torch.Tensor:
     batch_size = a.size(0)
 
     if classname == "Conv2d":
         if fast_cnn:
-            a = _extract_patches(a, *layer_info)
+            a = _extract_patches(a, *layer_info)  # type: ignore
             a = a.view(a.size(0), -1, a.size(-1))
             a = a.mean(1)
         else:
-            a = _extract_patches(a, *layer_info)
+            a = _extract_patches(a, *layer_info)  # type: ignore
             a = a.view(-1, a.size(-1)).div_(a.size(1)).div_(a.size(2))
     elif classname == "AddBias":
         is_cuda = a.is_cuda
@@ -47,7 +59,12 @@ def compute_cov_a(a, classname, layer_info, fast_cnn):
     return a.t() @ (a / batch_size)
 
 
-def compute_cov_g(g, classname, _layer_info, fast_cnn):
+def compute_cov_g(
+    g: torch.Tensor,
+    classname: str,
+    _layer_info: Optional[Tuple[Tuple[int, ...], ...]],
+    fast_cnn: bool,
+) -> torch.Tensor:
     batch_size = g.size(0)
 
     if classname == "Conv2d":
@@ -65,7 +82,9 @@ def compute_cov_g(g, classname, _layer_info, fast_cnn):
     return g_.t() @ (g_ / g.size(0))
 
 
-def update_running_stat(aa, m_aa, momentum):
+def update_running_stat(
+    aa: torch.Tensor, m_aa: torch.Tensor, momentum: float
+) -> torch.Tensor:
     # Do the trick to keep aa unchanged and not create any additional tensors
     m_aa *= momentum / (1 - momentum)
     m_aa += aa
@@ -73,13 +92,13 @@ def update_running_stat(aa, m_aa, momentum):
 
 
 class SplitBias(nn.Module):
-    def __init__(self, module):
+    def __init__(self, module: nn.Module):
         super(SplitBias, self).__init__()
         self.module = module
         self.add_bias = AddBias(module.bias.data)
         self.module.bias = None
 
-    def forward(self, bias_input):
+    def forward(self, bias_input: torch.Tensor) -> torch.Tensor:
         x = self.module(bias_input)
         x = self.add_bias(x)
         return x
@@ -88,20 +107,20 @@ class SplitBias(nn.Module):
 class KFACOptimizer(optim.Optimizer):
     def __init__(
         self,
-        model,
-        lr=0.25,
-        momentum=0.9,
-        stat_decay=0.99,
-        kl_clip=0.001,
-        damping=1e-2,
-        weight_decay=0,
-        fast_cnn=False,
-        Ts=1,
-        Tf=10,
+        model: Policy,
+        lr: float = 0.25,
+        momentum: float = 0.9,
+        stat_decay: float = 0.99,
+        kl_clip: float = 0.001,
+        damping: float = 1e-2,
+        weight_decay: float = 0,
+        fast_cnn: bool = False,
+        Ts: int = 1,
+        Tf: int = 10,
     ):
-        defaults = dict()
+        defaults: Dict[str, Any] = dict()
 
-        def split_bias(module):
+        def split_bias(module: nn.Module) -> None:
             for mname, child in module.named_children():
                 if hasattr(child, "bias") and child.bias is not None:
 
@@ -116,17 +135,20 @@ class KFACOptimizer(optim.Optimizer):
 
         self.known_modules = {"Linear", "Conv2d", "AddBias"}
 
-        self.modules = []
-        self.grad_outputs = {}
+        self.modules: List[nn.Module] = []
+        self.grad_outputs: Dict[Any, Any] = {}
 
         self.model = model
         self._prepare_model()
 
         self.steps = 0
 
-        self.m_aa, self.m_gg = {}, {}
-        self.Q_a, self.Q_g = {}, {}
-        self.d_a, self.d_g = {}, {}
+        self.m_aa: Dict[nn.Module, torch.Tensor] = {}
+        self.m_gg: Dict[nn.Module, torch.Tensor] = {}
+        self.Q_a: Dict[nn.Module, torch.Tensor] = {}
+        self.Q_g: Dict[nn.Module, torch.Tensor] = {}
+        self.d_a: Dict[nn.Module, torch.Tensor] = {}
+        self.d_g: Dict[nn.Module, torch.Tensor] = {}
 
         self.momentum = momentum
         self.stat_decay = stat_decay
@@ -145,7 +167,7 @@ class KFACOptimizer(optim.Optimizer):
             model.parameters(), lr=self.lr * (1 - self.momentum), momentum=self.momentum
         )
 
-    def _save_input(self, module, kfac_input):
+    def _save_input(self, module: nn.Module, kfac_input: torch.Tensor) -> None:
         if torch.is_grad_enabled() and self.steps % self.Ts == 0:
             classname = module.__class__.__name__
             layer_info = None
@@ -160,7 +182,9 @@ class KFACOptimizer(optim.Optimizer):
 
             update_running_stat(aa, self.m_aa[module], self.stat_decay)
 
-    def _save_grad_output(self, module, _grad_input, grad_output):
+    def _save_grad_output(
+        self, module: nn.Module, _grad_input: torch.Tensor, grad_output: torch.Tensor
+    ) -> None:
         # Accumulate statistics for Fisher matrices
         if self.acc_stats:
             classname = module.__class__.__name__

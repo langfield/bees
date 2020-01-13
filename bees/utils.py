@@ -2,7 +2,7 @@
 import os
 import inspect
 import argparse
-from typing import Tuple, Any
+from typing import List, Tuple, Any
 import functools
 
 import numpy as np
@@ -181,7 +181,7 @@ def DEBUG(var: Any) -> None:
 
 
 def flat_action_to_tuple(
-    flat_action: int, subaction_sizes: Tuple[int, ...]
+    flat_action: int, subaction_sizes: List[int]
 ) -> Tuple[int, ...]:
     """
     Converts a flat action to a tuple action. Example: If action space is made up of

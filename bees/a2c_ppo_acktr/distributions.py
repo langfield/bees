@@ -389,5 +389,5 @@ class CategoricalProduct(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> Distribution:
-        logits_list = [linear(x) for linear in self.linears]  # type: ignore
+        logits_list = [linear(x) for linear in self.linears]
         return FixedCategoricalProduct(logits_list=logits_list)

@@ -66,7 +66,7 @@ class Policy(nn.Module):
         """Size of rnn_hx."""
         return self.base.recurrent_hidden_state_size
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         pass
 
     def act(

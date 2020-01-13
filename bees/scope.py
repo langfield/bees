@@ -26,7 +26,7 @@ def one_hot(n: int, k: int) -> np.ndarray:
     return vec
 
 
-def search_model_dir(model_dir, template):
+def search_model_dir(model_dir: str, template: str) -> str:
     """ Search model results directory for results file. """
 
     results = glob.glob(os.path.join(model_dir, template))
@@ -42,7 +42,7 @@ def search_model_dir(model_dir, template):
     return results[0]
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
 
     # Read in env.pkl.
     env_path = search_model_dir(args.model_dir, "*_env.pkl")
@@ -79,10 +79,6 @@ def main(args):
     food_size_stddev = settings["env"]["food_size_stddev"]
     sight_len = settings["env"]["sight_len"]
     num_obj_types = settings["env"]["num_obj_types"]
-
-    # Define function to sample from food distribution.
-    def get_food():
-        return food_size_mean + normal() * food_size_stddev
 
     # HARDCODE
     AGENT_OBJ_TYPE = 0
