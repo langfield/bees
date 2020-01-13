@@ -1,20 +1,19 @@
 """ Test that ``Env.reset()`` works correctly. """
+from typing import Tuple
 from hypothesis import given
-
 from bees.env import Env
+from bees.tests import strategies
 
-
-# TODO: Everything.
-@given()
-def env_update_pos(env: Env) -> None:
-    """ Tests that each observation has the corret number of each object type. """
-
+@given(strategies.grid_positions_and_moves())
+def test_env_update_pos(env_and_pos_and_move: Tuple[Env, Tuple[int, int], int]) -> None:
+    """ Tests that changes are always delta 1 and only one coordinate is changed. """
+    env, pos, move = env_and_pos_and_move
     env.reset()
-    valid_moves = [
-        env.config.STAY,
-        env.config.LEFT,
-        env.config.RIGHT,
-        env.config.UP,
-        env.config.DOWN,
-    ]
-    raise NotImplementedError
+    new_pos = env._update_pos(pos, move)
+
+    if pos[0] != new_pos[0]:
+        assert pos[1] == new_pos[1]
+        assert abs(pos[0] - new_pos[0]) == 1
+    if pos[1] != new_pos[1]:
+        assert pos[0] == new_pos[0]
+        assert abs(pos[1] - new_pos[1]) == 1

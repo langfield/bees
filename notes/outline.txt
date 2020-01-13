@@ -332,6 +332,15 @@ Things to come back to:
     our existing KL divergence function, where the greedy temperature is set to
     ``1``, i.e. minimally greedy.
 
+    Ideas for accelerating natural selection:
+    - Increase aging rate with age (maybe with a delay?)
+    - Disallow mating until maturity (threshold policy score, age, or health?)
+    - Better adaptive food rate to control competition
+
+    At some point we should try different parameterizations of the reward network.
+    There's no obvious reason why (at least for simple tasks) we couldn't use
+    radial basis functions, fourier series, etc.
+
 #===========================================================================================
 
     October sprint:
@@ -380,7 +389,10 @@ Things to come back to:
      - Move metric analysis into another file (DONE)
      - Fix printing, get analysis to work for all algorithms
      - Keep moving functionality out of trainer.py and into modular pieces.
-   - Run experiments (multi-agent linear rewards (action), multi-agent linear rewards (action, obs))
+   - Run experiments (zero to food)
+     - Implement reward network evaluation
+     - Choose good hyperparameters
+     - Run 'em
    - Analyze results
    - Refactor
      - Universal config file (DONE)
