@@ -8,7 +8,7 @@ from bees.a2c_ppo_acktr.utils import init
 
 
 class Flatten(nn.Module):
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x.view(x.size(0), -1)
 
 

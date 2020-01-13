@@ -1,6 +1,6 @@
 """ Agent object for instantiating agents in the environment. """
 import copy
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Optional
 
 import numpy as np
 
@@ -53,10 +53,10 @@ class Agent:
         self,
         config: Config,
         num_actions: int,
-        pos: Tuple[int, int] = None,
-        initial_health: float = 1,
-        reward_weights: List[np.ndarray] = None,
-        reward_biases: List[np.ndarray] = None,
+        pos: Tuple[int, int],
+        initial_health: float,
+        reward_weights: Optional[List[np.ndarray]] = None,
+        reward_biases: Optional[List[np.ndarray]] = None,
     ) -> None:
         """ __init__ function for Agent class. """
 
@@ -181,7 +181,7 @@ class Agent:
             if i < self.n_layers - 1:
                 reward = np.maximum(reward, 0)
 
-        scalar_reward = np.asscalar(reward)
+        scalar_reward: float = np.asscalar(reward)
         self.total_reward += scalar_reward
         self.last_reward = scalar_reward
         return scalar_reward

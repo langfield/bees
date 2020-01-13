@@ -272,7 +272,10 @@ class Env:
         self.agent_ids_created = 0
         for _ in range(self.num_agents):
             self.agents[self._new_agent_id()] = Agent(
-                config=self.config, num_actions=self.num_actions,
+                config=self.config,
+                num_actions=self.num_actions,
+                pos=(0, 0),
+                initial_health=1,
             )
 
         self.iteration = 0
@@ -1154,6 +1157,7 @@ class Env:
                 config=self.config,
                 num_actions=self.num_actions,
                 pos=agent_state["pos"],
+                initial_health=agent_state["initial_health"],
                 reward_weights=agent_state["reward_weights"],
                 reward_biases=agent_state["reward_biases"],
             )

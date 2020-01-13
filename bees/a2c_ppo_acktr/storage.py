@@ -96,7 +96,7 @@ class RolloutStorage:
 
     def compute_returns(
         self,
-        next_value,
+        next_value: torch.Tensor,
         use_gae: bool,
         gamma: float,
         gae_lambda: float,
