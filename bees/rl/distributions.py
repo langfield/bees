@@ -10,6 +10,7 @@ from bees.rl.utils import AddBias, init
 
 # pylint: disable=bad-continuation, abstract-method, no-member
 
+
 class FixedCategorical(torch.distributions.Categorical):
     r"""
     Fixed parameter categorical distribution.

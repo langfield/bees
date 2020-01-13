@@ -31,7 +31,6 @@ def envs(draw: Callable[[st.SearchStrategy], Any]) -> Env:
     sample["food_plant_retries"] = draw(st.integers(min_value=0, max_value=5))
     sample["aging_rate"] = draw(st.floats(min_value=1e-6, max_value=1.0))
     sample["mating_cooldown_len"] = draw(st.integers(min_value=0))
-    sample["min_mating_health"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["target_agent_density"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["print_repr"] = draw(st.booleans())
     sample["time_steps"] = draw(st.integers(min_value=0, max_value=int(1e9)))
