@@ -155,8 +155,6 @@ def train(args: argparse.Namespace) -> float:
 
     # Initialize first policies.
     env_done = False
-
-    # Hyperparameter optimization loss.
     for agent_id, agent_obs in obs.items():
         if agent_id not in agents:
             agent, actor_critic, rollouts = get_agent(
@@ -302,7 +300,7 @@ def train(args: argparse.Namespace) -> float:
                             agent.optimizer.load_state_dict(optim_state_dict)
                         else:
 
-                            # Reinitialize the policy of actor_critic.
+                            # Reinitialize the policy of ``actor_critic``.
                             if isinstance(actor_critic.base, CNNBase):
                                 (
                                     actor_critic.base.main,
@@ -334,7 +332,6 @@ def train(args: argparse.Namespace) -> float:
                         )
 
                     else:
-
                         agent, actor_critic, rollouts = get_agent(
                             config, env.observation_space, env.action_space, device
                         )

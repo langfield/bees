@@ -7,7 +7,6 @@ import hypothesis.strategies as st
 
 from bees.env import Env
 from bees.config import Config
-from bees.utils import DEBUG
 
 
 hypothesis.settings.register_profile("test_settings", deadline=None)
