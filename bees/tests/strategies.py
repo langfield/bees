@@ -8,6 +8,8 @@ import hypothesis.strategies as st
 from bees.env import Env
 from bees.config import Config
 
+# pylint: disable=no-value-for-parameter
+
 
 hypothesis.settings.register_profile("test_settings", deadline=None)
 hypothesis.settings.load_profile("test_settings")
@@ -118,7 +120,7 @@ def grid_positions_and_moves(
 @st.composite
 def grid_positions(
     draw: Callable[[st.SearchStrategy], Any]
-) -> Tuple[Env, Tuple[int, int], int]:
+) -> Tuple[Env, Tuple[int, int]]:
     """ Strategy for ``Env`` instances and valid grid positions. """
     env = draw(envs())
     pos: Tuple[int, int] = draw(
@@ -128,3 +130,38 @@ def grid_positions(
         )
     )
     return env, pos
+
+
+@st.composite
+def recursive_extension_dicts(
+    draw: Callable[[st.SearchStrategy], Any], values: st.SearchStrategy
+) -> Dict[str, Any]:
+    """ Returns a strategy for dictionaries to be used in ``st.recursive()``. """
+    dictionary: Dict[str, Any] = draw(
+        st.dictionaries(keys=st.from_regex(r"[a-zA-Z_-]+"), values=values)
+    )
+    return dictionary
+
+
+@st.composite
+def settings_dicts(draw: Callable[[st.SearchStrategy], Any]) -> Dict[str, Any]:
+    """ Strategy for settings dicts. """
+    settings: Dict[str, Any] = draw(
+        st.dictionaries(
+            keys=st.from_regex(r"[a-zA-Z_-]+"),
+            values=st.recursive(
+                base=st.one_of(
+                    st.floats(),
+                    st.integers(),
+                    st.text(st.characters()),
+                    st.booleans(),
+                    st.lists(st.integers()),
+                    st.lists(st.floats()),
+                    st.lists(st.text(st.characters())),
+                ),
+                extend=recursive_extension_dicts,
+                max_leaves=5,
+            ),
+        )
+    )
+    return settings

@@ -3,6 +3,7 @@ import copy
 from pprint import pformat
 from typing import List, Dict, Any
 
+
 class Config:
     """
     Configuration object.
@@ -11,12 +12,14 @@ class Config:
     ----------
     settings : ``Dict[str, Any]``.
     """
+
     def __init__(self, settings: Dict[str, Any]):
 
         self.keys: List[str] = []
-
         self.settings: Dict[str, Any] = copy.deepcopy(settings)
-        for key, value in settings.items():
+
+        # Add all key-value pairs.
+        for key, value in self.settings.items():
             if isinstance(value, dict):
                 value = Config(value)
                 self.settings[key] = value

@@ -6,12 +6,6 @@ import torch
 import torch.nn as nn
 
 
-class VecNormalize:
-    """ Dummy class as a placeholder for Ikostrikov's ``envs.py``. """
-
-    pass
-
-
 # Get a render function
 # Necessary for my KFAC implementation.
 class AddBias(nn.Module):

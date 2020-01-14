@@ -7,6 +7,8 @@ from hypothesis import HealthCheck as hc
 from bees.env import Env
 from bees.tests import strategies
 
+# pylint: disable=no-value-for-parameter
+
 
 @given(strategies.envs())
 def test_env_fill_places_correct_number_of_agents(env: Env) -> None:

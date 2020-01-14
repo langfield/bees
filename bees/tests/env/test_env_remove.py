@@ -4,6 +4,9 @@ from hypothesis import given
 from bees.env import Env
 from bees.tests import strategies
 
+# pylint: disable=no-value-for-parameter, protected-access
+
+
 @given(strategies.grid_positions())
 def test_env_remove_without_id(remove_args: Tuple[Env, Tuple[int, int]]) -> None:
     """ Tests removal of an object without id (such as food). """

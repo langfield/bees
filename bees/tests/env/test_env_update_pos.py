@@ -4,6 +4,9 @@ from hypothesis import given
 from bees.env import Env
 from bees.tests import strategies
 
+# pylint: disable=no-value-for-parameter, protected-access
+
+
 @given(strategies.grid_positions_and_moves())
 def test_env_update_pos(env_and_pos_and_move: Tuple[Env, Tuple[int, int], int]) -> None:
     """ Tests that changes are always delta 1 and only one coordinate is changed. """
