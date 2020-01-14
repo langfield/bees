@@ -31,7 +31,6 @@ def envs(draw: Callable[[st.SearchStrategy], Any]) -> Env:
     sample["food_plant_retries"] = draw(st.integers(min_value=0, max_value=5))
     sample["aging_rate"] = draw(st.floats(min_value=1e-6, max_value=1.0))
     sample["mating_cooldown_len"] = draw(st.integers(min_value=0))
-    sample["min_mating_health"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["target_agent_density"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["print_repr"] = draw(st.booleans())
     sample["time_steps"] = draw(st.integers(min_value=0, max_value=int(1e9)))
@@ -94,14 +93,38 @@ def envs(draw: Callable[[st.SearchStrategy], Any]) -> Env:
 
 
 @st.composite
-def grid_positions(
-    draw: Callable[[st.SearchStrategy], Any], env: Env
-) -> Tuple[int, int]:
-    """ Strategy for grid positions in ``env``. """
-    coords: Tuple[int, int] = draw(
+def grid_positions_and_moves(
+    draw: Callable[[st.SearchStrategy], Any]
+) -> Tuple[Env, Tuple[int, int], int]:
+    """ Strategy for ``Env`` instances and valid grid positions. """
+    env = draw(envs())
+    pos: Tuple[int, int] = draw(
         st.tuples(
             st.integers(min_value=0, max_value=env.width - 1),
             st.integers(min_value=0, max_value=env.height - 1),
         )
     )
-    return coords
+    valid_moves = [
+        env.config.STAY,
+        env.config.LEFT,
+        env.config.RIGHT,
+        env.config.UP,
+        env.config.DOWN,
+    ]
+    move = draw(st.sampled_from(valid_moves))
+    return env, pos, move
+
+
+@st.composite
+def grid_positions(
+    draw: Callable[[st.SearchStrategy], Any]
+) -> Tuple[Env, Tuple[int, int], int]:
+    """ Strategy for ``Env`` instances and valid grid positions. """
+    env = draw(envs())
+    pos: Tuple[int, int] = draw(
+        st.tuples(
+            st.integers(min_value=0, max_value=env.width - 1),
+            st.integers(min_value=0, max_value=env.height - 1),
+        )
+    )
+    return env, pos

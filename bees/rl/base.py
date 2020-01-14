@@ -4,7 +4,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-from bees.a2c_ppo_acktr.utils import init
+from bees.rl.utils import init
 
 
 class Flatten(nn.Module):

@@ -4,9 +4,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from bees.a2c_ppo_acktr.model import Policy
-from bees.a2c_ppo_acktr.storage import RolloutStorage
-from bees.a2c_ppo_acktr.algo.algo import Algo
+from bees.rl.model import Policy
+from bees.rl.storage import RolloutStorage
+from bees.rl.algo.algo import Algo
 
 # pylint: disable=duplicate-code
 
