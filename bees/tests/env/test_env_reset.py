@@ -7,8 +7,9 @@ from bees.env import Env
 from bees.tests import strategies
 from bees.utils import DEBUG
 
+# pylint: disable=no-value-for-parameter
 
-# TODO: Everything.
+
 @given(strategies.envs())
 def test_env_reset_sees_correct_number_of_objects(env: Env) -> None:
     """ Tests that each observation has the correct number of each object type. """

@@ -5,7 +5,7 @@ import pickle
 import shutil
 import argparse
 import datetime
-from typing import TextIO, Tuple, Any, Dict
+from typing import TextIO, Any, Dict
 from bees.utils import get_token, validate_args
 from bees.config import Config
 
@@ -13,7 +13,24 @@ from bees.config import Config
 
 
 class Setup:
-    def __init__(self, args: argparse.Namespace) -> None:
+    """
+    Object to setup training process. Meant to be run at the start of
+    ``bees.trainer.train()``.
+
+    Parameters
+    ----------
+    args : ``argparse.Namespace``.
+        Args determining whether or not to load saved model, where to save models, and
+        what settings file to use.
+
+
+    Raises
+    ------
+    ValueError
+        In the case where both ``--settings`` and ``--load_from`` are not passed.
+    """
+
+    def __init__(self, args: argparse.Namespace):
         validate_args(args)
 
         trainer_state: Dict[str, Any] = {}

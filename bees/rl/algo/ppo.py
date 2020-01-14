@@ -1,3 +1,4 @@
+""" Proximal Policy Optimization implementation. """
 from typing import Tuple, Optional
 
 import torch
@@ -8,10 +9,21 @@ from bees.rl.model import Policy
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
-# pylint: disable=duplicate-code
+# pylint: disable=duplicate-code, too-many-arguments, too-few-public-methods
 
 
 class PPO(Algo):
+    """
+    Proximal Policy Optimization implementation.
+
+    Parameters
+    ----------
+    actor_critic : ``Policy``.
+        The model object from ``bees.rl.model.py``.
+    clip_param : ``float``.
+    """
+
+    # TODO: Figure out what hyperparameters mean.
     def __init__(
         self,
         actor_critic: Policy,
