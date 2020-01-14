@@ -1,21 +1,21 @@
 """ Converts settings dictionary into config object. """
+import copy
+from pprint import pformat
 from typing import List, Dict, Any
 
-from pprint import pformat
-
-
 class Config:
-    """ Configuration object. """
+    """
+    Configuration object.
 
-    # TODO: Needs testing.
-
-    def __init__(self, settings: Dict[str, Any]) -> None:
-        """ __init__ function for Config class. """
+    Parameters
+    ----------
+    settings : ``Dict[str, Any]``.
+    """
+    def __init__(self, settings: Dict[str, Any]):
 
         self.keys: List[str] = []
 
-        # TODO: Does this need to be deep?
-        self.settings: Dict[str, Any] = settings.copy()
+        self.settings: Dict[str, Any] = copy.deepcopy(settings)
         for key, value in settings.items():
             if isinstance(value, dict):
                 value = Config(value)
