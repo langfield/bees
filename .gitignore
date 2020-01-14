@@ -4,3 +4,4 @@ logs/
 .mypy_cache/
 models/
 .hypothesis/
+.coverage

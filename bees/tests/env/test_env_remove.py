@@ -30,13 +30,13 @@ def test_env_remove_with_id(remove_args: Tuple[Env, Tuple[int, int]]) -> None:
 
     # Env setup.
     env, pos = remove_args
+    x, y = pos
     env.reset()
     obj_type_id = env.obj_type_ids["agent"]
     if not env._obj_exists(obj_type_id, pos):
         agent_id = env._new_agent_id()
         env._place(obj_type_id, pos, agent_id)
     else:
-        x, y = pos
         agent_id = next(iter(env.id_map[x][y][obj_type_id]))
 
     # Remove from ``pos``.
@@ -44,3 +44,4 @@ def test_env_remove_with_id(remove_args: Tuple[Env, Tuple[int, int]]) -> None:
 
     grid_idx = pos + (obj_type_id,)
     assert env.grid[grid_idx] == 0
+    assert agent_id not in env.id_map[x][y][obj_type_id]
