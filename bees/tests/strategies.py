@@ -160,7 +160,7 @@ def settings_dicts(draw: Callable[[st.SearchStrategy], Any]) -> Dict[str, Any]:
                     st.lists(st.text(st.characters())),
                 ),
                 extend=recursive_extension_dicts,
-                max_leaves=5,
+                max_leaves=4,
             ),
         )
     )

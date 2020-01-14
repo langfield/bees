@@ -8,3 +8,7 @@ opencv-python
 deap
 hypothesis
 optuna
+coverage
+pytest
+mypy
+black
