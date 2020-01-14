@@ -88,7 +88,8 @@ def update_policy_score(
     new_metrics = copy.deepcopy(metrics)
 
     # Update policy score estimates.
-    for agent_id in env.agents:
+    valid_ids = set(env.agents.keys()).intersection(set(agent_action_dists.keys()))
+    for agent_id in valid_ids:
         optimal_action_dist = infos[agent_id]["optimal_action_dist"]
         agent_action_dist = agent_action_dists[agent_id]
         agent_action_dist = agent_action_dist.cpu()

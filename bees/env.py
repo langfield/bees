@@ -57,25 +57,16 @@ class Env:
         Initial number of agents in the environment.
     aging_rate : ``float``.
         The amount of health agents lose on each timestep.
-    food_density : ``float``.
+    initial_food_density : ``float``.
         The initial proportion of food in the grid.
+    initial_food_regen_prob : ``float``.
+        The initial probability of food regeneration per square per timestep.
     food_size_mean : ``float``.
         The mean of the Gaussian from which food size is sampled.
     food_size_stddev : ``float``.
         The standard deviation of the Gaussian from which food size is sampled.
-    plant_foods_mean : ``float``.
-        The mean of the Gaussian from which the number of foods to add to the
-        grid at each timestep is sampled.
-    plant_foods_stddev : ``float``.
-        The standard deviation of the Gaussian from which the number of foods
-        to add to the grid at each timestep is sampled.
-    food_plant_retries : ``int``.
-        How many times to attempt to add a food item to the environment given
-        a conflict before giving up.
     mating_cooldown_len : ``int``.
         How long agents must wait in between mate actions.
-    min_mating_health : ``float``.
-        The minimum health bar value at which agents can mate.
     target_agent_density: ``float``.
         The target agent density for adaptive food regeneration rate.
     print_repr: ``bool``.
@@ -100,58 +91,13 @@ class Env:
 
     def __init__(self, config: Config) -> None:
 
+        # Parse settings from config.
         self.config = config
+        for key in config.keys:
+            setattr(self, key, config.settings[key])
 
-        # Environment config
-        self.width = config.width
-        self.height = config.height
-        self.sight_len = config.sight_len
-        self.num_obj_types = config.num_obj_types
-        self.num_agents = config.num_agents
-        self.food_density = config.food_density
-        self.food_size_mean = config.food_size_mean
-        self.food_size_stddev = config.food_size_stddev
-        self.plant_foods_mean = config.plant_foods_mean
-        self.plant_foods_stddev = config.plant_foods_stddev
-        self.food_plant_retries = config.food_plant_retries
-        self.aging_rate = config.aging_rate
-        self.mating_cooldown_len = config.mating_cooldown_len
-        self.min_mating_health = config.min_mating_health
-        self.target_agent_density = config.target_agent_density
-        self.print_repr = config.print_repr
-
-        # Reward config
-        self.n_layers = config.n_layers
-        self.hidden_dim = config.hidden_dim
-        self.reward_weight_mean = config.reward_weight_mean
-        self.reward_weight_stddev = config.reward_weight_stddev
-        self.reward_inputs = config.reward_inputs
-
-        # Genetics config
-        self.mut_sigma = config.mut_sigma
-        self.mut_p = config.mut_p
-
-        # Trainer config
-        self.policy_score_frequency = config.policy_score_frequency
-        self.greedy_temperature = config.greedy_temperature
-
-        """
-        for attr in get_attrs(config):
-            setattr(self, attr, getattr(config, attr))
-        """
-
-        # pylint: disable=invalid-name
-        # Get constants.
-        self.LEFT = config.LEFT
-        self.RIGHT = config.RIGHT
-        self.UP = config.UP
-        self.DOWN = config.DOWN
-        self.STAY = config.STAY
-        self.EAT = config.EAT
-        self.NO_EAT = config.NO_EAT
-        self.MATE = config.MATE
-        self.NO_MATE = config.NO_MATE
-        self.HEAVEN: Tuple[int, int] = tuple(config.BEE_HEAVEN)  # type: ignore
+        # Cast ``self.HEAVEN`` to tuple because json doesn't support tuples.
+        self.HEAVEN: Tuple[int, int] = tuple(self.HEAVEN)  # type: ignore
 
         # Construct object identifier dictionary.
         self.obj_type_ids = {"agent": 0, "food": 1}
@@ -159,8 +105,9 @@ class Env:
 
         # Compute number of foods.
         num_squares = self.width * self.height
-        self.initial_num_foods = math.floor(self.food_density * num_squares)
+        self.initial_num_foods = math.floor(self.initial_food_density * num_squares)
         self.num_foods = 0
+        self.food_regen_prob = self.initial_food_regen_prob
 
         # Construct ``self.grid`` and ``self.id_map``.
         self.grid = np.zeros((self.width, self.height, self.num_obj_types))
@@ -201,6 +148,10 @@ class Env:
         self.dones: Dict[int, bool] = {}
         self.resetted = False
         self.iteration = 0
+
+    def __getattr__(self, name: str) -> Any:
+        """ Override to make mypy happy. """
+        return self.config.settings[name]
 
     def fill(self) -> None:
         """
@@ -487,42 +438,26 @@ class Env:
             Number of foods in the environment.
         """
 
-        # Generate and validate the number of foods to plant.
-        agent_density = len(self.agents) / (self.width * self.height)
-        delta_density = self.target_agent_density - agent_density
-        sign = lambda x: (1, -1)[x < 0]
-        self.plant_foods_mean = self.plant_foods_mean * (
-            1.0 + (sign(delta_density) * math.sqrt(abs(delta_density)))
-        )
-        grid_size = self.width * self.height
-        MAX_FOOD_DENSITY = 0.2
-        self.plant_foods_mean = min(self.plant_foods_mean, 0.02 * grid_size)
-        self.plant_foods_mean = max(self.plant_foods_mean, 0.05)
-        if (self.num_foods / grid_size) > MAX_FOOD_DENSITY:
-            self.plant_foods_mean = 0.5
-        food_ev = np.random.normal(self.plant_foods_mean, self.plant_foods_stddev)
-        num_new_foods = round(food_ev)
-        num_new_foods = max(0, num_new_foods)
-        num_new_foods = min(self.height * self.width, num_new_foods)
+        # Compute new food density with adaptive population control.
+        if self.adaptive_food:
+            agent_density = len(self.agents) / (self.width * self.height)
+            delta_density = self.target_agent_density - agent_density
+            NORMALIZER = 1000
+            self.food_regen_prob += delta_density / NORMALIZER
+            self.food_regen_prob = max(self.food_regen_prob, 0.0)
+            self.food_regen_prob = min(self.food_regen_prob, 1.0)
+
+        # Sample whether or not to regenerate food for each square.
+        regen_samples = np.random.rand(self.width, self.height)
+        regen_locations = np.argwhere(regen_samples <= self.food_regen_prob)
 
         # Set new food positions.
-        grid_positions = list(itertools.product(range(self.width), range(self.height)))
-        food_positions = random.sample(grid_positions, num_new_foods)
-        for food_pos in food_positions:
-            if self._obj_exists(self.obj_type_ids["food"], food_pos):
-
-                # Retry for an unoccupied position a fixed number of times.
-                for _ in range(self.food_plant_retries):
-                    food_pos = random.sample(grid_positions, 1)[0]
-                    if not self._obj_exists(self.obj_type_ids["food"], food_pos):
-                        break
-
-            # If unsuccessful, skip.
-            if self._obj_exists(self.obj_type_ids["food"], food_pos):
-                continue
-
-            self._place(self.obj_type_ids["food"], food_pos)
-            self.num_foods += 1
+        for food_pos in regen_locations:
+            food_pos_tuple: Tuple[int, int] = tuple(food_pos)  # type: ignore
+            assert len(food_pos) == 2
+            if not self._obj_exists(self.obj_type_ids["food"], food_pos):
+                self._place(self.obj_type_ids["food"], food_pos)
+                self.num_foods += 1
 
     def _move(
         self, action_dict: Dict[int, Tuple[int, int, int]]
@@ -650,7 +585,7 @@ class Env:
             pos = mom.pos
 
             # If the agent is dead, don't do anything.
-            if mom.health <= self.min_mating_health:
+            if mom.health <= 0.0:
                 continue
 
             # Grab action, do nothing if the agent chose not to mate.
@@ -683,7 +618,7 @@ class Env:
                 if mom.mating_cooldown > 0 or dad.mating_cooldown > 0:
                     continue
 
-                if dad.health <= self.min_mating_health:
+                if dad.health <= 0.0:
                     continue
 
                 # Choose child location.

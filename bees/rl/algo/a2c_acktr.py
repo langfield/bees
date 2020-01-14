@@ -5,10 +5,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from bees.a2c_ppo_acktr.model import Policy
-from bees.a2c_ppo_acktr.storage import RolloutStorage
-from bees.a2c_ppo_acktr.algo.algo import Algo
-from bees.a2c_ppo_acktr.algo.kfac import KFACOptimizer
+from bees.rl.model import Policy
+from bees.rl.storage import RolloutStorage
+from bees.rl.algo.algo import Algo
+from bees.rl.algo.kfac import KFACOptimizer
 
 
 # pylint: disable=invalid-name, too-few-public-methods

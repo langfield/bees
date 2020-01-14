@@ -35,8 +35,7 @@ def search_model_dir(model_dir: str, template: str) -> str:
         )
     elif len(results) > 1:
         raise ValueError(
-            "More than one file matching template '%s' in %s"
-            % (template, model_dir)
+            "More than one file matching template '%s' in %s" % (template, model_dir)
         )
     return results[0]
 

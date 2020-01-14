@@ -47,8 +47,6 @@ class Agent:
         How long agent must wait in between mate actions.
     """
 
-    # TODO: Remove default values from ``__init__`` parameters.
-
     def __init__(
         self,
         config: Config,
@@ -60,17 +58,10 @@ class Agent:
     ) -> None:
         """ __init__ function for Agent class. """
 
-        # Environment config.
-        self.sight_len = config.sight_len
-        self.num_obj_types = config.num_obj_types
-        self.mating_cooldown_len = config.mating_cooldown_len
-
-        # Reward config.
-        self.n_layers = config.n_layers
-        self.hidden_dim = config.hidden_dim
-        self.reward_weight_mean = config.reward_weight_mean
-        self.reward_weight_stddev = config.reward_weight_stddev
-        self.reward_inputs = config.reward_inputs
+        # Parse settings from config.
+        self.config = config
+        for key in config.keys:
+            setattr(self, key, config.settings[key])
 
         # Agent state.
         self.num_actions = num_actions
@@ -110,6 +101,10 @@ class Agent:
         self.last_reward = 0.0
         self.age = 0
         self.num_children = 0
+
+    def __getattr__(self, name: str) -> Any:
+        """ Override to make mypy happy. """
+        return self.config.settings[name]
 
     def initialize_reward_weights(self) -> None:
         """ Initializes the weights of the reward function. """

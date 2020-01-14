@@ -6,17 +6,15 @@
     "sight_len": 6,
     "num_obj_types": 2,
     "num_agents": 5,
-    "food_density": 0.2,
+    "initial_food_density": 1.0,
+    "initial_food_regen_prob": 1.0,
+    "adaptive_food": false,
     "food_size_mean": 0.29,
     "food_size_stddev": 0.247,
-    "plant_foods_mean": 0.01,
-    "plant_foods_stddev": 0.2,
-    "food_plant_retries": 3,
-    "aging_rate": 0.0001,
-    "mating_cooldown_len": 1000000,
-    "min_mating_health": 0.112,
-    "target_agent_density": 0.08,
-    "print_repr": false,
+    "aging_rate": 0.05,
+    "mating_cooldown_len": 100,
+    "target_agent_density": 0.06,
+    "print_repr": true,
 
     "2": "====================TRAINER====================",
 
@@ -50,7 +48,7 @@
     "NO_EAT": 1,
     "MATE": 0,
     "NO_MATE": 1,
-    "BEE_HEAVEN": [-1,-1],
+    "HEAVEN": [-1,-1],
 
     "6": "====================POLICY====================",
 
