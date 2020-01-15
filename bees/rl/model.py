@@ -1,10 +1,10 @@
+""" RL policy class. """
 from typing import Dict, Tuple, Any, Type, Optional
 
 import gym
 import torch
 import torch.nn as nn
 
-from bees.utils import DEBUG
 from bees.rl.distributions import (
     Bernoulli,
     Categorical,
@@ -15,6 +15,19 @@ from bees.rl.base import NNBase, MLPBase, CNNBase
 
 
 class Policy(nn.Module):
+    """
+    PyTorch module containing base network.
+
+    Parameters
+    ----------
+    obs_shape : ``Tuple[int]```.
+        Shape of the agent observations.
+    action_space : ``gym.spaces.space.Space``.
+        Agent action space.
+    base_kwargs : ``Optional[Dict[str, Any]]``.
+        Optional keyword arguments to pass to the base network instantiator.
+    """
+
     def __init__(
         self,
         obs_shape: Tuple[int],
@@ -59,15 +72,17 @@ class Policy(nn.Module):
 
     @property
     def is_recurrent(self) -> bool:
+        """ Returns whether the base network is recurrent or not. """
         return self.base.is_recurrent
 
     @property
     def recurrent_hidden_state_size(self) -> int:
-        """Size of rnn_hx."""
+        """ Size of rnn_hx. """
         return self.base.recurrent_hidden_state_size
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        pass
+        """ Not used. """
+        raise NotImplementedError
 
     def act(
         self,
@@ -95,6 +110,10 @@ class Policy(nn.Module):
             Shape : ``(num_processes, hidden_dim)``.
         deterministic : ``bool``.
             Whether to sample from or just take the mode of the action distribution.
+
+        Returns
+        -------
+        value : ``torch.Tensor``.
         """
 
         value, actor_features, rnn_hxs = self.base(inputs, rnn_hxs, masks)
@@ -118,6 +137,7 @@ class Policy(nn.Module):
     def get_value(
         self, inputs: torch.Tensor, rnn_hxs: torch.Tensor, masks: torch.Tensor
     ) -> torch.Tensor:
+        """ Returns the value as a ``torch.Tensor``. """
         value, _, _ = self.base(inputs, rnn_hxs, masks)
         return value
 

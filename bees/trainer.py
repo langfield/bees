@@ -65,17 +65,14 @@ def train(args: argparse.Namespace) -> float:
         Contains arguments as described above.
     """
 
-    # TODO: Replace instances of these locals with ``setup.<var_name>``.
     setup = Setup(args)
     config: Config = setup.config
-    trainer_state: Dict[str, Any] = setup.trainer_state
+    save_dir: str = setup.save_dir
+    codename: str = setup.codename
     env_log: TextIO = setup.env_log
     visual_log: TextIO = setup.visual_log
-    save_dir: str = setup.save_dir
-    settings_path: str = setup.settings_path
-    trainer_state_path: str = setup.trainer_state_path
     env_state_path: str = setup.env_state_path
-    codename: str = setup.codename
+    trainer_state: Dict[str, Any] = setup.trainer_state
 
     # Create environment.
     if config.print_repr:

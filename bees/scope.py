@@ -12,6 +12,10 @@ import numpy as np
 
 from bees.agent import Agent
 
+# pylint: disable=too-many-nested-blocks
+
+
+# HARDCODE
 EAT_PROB = 0.1
 OBS_DENSITY = 0.3
 REWARD_SAMPLE_SIZE = 3200
@@ -33,7 +37,7 @@ def search_model_dir(model_dir: str, template: str) -> str:
         raise ValueError(
             "No files matching template '%s' in %s." % (template, model_dir)
         )
-    elif len(results) > 1:
+    if len(results) > 1:
         raise ValueError(
             "More than one file matching template '%s' in %s" % (template, model_dir)
         )
@@ -41,6 +45,7 @@ def search_model_dir(model_dir: str, template: str) -> str:
 
 
 def scope(args: argparse.Namespace) -> None:
+    """ Analyze agent reward networks and associated action distributions. """
 
     # Read in env.pkl.
     env_path = search_model_dir(args.model_dir, "*_env.pkl")
@@ -72,14 +77,8 @@ def scope(args: argparse.Namespace) -> None:
     agent = Agent(**agent_args)
 
     # Get settings for sampling health and observation distributions.
-    aging_rate = settings["env"]["aging_rate"]
-    food_size_mean = settings["env"]["food_size_mean"]
-    food_size_stddev = settings["env"]["food_size_stddev"]
     sight_len = settings["env"]["sight_len"]
     num_obj_types = settings["env"]["num_obj_types"]
-
-    # HARDCODE
-    AGENT_OBJ_TYPE = 0
 
     # Compute the distribution of rewards for each fixed action as observation and
     # health vary.
@@ -112,7 +111,7 @@ def scope(args: argparse.Namespace) -> None:
                     # field of vision, AKA the agent's position.
                     if random.random() < OBS_DENSITY or (x == sight_len == y):
                         if x == sight_len == y:
-                            object_type = AGENT_OBJ_TYPE
+                            object_type = env.obj_type_ids["agent"]
                         else:
                             object_type = random.choice(list(range(num_obj_types)))
                         observation[:, x, y] = one_hot(num_obj_types, object_type)
@@ -129,6 +128,7 @@ def scope(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    """ Runs the reward network scope. """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "model_dir", type=str, help="Directory containing environment state and logs."

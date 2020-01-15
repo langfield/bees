@@ -33,11 +33,18 @@ class Setup:
     def __init__(self, args: argparse.Namespace):
         validate_args(args)
 
+        # Convert to abspaths.
+        if args.load_from:
+            args.load_from = os.path.abspath(args.load_from)
+        if args.save_root:
+            args.save_root = os.path.abspath(args.save_root)
+        if args.settings:
+            args.settings = os.path.abspath(args.settings)
+
         trainer_state: Dict[str, Any] = {}
         trainer_state_path: str = ""
         env_state_path: str = ""
 
-        # TODO: Convert everything to abspaths.
         # Resume from previous run.
         if args.load_from:
 
@@ -107,11 +114,9 @@ class Setup:
 
         # Load setup state.
         self.config: Config = config
-        self.trainer_state: Dict[str, Any] = trainer_state
+        self.save_dir: str = save_dir
+        self.codename: str = codename
         self.env_log: TextIO = env_log
         self.visual_log: TextIO = visual_log
-        self.save_dir: str = save_dir
-        self.settings_path: str = settings_path
-        self.trainer_state_path: str = trainer_state_path
         self.env_state_path: str = env_state_path
-        self.codename: str = codename
+        self.trainer_state: Dict[str, Any] = trainer_state

@@ -33,6 +33,7 @@ PRINT_DONES = True
 
 # Parameter for exponential moving average
 ALPHA = 0.9
+NORMALIZER = 1000
 
 # pylint: disable=bad-continuation
 
@@ -86,8 +87,6 @@ class Env:
     consts : ``Dict[str, Any]``.
         Dictionary of various constants.
     """
-
-    # TODO: make optional arguments consistent throughout nested init calls.
 
     def __init__(self, config: Config) -> None:
 
@@ -442,7 +441,6 @@ class Env:
         if self.adaptive_food:
             agent_density = len(self.agents) / (self.width * self.height)
             delta_density = self.target_agent_density - agent_density
-            NORMALIZER = 1000
             self.food_regen_prob += delta_density / NORMALIZER
             self.food_regen_prob = max(self.food_regen_prob, 0.0)
             self.food_regen_prob = min(self.food_regen_prob, 1.0)
@@ -454,9 +452,9 @@ class Env:
         # Set new food positions.
         for food_pos in regen_locations:
             food_pos_tuple: Tuple[int, int] = tuple(food_pos)  # type: ignore
-            assert len(food_pos) == 2
-            if not self._obj_exists(self.obj_type_ids["food"], food_pos):
-                self._place(self.obj_type_ids["food"], food_pos)
+            assert len(food_pos_tuple) == 2
+            if not self._obj_exists(self.obj_type_ids["food"], food_pos_tuple):
+                self._place(self.obj_type_ids["food"], food_pos_tuple)
                 self.num_foods += 1
 
     def _move(
@@ -718,7 +716,7 @@ class Env:
 
         Returns
         -------
-        obs : ``np.ndarray``.
+        agent_obs : ``np.ndarray``.
             The observation from the given position.
             Shape: ``(num_obj_types, obs_len, obs_len)``.
         """
@@ -745,17 +743,17 @@ class Env:
 
         # Construct observation.
         obs_len = 2 * self.sight_len + 1
-        obs = np.zeros((obs_len, obs_len, self.num_obj_types))
+        agent_obs = np.zeros((obs_len, obs_len, self.num_obj_types))
         pad_x_len = obs_len - pad_left - pad_right
         pad_y_len = obs_len - pad_top - pad_bottom
-        obs[
+        agent_obs[
             pad_left : pad_left + pad_x_len, pad_bottom : pad_bottom + pad_y_len
         ] = self.grid[sight_left : sight_right + 1, sight_bottom : sight_top + 1]
 
         # Policy network expects number of channels in first dimension.
-        obs = np.swapaxes(obs, 0, 2)
+        agent_obs = np.swapaxes(agent_obs, 0, 2)
 
-        return obs
+        return agent_obs
 
     def step(
         self, action_dict: Dict[int, int]
@@ -1087,7 +1085,6 @@ class Env:
         # Construct agents
         self.agents = {}
         for agent_id, agent_state in state["agents"].items():
-            # TODO: Get rid of default arguments (initial_health is defaulted here).
             self.agents[agent_id] = Agent(
                 config=self.config,
                 num_actions=self.num_actions,

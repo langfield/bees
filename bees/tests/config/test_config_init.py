@@ -1,5 +1,5 @@
 """ Test that the ``Config`` class loads dictionaries correctly. """
-from typing import List, Dict, Any
+from typing import Dict, Any
 from hypothesis import given
 from bees.tests import strategies
 from bees.config import Config
@@ -49,5 +49,5 @@ def test_config_settings_passed_by_value() -> None:
 def test_config_repr_prints_everything(settings: Dict[str, Any]) -> None:
     """ Test that every key appears in the string representation. """
     config_repr = repr(Config(settings))
-    for key, value in settings.items():
+    for key in settings:
         assert repr(key) in config_repr
