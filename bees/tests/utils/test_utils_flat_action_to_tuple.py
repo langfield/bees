@@ -1,3 +1,4 @@
+""" Tests the ``utils.flat_action_to_tuple()`` function. """
 import functools
 from typing import List
 

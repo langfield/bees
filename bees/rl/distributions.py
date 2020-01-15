@@ -163,13 +163,16 @@ class FixedBernoulli(torch.distributions.Bernoulli):
 
     # pylint: disable=no-self-use
     def log_probs(self, actions: torch.Tensor) -> torch.Tensor:
+        """ Returns the log probabilities of ``actions``. """
         return super().log_prob(actions).view(actions.size(0), -1).sum(-1).unsqueeze(-1)
 
     # pylint: disable=no-self-use
     def entropy(self) -> torch.Tensor:
+        """ Returns distribution entropy. """
         return super().entropy().sum(-1)
 
     def mode(self) -> torch.Tensor:
+        """ Returns the mode of the distribution. """
         return torch.gt(self.probs, 0.5).float()
 
 
@@ -313,6 +316,17 @@ class FixedCategoricalProduct(Distribution):
 
 
 class Categorical(nn.Module):
+    """
+    Categorical distribution generator module for when ``action_space`` is ``Discrete``.
+
+    Parameters
+    ----------
+    num_inputs : ``int``.
+        Base network output dimension.
+    num_outputs : ``int``.
+        Action space size (``action_space.n``).
+    """
+
     def __init__(self, num_inputs: int, num_outputs: int):
         super(Categorical, self).__init__()
 
@@ -323,6 +337,7 @@ class Categorical(nn.Module):
         self.linear = init_(nn.Linear(num_inputs, num_outputs))
 
     def forward(self, x: torch.Tensor) -> Distribution:
+        """ Returns an action distribution given a tensor input from base network. """
         x = self.linear(x)
         return FixedCategorical(logits=x)
 
