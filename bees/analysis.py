@@ -36,6 +36,17 @@ class Metrics:
         self.food_score: float = float("inf")
 
 
+    def __eq__(self, other) -> bool:
+        """ Comparison function for ``Metrics`` class. """
+
+        eq = True
+        for key in self.__dict__:
+            if getattr(self, key) != getattr(other, key):
+                eq = False
+                break
+        return eq
+
+
 def aggregate_loss(env: Env, losses: Dict[int, float]) -> float:
     """
     Aggregates loss data over all agents, by taking a weighted average of the values
