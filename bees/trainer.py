@@ -21,7 +21,12 @@ from bees.rl.algo.algo import Algo
 
 from bees.env import Env
 from bees.config import Config
-from bees.analysis import update_policy_score, update_losses, Metrics
+from bees.analysis import (
+    update_policy_score,
+    update_losses,
+    update_food_scores,
+    Metrics,
+)
 from bees.initialization import Setup
 
 # pylint: disable=bad-continuation, too-many-branches
@@ -255,6 +260,11 @@ def train(args: argparse.Namespace) -> float:
                         )
                         return metrics.policy_score
 
+            # Update food scores if any agents were born/died this step, and on the
+            # first iteration.
+            if env.iteration == 1 or set(obs.keys()) != set(agents.keys()):
+                metrics = update_food_scores(env, metrics)
+
             # Print debug output.
             end = "\n" if config.print_repr else "\r"
             print("Iteration: %d| " % env.iteration, end="")
@@ -265,7 +275,8 @@ def train(args: argparse.Namespace) -> float:
             print("%.6f, " % metrics.action_loss, end="")
             print("%.6f, " % metrics.value_loss, end="")
             print("%.6f, " % metrics.dist_entropy, end="")
-            print("%.6f" % metrics.total_loss, end="")
+            print("%.6f|" % metrics.total_loss, end="")
+            print("Food score: %.6f" % metrics.food_score, end="")
             print("||||||", end=end)
 
             # Agent creation and termination, rollout stacking.

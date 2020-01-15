@@ -668,7 +668,7 @@ class Env:
         return child_ids
 
     # TODO: Remove from this class so that ``Env`` is framework-agnostic.
-    def _get_optimal_action_dists(self) -> Dict[int, torch.Tensor]:
+    def get_optimal_action_dists(self) -> Dict[int, torch.Tensor]:
         """
         Iterates over the action space and compute the optimal action distribution for
         each agent.
@@ -829,7 +829,7 @@ class Env:
         # the end of this function, and the policy score is computed in trainer.py
         # after this increment happens.
         if (self.iteration + 1) % self.policy_score_frequency == 0:
-            optimal_action_dists = self._get_optimal_action_dists()
+            optimal_action_dists = self.get_optimal_action_dists()
             for agent_id in self.agents:
                 info[agent_id]["optimal_action_dist"] = optimal_action_dists[agent_id]
 
