@@ -176,7 +176,7 @@ class Agent:
             if i < self.n_layers - 1:
                 reward = np.maximum(reward, 0)
 
-        scalar_reward: float = np.asscalar(reward)
+        scalar_reward: float = float(reward)
         self.total_reward += scalar_reward
         self.last_reward = scalar_reward
         return scalar_reward

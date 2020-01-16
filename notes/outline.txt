@@ -341,6 +341,10 @@ Things to come back to:
     There's no obvious reason why (at least for simple tasks) we couldn't use
     radial basis functions, fourier series, etc.
 
+    The food score evaluation that we wrote is meaningful only when the inputs
+    to the reward network are ["actions"]. If the observation is input then
+    there doesn't seem to be a clear analogue.
+
 #===========================================================================================
 
     October sprint:

@@ -102,7 +102,7 @@ def timing(f: Callable[[Any], Any]) -> Callable[[Any], Any]:
     @functools.wraps(f)
     def wrap(*args: Any, **kw: Any) -> Any:
         ts = time.time()
-        result = f(*args, **kw) # type: ignore
+        result = f(*args, **kw)  # type: ignore
         te = time.time()
         print("func:%r args:[%r, %r] took: %2.4f sec" % (f.__name__, args, kw, te - ts))
         return result
