@@ -7,12 +7,9 @@ import hypothesis.strategies as st
 
 from bees.env import Env
 from bees.config import Config
+from bees.analysis import Metrics
 
 # pylint: disable=no-value-for-parameter
-
-
-hypothesis.settings.register_profile("test_settings", deadline=None)
-hypothesis.settings.load_profile("test_settings")
 
 
 @st.composite
@@ -43,7 +40,7 @@ def envs(draw: Callable[[st.SearchStrategy], Any]) -> Env:
     sample["ema_alpha"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["n_layers"] = draw(st.integers(min_value=1, max_value=3))
     sample["hidden_dim"] = draw(st.integers(min_value=1, max_value=64))
-    sample["reward_weight_mean"] = draw(st.floats())
+    sample["reward_weight_mean"] = draw(st.floats(min_value=-2.0, max_value=2.0))
     sample["reward_weight_stddev"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["reward_inputs"] = draw(st.sampled_from(["actions", "obs", "health"]))
     sample["mut_sigma"] = draw(st.floats(min_value=0.0, max_value=1.0))
@@ -115,6 +112,15 @@ def grid_positions_and_moves(
     ]
     move = draw(st.sampled_from(valid_moves))
     return env, pos, move
+
+
+@st.composite
+def env_and_metrics(draw: Callable[[st.SearchStrategy], Any]) -> Tuple[Env, Metrics]:
+    """ Strategy for ``Env`` instances and ``Metric`` objects. """
+    metrics = Metrics()
+    env = draw(envs())
+
+    return env, metrics
 
 
 @st.composite
