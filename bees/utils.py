@@ -1,8 +1,9 @@
 """ Various functions for use in ``env.py``. """
 import os
+import time
 import inspect
 import argparse
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Callable
 import functools
 
 import numpy as np
@@ -92,6 +93,21 @@ def validate_args(args: argparse.Namespace) -> None:
             "Warning: Argument --settings not provided, loading from '%s'."
             % args.load_from
         )
+
+
+# pylint: disable=invalid-name
+def timing(f: Callable[[Any], Any]) -> Callable[[Any], Any]:
+    """ Time functions. """
+
+    @functools.wraps(f)
+    def wrap(*args: Any, **kw: Any) -> Any:
+        ts = time.time()
+        result = f(*args, **kw) # type: ignore
+        te = time.time()
+        print("func:%r args:[%r, %r] took: %2.4f sec" % (f.__name__, args, kw, te - ts))
+        return result
+
+    return wrap
 
 
 # pylint: disable=invalid-name

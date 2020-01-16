@@ -35,10 +35,11 @@ class Metrics:
         self.food_scores: Dict[int, float] = {}
         self.food_score: float = float("inf")
 
-
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         """ Comparison function for ``Metrics`` class. """
 
+        if not isinstance(other, Metrics):
+            raise NotImplementedError
         eq = True
         for key in self.__dict__:
             if getattr(self, key) != getattr(other, key):
