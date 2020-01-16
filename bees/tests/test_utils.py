@@ -13,6 +13,7 @@ TEST_SETTINGS_PATH = "bees/settings/test_settings.json"
 with open(TEST_SETTINGS_PATH, "r") as test_settings_file:
     default_settings = json.load(test_settings_file)
 
+
 def get_default_settings() -> Dict[str, Any]:
     """ Returns a copy of the default settings. """
     return dict(default_settings)

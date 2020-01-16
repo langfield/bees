@@ -224,7 +224,11 @@ def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
             # decoupled, so that we can use the non-greedy version here and the greedy
             # version for the policy score loss, if we choose.
             new_metrics.food_scores[agent_id] = float(
-                F.kl_div(torch.log(optimal_action_dists[agent_id]), target_dist, reduction='sum')
+                F.kl_div(
+                    torch.log(optimal_action_dists[agent_id]),
+                    target_dist,
+                    reduction="sum",
+                )
             )
 
     # Remove food scores for any agents that have died.

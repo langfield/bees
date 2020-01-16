@@ -46,8 +46,13 @@ def test_analysis_update_food_scores_computes_mean_corectly(
 
     assert new_metrics.food_score == np.mean(list(new_metrics.food_scores.values()))
 
-def test_analysis_update_food_scores_computes_scores_correctly_1() -> None:
-    """ Tests that ``new_metrics.food_scores`` is computed correctly. """
+
+def test_analysis_update_food_scores_computes_uniform_dist_correctly() -> None:
+    """
+    Tests that ``new_metrics.food_scores`` is computed correctly when the reward
+    network has a single layer, only actions as reward inputs, outputs zero as a
+    reward for any action, and there is only a single agent in the environment.
+    """
 
     # Get settings and create environment.
     settings = get_default_settings()
@@ -74,27 +79,22 @@ def test_analysis_update_food_scores_computes_scores_correctly_1() -> None:
     assert abs(new_metrics.food_score - expected_food_score) < 1e-6
 
 
-def test_analysis_update_food_scores_computes_scores_correctly_2() -> None:
+@given(strategies.envs())
+def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None:
     """
     Tests that ``new_metrics.food_scores`` is computed correctly when the reward
     network has a single layer, and only actions as inputs.
     """
 
-    # Get settings and create environment.
-    settings = get_default_settings()
-    settings["num_agents"] = 2
-    assert settings["n_layers"] == 1
-    assert settings["reward_inputs"] == ["actions"]
-    config = Config(settings)
-    env = Env(config)
+    # Janky fix because wasn't sure how to modify strategies.envs() to constrain
+    # ``n_layers`` to 1 and ``reward_inputs`` to ["actions"].
+    if env.n_layers != 1 or env.reward_inputs != ["actions"]:
+        return
     env.reset()
 
-    # Set reward weights and biases.
-    weight_shape = env.agents[0].reward_weights[0].shape
-    bias_shape = env.agents[0].reward_biases[0].shape
-    for agent_id in env.agents:
-        env.agents[agent_id].reward_weights[0] = np.random.normal(size=weight_shape)
-        env.agents[agent_id].reward_biases[0] = np.zeros(bias_shape)
+    if env.agents[0].reward_weights[0].shape != 20:
+        print("BAD %s" % str(env.agents[0].reward_weights[0].shape))
+        print(env.config)
 
     # Compute expected food score for each agent.
     expected_food_scores = {}
@@ -119,4 +119,4 @@ def test_analysis_update_food_scores_computes_scores_correctly_2() -> None:
     # Compare expected vs. actual.
     metrics = Metrics()
     new_metrics = update_food_scores(env, metrics)
-    assert abs(new_metrics.food_score - expected_food_score) < 1e-6
+    assert abs(new_metrics.food_score - expected_food_score) < 1e-5
