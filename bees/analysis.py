@@ -264,18 +264,19 @@ def get_food_target_dist(env: Env) -> torch.Tensor:
 
     # HARDCODE
     EAT_INDEX = 1
+    MATE_INDEX = 2
     target_dist = torch.zeros((env.num_actions,))
-    num_eat_actions = 0
+    num_correct_actions = 0
 
     # Count actions that involve eating, and set values in ``target_dist``.
     for flat_action in range(env.num_actions):
         action_tuple = flat_action_to_tuple(flat_action, env.subaction_sizes)
 
-        if action_tuple[EAT_INDEX] == 1:
+        if action_tuple[EAT_INDEX] == 1 and action_tuple[MATE_INDEX] == 1:
             target_dist[flat_action] = 1.0
-            num_eat_actions += 1
+            num_correct_actions += 1
 
     # Normalize values in ``target_dist``.
-    target_dist /= num_eat_actions
+    target_dist /= num_correct_actions
 
     return target_dist
