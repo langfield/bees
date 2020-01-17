@@ -843,7 +843,10 @@ class Env:
         # Decrease agent health, compute observations and dones.
         killed_agent_ids = []
         for agent_id, agent in self.agents.items():
-            agent.health -= self.aging_rate
+            if self.aging_type == "linear":
+                agent.health -= self.aging_rate
+            elif self.aging_type == "quadratic":
+                agent.health -= self.aging_rate * agent.age
 
             # Update mating cooldown.
             agent.mating_cooldown = max(0, agent.mating_cooldown - 1)

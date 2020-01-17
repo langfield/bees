@@ -245,7 +245,7 @@ def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
             )
 
     # Remove food scores for any agents that have died.
-    intermediate_agent_ids = new_metrics.food_scores.keys()
+    intermediate_agent_ids = list(new_metrics.food_scores.keys())
     for agent_id in intermediate_agent_ids:
         if agent_id not in env.agents:
             del new_metrics.food_scores[agent_id]
