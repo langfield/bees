@@ -237,7 +237,7 @@ def train(args: argparse.Namespace) -> float:
 
             # Write env state and metrics to log.
             env.log_state(env_log, visual_log)
-            metrics_log.write(str(metrics.get_summary()))
+            metrics_log.write(str(metrics.get_summary()) + "\n")
 
             # Update the policy score.
             if env.iteration % config.policy_score_frequency == 0:
