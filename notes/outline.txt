@@ -339,6 +339,7 @@ Things to come back to:
     - Increase speed by trimming easy fat
       - Metric calculation at every step
       - Printing/writing to file at every step
+      - Profile training process to inspect relative running time of phases
 
     At some point we should try different parameterizations of the reward network.
     There's no obvious reason why (at least for simple tasks) we couldn't use
