@@ -47,6 +47,15 @@ class Metrics:
                 break
         return eq
 
+    def get_summary(self) -> Dict[str, float]:
+        """ Returns a summary of the current metric values. """
+
+        summary = {}
+        attrs = ["policy_score", "total_loss", "food_score"]
+        for attr in attrs:
+            summary[attr] = getattr(self, attr)
+        return summary
+
 
 def aggregate_loss(env: Env, losses: Dict[int, float]) -> float:
     """
