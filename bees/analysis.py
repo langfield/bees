@@ -122,7 +122,7 @@ def update_policy_score(
         agent_action_dist = agent_action_dist.cpu()
 
         timestep_score = float(
-            F.kl_div(torch.log(agent_action_dist), optimal_action_dist)
+            F.kl_div(torch.log(agent_action_dist), optimal_action_dist, reduction="sum")
         )
 
         # Update policy score with exponential moving average.
@@ -218,11 +218,15 @@ def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
     previous_agent_ids = set(new_metrics.food_scores.keys())
 
     # Compute individual food scores for any new agents.
+    # HARDCODE
+    FOOD_TEMPERATURE = 1.0
     # TODO: Fix this inefficiency.
     # Calling ``env.get_optimal_action_dists()`` is pretty inefficient, because this
     # function will compute the optimal action distribution for each agent, even though
     # we only need it for newly born agents.
-    optimal_action_dists = env.get_optimal_action_dists()
+    optimal_action_dists = env.get_optimal_action_dists(
+        greedy_temperature=FOOD_TEMPERATURE
+    )
     target_dist = get_food_target_dist(env)
     for agent_id in env.agents:
         if agent_id not in new_metrics.food_scores:
