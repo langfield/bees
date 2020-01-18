@@ -98,7 +98,7 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
         print(env.config)
 
     # Compute expected food score for each agent.
-    expected_food_scores: Dict[int, float]= {}
+    expected_food_scores: Dict[int, float] = {}
     for agent_id in env.agents:
         optimal_dist = softmax(env.agents[agent_id].reward_weights[0])
 
