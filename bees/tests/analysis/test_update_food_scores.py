@@ -1,5 +1,5 @@
 """ Test that ``Env.reset()`` works correctly. """
-from typing import Tuple
+from typing import Dict, Tuple
 from math import log
 
 import numpy as np
@@ -76,6 +76,7 @@ def test_analysis_update_food_scores_computes_uniform_dist_correctly() -> None:
     # Compare expected vs. actual.
     metrics = Metrics()
     new_metrics = update_food_scores(env, metrics)
+    # TODO: Use numpy almostequal check.
     assert abs(new_metrics.food_score - expected_food_score) < 1e-6
 
 
@@ -97,7 +98,7 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
         print(env.config)
 
     # Compute expected food score for each agent.
-    expected_food_scores = {}
+    expected_food_scores: Dict[int, float]= {}
     for agent_id in env.agents:
         optimal_dist = softmax(env.agents[agent_id].reward_weights[0])
 
@@ -108,7 +109,7 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
             if tuple_action[EAT_INDEX] == 1:
                 eat_actions.append(action)
 
-        expected_food_scores[agent_id] = 0
+        expected_food_scores[agent_id] = 0.0
         for action in eat_actions:
             p = 1.0 / len(eat_actions)
             q = optimal_dist[action]
@@ -119,4 +120,5 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
     # Compare expected vs. actual.
     metrics = Metrics()
     new_metrics = update_food_scores(env, metrics)
+    # TODO: Use numpy almostequal check.
     assert abs(new_metrics.food_score - expected_food_score) < 1e-5
