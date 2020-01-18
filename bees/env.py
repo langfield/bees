@@ -668,10 +668,19 @@ class Env:
         return child_ids
 
     # TODO: Remove from this class so that ``Env`` is framework-agnostic.
-    def get_optimal_action_dists(self) -> Dict[int, torch.Tensor]:
+    def get_optimal_action_dists(
+        self, greedy_temperature: float
+    ) -> Dict[int, torch.Tensor]:
         """
         Iterates over the action space and compute the optimal action distribution for
         each agent.
+
+        Parameters
+        ----------
+        greedy_temperature : ``float``.
+            Greedy temperature for computation of optimal action distributions. As the
+            value of this variable goes to zero, the optimal distribution gets more
+            greedy. This value should be between 0 and 1.
 
         Returns
         -------
@@ -691,12 +700,8 @@ class Env:
             # This is because torch.nn.functional.softmax only computes softmax along
             # a single dimension.
             action_rewards = torch.reshape(action_rewards, (-1,))
-
-            # ``self.greedy_temperature`` is used to vary how greedy the target
-            # action distribution is. As ``self.greedy_temperature`` goes to 0, the
-            # optimal distribution becomes more greedy.
             optimal_action_dists[agent_id] = F.softmax(
-                action_rewards / self.greedy_temperature, dim=0
+                action_rewards / greedy_temperature, dim=0
             )
             action_rewards = torch.reshape(action_rewards, (self.num_actions,))
             optimal_action_dists[agent_id] = torch.reshape(
@@ -829,14 +834,19 @@ class Env:
         # the end of this function, and the policy score is computed in trainer.py
         # after this increment happens.
         if (self.iteration + 1) % self.policy_score_frequency == 0:
-            optimal_action_dists = self.get_optimal_action_dists()
+            optimal_action_dists = self.get_optimal_action_dists(
+                greedy_temperature=self.greedy_temperature
+            )
             for agent_id in self.agents:
                 info[agent_id]["optimal_action_dist"] = optimal_action_dists[agent_id]
 
         # Decrease agent health, compute observations and dones.
         killed_agent_ids = []
         for agent_id, agent in self.agents.items():
-            agent.health -= self.aging_rate
+            if self.aging_type == "linear":
+                agent.health -= self.aging_rate
+            elif self.aging_type == "quadratic":
+                agent.health -= self.aging_rate * agent.age
 
             # Update mating cooldown.
             agent.mating_cooldown = max(0, agent.mating_cooldown - 1)

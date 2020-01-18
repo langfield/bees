@@ -91,8 +91,10 @@ class Setup:
         # Construct log paths.
         env_log_filename = codename + "_env_log.txt"
         visual_log_filename = codename + "_visual_log.txt"
+        metrics_log_filename = codename + "_metrics.txt"
         env_log_path = os.path.join(save_dir, env_log_filename)
         visual_log_path = os.path.join(save_dir, visual_log_filename)
+        metrics_log_path = os.path.join(save_dir, metrics_log_filename)
 
         # If ``save_dir`` is not the same as ``load_from`` we must copy the existing logs
         # into the new save directory, then contine to append to them.
@@ -101,16 +103,21 @@ class Setup:
         ):
             new_env_log_filename = codename + "_env_log.txt"
             new_visual_log_filename = codename + "_visual_log.txt"
+            new_metrics_log_filename = codename + "_metrics.txt"
             new_env_log_path = os.path.join(save_dir, new_env_log_filename)
             new_visual_log_path = os.path.join(save_dir, new_visual_log_filename)
+            new_metrics_log_path = os.path.join(save_dir, new_metrics_log_filename)
             shutil.copyfile(env_log_path, new_env_log_path)
             shutil.copyfile(visual_log_path, new_visual_log_path)
+            shutil.copyfile(metrics_log_path, new_metrics_log_path)
             env_log_path = new_env_log_path
             visual_log_path = new_visual_log_path
+            metrics_log_path = new_metrics_log_path
 
         # Open logs.
         env_log = open(env_log_path, "a+")
         visual_log = open(visual_log_path, "a+")
+        metrics_log = open(metrics_log_path, "a+")
 
         # Load setup state.
         self.config: Config = config
@@ -118,5 +125,6 @@ class Setup:
         self.codename: str = codename
         self.env_log: TextIO = env_log
         self.visual_log: TextIO = visual_log
+        self.metrics_log: TextIO = metrics_log
         self.env_state_path: str = env_state_path
         self.trainer_state: Dict[str, Any] = trainer_state
