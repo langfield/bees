@@ -18,6 +18,7 @@ class EnvironmentMachine(RuleBasedStateMachine):
         super(EnvironmentMachine, self).__init__()
         self.env = env
 
+    @timing
     @initialize()
     def reset(self) -> None:
         self.env.reset()
