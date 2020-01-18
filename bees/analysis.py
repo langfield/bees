@@ -47,6 +47,15 @@ class Metrics:
                 break
         return eq
 
+    def get_summary(self) -> Dict[str, float]:
+        """ Returns a summary of the current metric values. """
+
+        summary = {}
+        attrs = ["policy_score", "total_loss", "food_score"]
+        for attr in attrs:
+            summary[attr] = getattr(self, attr)
+        return summary
+
 
 def aggregate_loss(env: Env, losses: Dict[int, float]) -> float:
     """
@@ -113,7 +122,7 @@ def update_policy_score(
         agent_action_dist = agent_action_dist.cpu()
 
         timestep_score = float(
-            F.kl_div(torch.log(agent_action_dist), optimal_action_dist)
+            F.kl_div(torch.log(agent_action_dist), optimal_action_dist, reduction="sum")
         )
 
         # Update policy score with exponential moving average.
@@ -209,11 +218,15 @@ def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
     previous_agent_ids = set(new_metrics.food_scores.keys())
 
     # Compute individual food scores for any new agents.
+    # HARDCODE
+    FOOD_TEMPERATURE = 1.0
     # TODO: Fix this inefficiency.
     # Calling ``env.get_optimal_action_dists()`` is pretty inefficient, because this
     # function will compute the optimal action distribution for each agent, even though
     # we only need it for newly born agents.
-    optimal_action_dists = env.get_optimal_action_dists()
+    optimal_action_dists = env.get_optimal_action_dists(
+        greedy_temperature=FOOD_TEMPERATURE
+    )
     target_dist = get_food_target_dist(env)
     for agent_id in env.agents:
         if agent_id not in new_metrics.food_scores:
@@ -232,7 +245,7 @@ def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
             )
 
     # Remove food scores for any agents that have died.
-    intermediate_agent_ids = new_metrics.food_scores.keys()
+    intermediate_agent_ids = list(new_metrics.food_scores.keys())
     for agent_id in intermediate_agent_ids:
         if agent_id not in env.agents:
             del new_metrics.food_scores[agent_id]
@@ -264,18 +277,19 @@ def get_food_target_dist(env: Env) -> torch.Tensor:
 
     # HARDCODE
     EAT_INDEX = 1
+    MATE_INDEX = 2
     target_dist = torch.zeros((env.num_actions,))
-    num_eat_actions = 0
+    num_correct_actions = 0
 
     # Count actions that involve eating, and set values in ``target_dist``.
     for flat_action in range(env.num_actions):
         action_tuple = flat_action_to_tuple(flat_action, env.subaction_sizes)
 
-        if action_tuple[EAT_INDEX] == 1:
+        if action_tuple[EAT_INDEX] == 1 and action_tuple[MATE_INDEX] == 1:
             target_dist[flat_action] = 1.0
-            num_eat_actions += 1
+            num_correct_actions += 1
 
     # Normalize values in ``target_dist``.
-    target_dist /= num_eat_actions
+    target_dist /= num_correct_actions
 
     return target_dist

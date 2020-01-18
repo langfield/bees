@@ -68,16 +68,16 @@ def test_analysis_update_food_scores_computes_uniform_dist_correctly() -> None:
     env.agents[0].reward_weights[0] = np.zeros(weight_shape)
 
     # Compute expected food score.
-    num_eat_actions = env.num_actions / 2.0
-    p = 1.0 / num_eat_actions
+    num_correct_actions = env.num_actions / 4.0
+    p = 1.0 / num_correct_actions
     q = 1.0 / env.num_actions
-    expected_food_score = num_eat_actions * p * log(p / q)
+    expected_food_score = num_correct_actions * p * log(p / q)
 
     # Compare expected vs. actual.
     metrics = Metrics()
     new_metrics = update_food_scores(env, metrics)
     # TODO: Use numpy almostequal check.
-    assert abs(new_metrics.food_score - expected_food_score) < 1e-6
+    assert abs(new_metrics.food_score - expected_food_score) < 1e-5
 
 
 @given(strategies.envs())
@@ -102,16 +102,17 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
     for agent_id in env.agents:
         optimal_dist = softmax(env.agents[agent_id].reward_weights[0])
 
-        eat_actions = []
+        correct_actions = []
         EAT_INDEX = 1
+        MATE_INDEX = 2
         for action in range(env.num_actions):
             tuple_action = flat_action_to_tuple(action, env.subaction_sizes)
-            if tuple_action[EAT_INDEX] == 1:
-                eat_actions.append(action)
+            if tuple_action[EAT_INDEX] == 1 and tuple_action[MATE_INDEX] == 1:
+                correct_actions.append(action)
 
         expected_food_scores[agent_id] = 0.0
-        for action in eat_actions:
-            p = 1.0 / len(eat_actions)
+        for action in correct_actions:
+            p = 1.0 / len(correct_actions)
             q = optimal_dist[action]
             expected_food_scores[agent_id] += p * log(p / q)
 

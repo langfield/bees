@@ -76,6 +76,7 @@ def train(args: argparse.Namespace) -> float:
     codename: str = setup.codename
     env_log: TextIO = setup.env_log
     visual_log: TextIO = setup.visual_log
+    metrics_log: TextIO = setup.metrics_log
     env_state_path: str = setup.env_state_path
     trainer_state: Dict[str, Any] = setup.trainer_state
 
@@ -234,8 +235,9 @@ def train(args: argparse.Namespace) -> float:
             # Execute environment step.
             obs, rewards, dones, infos = env.step(action_dict)
 
-            # Write env state to log.
+            # Write env state and metrics to log.
             env.log_state(env_log, visual_log)
+            metrics_log.write(str(metrics.get_summary()) + "\n")
 
             # Update the policy score.
             if env.iteration % config.policy_score_frequency == 0:
