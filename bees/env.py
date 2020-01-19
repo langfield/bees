@@ -29,7 +29,7 @@ from bees.utils import DEBUG, flat_action_to_tuple
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
-PRINT_DONES = True
+PRINT_FAST = True
 
 # Parameter for exponential moving average
 ALPHA = 0.9
@@ -997,7 +997,10 @@ class Env:
         # Write to visual log, and print visualization if settings["env"]["print"].
         visual = self.visual()
         if self.print_repr:
-            os.system("clear")
+            if PRINT_FAST:
+                print(chr(27) + "[2J")
+            else:
+                os.system("clear")
             print(visual)
         visual_log.write(visual + 40 * "\n")
 
