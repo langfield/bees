@@ -99,6 +99,7 @@ class Agent:
         # Miscellaneous agent state.
         self.total_reward = 0.0
         self.last_reward = 0.0
+        self.policy_score_ema = float("inf")
         self.age = 0
         self.num_children = 0
         self.is_mature = False
@@ -233,7 +234,8 @@ class Agent:
         output : ``str``.
             Health and total reward of the agent at current timestep.
         """
-        output = "Health: %f, " % self.health
+        output = "Health: %f| " % self.health
+        output += "Policy score EMA: %f| " % self.policy_score_ema
         output += "Total reward: %f\n" % self.total_reward
         return output
 

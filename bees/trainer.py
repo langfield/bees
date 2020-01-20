@@ -279,11 +279,6 @@ def train(args: argparse.Namespace) -> float:
             print("Num agents: %d| " % len(agents), end="")
             print("Policy score loss: %.6f" % metrics.policy_score, end="")
             print("/%.6f| " % metrics.initial_policy_score, end="")
-            print("Losses (action, value, entropy, total): ", end="")
-            print("%.6f, " % metrics.action_loss, end="")
-            print("%.6f, " % metrics.value_loss, end="")
-            print("%.6f, " % metrics.dist_entropy, end="")
-            print("%.6f|" % metrics.total_loss, end="")
             print("Food score: %.6f" % metrics.food_score, end="")
             print("||||||", end=end)
 
