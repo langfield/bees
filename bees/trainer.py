@@ -29,7 +29,7 @@ from bees.analysis import (
 )
 from bees.initialization import Setup
 
-# pylint: disable=bad-continuation, too-many-branches
+# pylint: disable=bad-continuation, too-many-branches, duplicate-code
 # pylint: disable=too-many-statements, too-many-locals
 
 
