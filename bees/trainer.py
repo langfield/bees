@@ -248,13 +248,6 @@ def train(args: argparse.Namespace) -> float:
                     metrics=metrics,
                 )
 
-                # Set agent maturities.
-                for agent_id in env.agents:
-                    env.agents[agent_id].is_mature = (
-                        metrics.policy_scores[agent_id]
-                        < config.policy_score_mating_threshold
-                    )
-
                 # This block will run if train() was called with optuna for parameter
                 # optimization. If policy score loss explodes, end the training run
                 # early.

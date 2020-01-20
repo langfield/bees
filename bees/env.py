@@ -977,7 +977,10 @@ class Env:
             for agent_id, agent in self.agents.items():
                 if agent.health > 0.0:
                     num_living_agents += 1
-                if agent.health > 0.0 and num_agents_printed < self.config.num_displayed_agents:
+                if (
+                    agent.health > 0.0
+                    and num_agents_printed < self.config.num_displayed_agents
+                ):
                     output += "Agent %d: " % agent_id
                     output += agent.__repr__()
                     num_agents_printed += 1
