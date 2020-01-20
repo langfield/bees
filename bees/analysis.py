@@ -137,6 +137,11 @@ def update_policy_score(
         # Add policy score EMA to agent objects.
         env.agents[agent_id].policy_score_ema = new_metrics.policy_scores[agent_id]
 
+        # Set agent maturities.
+        env.agents[agent_id].is_mature = (
+            new_metrics.policy_scores[agent_id] < config.policy_score_mating_threshold
+        )
+
     # Compute aggregate policy score across all agents (weighted average by age).
     new_metrics.policy_score = aggregate_loss(env, new_metrics.policy_scores)
 
