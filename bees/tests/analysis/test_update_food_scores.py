@@ -68,10 +68,8 @@ def test_analysis_update_food_scores_computes_uniform_dist_correctly() -> None:
     env.agents[0].reward_weights[0] = np.zeros(weight_shape)
 
     # Compute expected food score.
-    num_correct_actions = env.num_actions / 4.0
-    p = 1.0 / num_correct_actions
-    q = 1.0 / env.num_actions
-    expected_food_score = num_correct_actions * p * log(p / q)
+    num_correct_actions = env.num_actions / 2.0
+    expected_food_score = num_correct_actions / env.num_actions
 
     # Compare expected vs. actual.
     metrics = Metrics()
@@ -93,10 +91,6 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
         return
     env.reset()
 
-    if env.agents[0].reward_weights[0].shape != 20:
-        print("BAD %s" % str(env.agents[0].reward_weights[0].shape))
-        print(env.config)
-
     # Compute expected food score for each agent.
     expected_food_scores: Dict[int, float] = {}
     for agent_id in env.agents:
@@ -104,17 +98,14 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
 
         correct_actions = []
         EAT_INDEX = 1
-        MATE_INDEX = 2
         for action in range(env.num_actions):
             tuple_action = flat_action_to_tuple(action, env.subaction_sizes)
-            if tuple_action[EAT_INDEX] == 1 and tuple_action[MATE_INDEX] == 1:
+            if tuple_action[EAT_INDEX] == 1:
                 correct_actions.append(action)
 
         expected_food_scores[agent_id] = 0.0
         for action in correct_actions:
-            p = 1.0 / len(correct_actions)
-            q = optimal_dist[action]
-            expected_food_scores[agent_id] += p * log(p / q)
+            expected_food_scores[agent_id] += optimal_dist[action]
 
     expected_food_score = np.mean(list(expected_food_scores.values()))
 

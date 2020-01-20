@@ -100,6 +100,7 @@ class Agent:
         self.total_reward = 0.0
         self.last_reward = 0.0
         self.policy_score_ema = float("inf")
+        self.food_score = float("inf")
         self.age = 0
         self.num_children = 0
         self.is_mature = False
@@ -236,6 +237,7 @@ class Agent:
         """
         output = "Health: %f| " % self.health
         output += "Policy score EMA: %f| " % self.policy_score_ema
+        output += "Food score: %f| " % self.food_score
         output += "Total reward: %f\n" % self.total_reward
         return output
 
