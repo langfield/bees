@@ -101,6 +101,7 @@ class Agent:
         self.last_reward = 0.0
         self.age = 0
         self.num_children = 0
+        self.is_mature = False
 
     def __getattr__(self, name: str) -> Any:
         """ Override to make mypy happy. """

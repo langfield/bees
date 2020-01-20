@@ -210,7 +210,6 @@ def train(args: argparse.Namespace) -> float:
 
             minted_agents = set()
             value_dict: Dict[int, torch.Tensor] = {}
-            # action_dict: Dict[int, Tuple[int, int, int]] = {}
             action_dict: Dict[int, int] = {}
             action_tensor_dict: Dict[int, torch.Tensor] = {}
             action_log_prob_dict: Dict[int, torch.Tensor] = {}
@@ -248,6 +247,13 @@ def train(args: argparse.Namespace) -> float:
                     agent_action_dists=agent_action_dists,
                     metrics=metrics,
                 )
+
+                # Set agent maturities.
+                for agent_id in env.agents:
+                    env.agents[agent_id].is_mature = (
+                        metrics.policy_scores[agent_id]
+                        < config.policy_score_mating_threshold
+                    )
 
                 # This block will run if train() was called with optuna for parameter
                 # optimization. If policy score loss explodes, end the training run
@@ -438,7 +444,7 @@ def train(args: argparse.Namespace) -> float:
                     config.use_proper_time_limits,
                 )
 
-                # This is a tuple of floats.
+                # Compute weight updates.
                 value_loss, action_loss, dist_entropy = agent.update(rollouts)
                 value_losses[agent_id] = value_loss
                 action_losses[agent_id] = action_loss
