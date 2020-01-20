@@ -225,6 +225,14 @@ def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
     new_metrics = copy.deepcopy(metrics)
     previous_agent_ids = set(new_metrics.food_scores.keys())
 
+    # Gather eat actions.
+    eat_actions = []
+    EAT_INDEX = 1
+    for action in range(env.num_actions):
+        action_tuple = flat_action_to_tuple(action, env.subaction_sizes)
+        if action_tuple[EAT_INDEX] == 1:
+            eat_actions.append(action)
+
     # Compute individual food scores for any new agents.
     # HARDCODE
     FOOD_TEMPERATURE = 1.0
@@ -235,22 +243,12 @@ def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
     optimal_action_dists = env.get_optimal_action_dists(
         greedy_temperature=FOOD_TEMPERATURE
     )
-    target_dist = get_food_target_dist(env)
     for agent_id in env.agents:
         if agent_id not in new_metrics.food_scores:
-            # TODO: Compute KL-divergence with non-greedy optimal distribution.
-            # Currently, since the KL-divergence isn't defined when q(x) = 0 and
-            # p(x) != 0 for some x, we can't use the argmax optimal distribution. But
-            # the two computations (policy score loss and food score loss) should be
-            # decoupled, so that we can use the non-greedy version here and the greedy
-            # version for the policy score loss, if we choose.
-            new_metrics.food_scores[agent_id] = float(
-                F.kl_div(
-                    torch.log(optimal_action_dists[agent_id]),
-                    target_dist,
-                    reduction="sum",
-                )
+            new_metrics.food_scores[agent_id] = sum(
+                [optimal_action_dists[agent_id][action] for action in eat_actions]
             )
+            env.agents[agent_id].food_score = new_metrics.food_scores[agent_id]
 
     # Remove food scores for any agents that have died.
     intermediate_agent_ids = list(new_metrics.food_scores.keys())
