@@ -274,6 +274,7 @@ good-names=i,
            dx,
            dy,
            n,
+           ob,
 
 # Include a hint for the correct naming format with invalid-name.
 include-naming-hint=no
