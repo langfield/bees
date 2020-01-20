@@ -590,6 +590,10 @@ class Env:
             if not wants_child[mom_id]:
                 continue
 
+            # If the agent is not mature, do nothing.
+            if not mom.is_mature:
+                continue
+
             # Search adjacent positions for possible mates and find mate.
             adj_positions = self._get_adj_positions(pos)
             next_to_agent = False
@@ -616,7 +620,8 @@ class Env:
                 if mom.mating_cooldown > 0 or dad.mating_cooldown > 0:
                     continue
 
-                if dad.health <= 0.0:
+                # Check ``dad`` health and maturity.
+                if dad.health <= 0.0 or not dad.is_mature:
                     continue
 
                 # Choose child location.
@@ -847,6 +852,8 @@ class Env:
                 agent.health -= self.aging_rate
             elif self.aging_type == "quadratic":
                 agent.health -= self.aging_rate * agent.age
+            else:
+                raise NotImplementedError
 
             # Update mating cooldown.
             agent.mating_cooldown = max(0, agent.mating_cooldown - 1)

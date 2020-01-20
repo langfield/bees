@@ -349,6 +349,10 @@ Things to come back to:
     to the reward network are ["actions"]. If the observation is input then
     there doesn't seem to be a clear analogue.
 
+    To not have a hard-coded policy score threshold, we can have the threshold be some
+    fixed percentage of the mean policy score, where the mean policy score is computed
+    over the space of randomly initialized policy networks and reward networks.
+
 #===========================================================================================
 
     October sprint:
