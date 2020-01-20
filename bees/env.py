@@ -972,17 +972,15 @@ class Env:
 
         # Print agent stats.
         if PRINT_AGENT_STATS:
-            # HARDCODE
-            agent_print_bound = 20
-            agents_printed = 0
+            num_agents_printed = 0
             num_living_agents = 0
             for agent_id, agent in self.agents.items():
                 if agent.health > 0.0:
                     num_living_agents += 1
-                if agent.health > 0.0 and agents_printed < agent_print_bound:
+                if agent.health > 0.0 and num_agents_printed < self.config.num_displayed_agents:
                     output += "Agent %d: " % agent_id
                     output += agent.__repr__()
-                    agents_printed += 1
+                    num_agents_printed += 1
             output += "Num living agents: %d.\n" % num_living_agents
             output += "Num foods: %d.\n" % self.num_foods
             output += "\n"

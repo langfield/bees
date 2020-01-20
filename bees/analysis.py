@@ -134,6 +134,9 @@ def update_policy_score(
         else:
             new_metrics.policy_scores[agent_id] = timestep_score
 
+        # Add policy score EMA to agent objects.
+        env.agents[agent_id].policy_score_ema = new_metrics.policy_scores[agent_id]
+
     # Compute aggregate policy score across all agents (weighted average by age).
     new_metrics.policy_score = aggregate_loss(env, new_metrics.policy_scores)
 
