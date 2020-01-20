@@ -55,16 +55,18 @@ def single_agent_loop(
                     rollouts.masks[step],
                 )
 
-                value = ac_tuple[0]
-                action = int(ac_tuple[1][0])
-                action_tensor = ac_tuple[1]
-                action_log_prob = ac_tuple[2]
-                recurrent_hidden_states = ac_tuple[3]
-                agent_action_dist = ac_tuple[4]
+                value: torch.Tensor = ac_tuple[0]
+                env_action: int = int(ac_tuple[1][0])
+                action: torch.Tensor = ac_tuple[1]
+                action_log_prob: torch.Tensor = ac_tuple[2]
+                recurrent_hidden_states: torch.Tensor = ac_tuple[3]
+                agent_action_dist: torch.Tensor = ac_tuple[4]
 
-            # TODO: Send ``action`` back to leader to execute step.
+            # TODO: Send ``env_action`` back to leader to execute step.
 
             # Execute environment step.
+            # TODO: Grab step output from leader.
+            action_dict = {}
             obs, rewards, dones, infos = env.step(action_dict)
 
             # Update the policy score.
@@ -96,17 +98,17 @@ def single_agent_loop(
                     pass
 
                 # Shape correction and casting.
-                obs_tensor = torch.FloatTensor([agent_obs])
-                reward_tensor = torch.FloatTensor([agent_reward])
+                observation = torch.FloatTensor([agent_obs])
+                reward = torch.FloatTensor([agent_reward])
 
                 # Add to rollouts.
                 rollouts.insert(
-                    obs_tensor,
+                    observation,
                     recurrent_hidden_states,
-                    action_tensor,
+                    action,
                     action_log_prob,
                     value,
-                    reward_tensor,
+                    reward,
                     masks,
                     bad_masks,
                 )
