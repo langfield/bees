@@ -1,5 +1,6 @@
 """ Distributed training function for a single agent worker. """
 import sys
+import time
 from typing import Dict, Tuple, Any
 from multiprocessing.connection import Connection
 
@@ -13,7 +14,7 @@ from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
 from bees.env import Env
-from bees.utils import DEBUG
+from bees.utils import DEBUG, timing
 from bees.config import Config
 
 # pylint: disable=duplicate-code
@@ -94,6 +95,8 @@ def act(
     # TODO: Send ``env_action: int`` back to leader to execute step.
     action_funnel.send(env_action)
 
+    print("Action send time: %f" % (time.time()))
+
     return act_returns
 
 
@@ -134,15 +137,13 @@ def worker_loop(
         recurrent_hidden_states: torch.Tensor = fwds[3]
         action_dist: torch.Tensor = fwds[4]
 
-        print("Waiting at env spout.")
-        sys.stdout.flush()
+        t_0 = time.time()
 
         # Execute environment step.
         # TODO: Grab step index and output from leader (no tensors included).
         step, ob, reward, done, info, backward_pass = env_spout.recv()
 
-        print("Received step %d" % step)
-        print("Age %d" % info["age"])
+        print("Received step %d in %fs" % (step, time.time() - t_0))
         sys.stdout.flush()
 
         decay = config.use_linear_lr_decay and backward_pass
@@ -163,11 +164,17 @@ def worker_loop(
         if done:
             action_funnel.send(STOP_FLAG)
 
+        t_0 = time.time()
+
         # Shape correction and casting.
         # TODO: Change names so everything is statically-typed.
         observation = torch.FloatTensor([ob])
         reward = torch.FloatTensor([reward])
         masks, bad_masks = get_masks(done, info)
+
+        print("Tensor creation: %fs" % (time.time() - t_0,))
+        sys.stdout.flush()
+        t_0 = time.time()
 
         # Add to rollouts.
         rollouts.insert(
@@ -180,6 +187,9 @@ def worker_loop(
             masks,
             bad_masks,
         )
+
+        print("Rollout insertion: %fs" % (time.time() - t_0,))
+        sys.stdout.flush()
 
         # Only when trainer would make an update/backward pass.
         # TODO: Environment is updating age, but we can't see it because of a shared
