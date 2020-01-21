@@ -1,4 +1,5 @@
 """ Converts settings dictionary into config object. """
+# NOTE: https://stackoverflow.com/questions/42272335/how-to-make-a-class-which-has-getattr-properly-pickable
 import copy
 from pprint import pformat
 from typing import List, Dict, Any
@@ -28,7 +29,10 @@ class Config:
 
     def __getattr__(self, name: str) -> Any:
         """ Override to make mypy happy. """
-        return self.settings[name]
+        try:
+            return self.settings[name]
+        except KeyError:
+            raise AttributeError(name)
 
     def __repr__(self) -> str:
         """ Return string representation of object. """

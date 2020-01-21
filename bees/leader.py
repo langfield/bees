@@ -3,11 +3,12 @@ import os
 import json
 import copy
 import random
+import pickle
 import logging
 import argparse
 from collections import OrderedDict
 from typing import Dict, Tuple, Set, List, Any, TextIO
-import pickle
+from multiprocessing.connection import Connection
 
 import gym
 import numpy as np
@@ -129,10 +130,16 @@ def train(args: argparse.Namespace) -> float:
     # Multiprocessing maps.
     workers: Dict[int, mp.Process] = {}
     devices: Dict[int, torch.device] = {}
-    env_pipes: Dict[int, mp.Pipe] = {}
-    action_pipes: Dict[int, mp.Pipe] = {}
-    action_dist_pipes: Dict[int, mp.Pipe] = {}
-    loss_pipes: Dict[int, mp.Pipe] = {}
+
+    env_spouts: Dict[int, Connection] = {}
+    action_spouts: Dict[int, Connection] = {}
+    action_dist_spouts: Dict[int, Connection] = {}
+    loss_spouts: Dict[int, Connection] = {}
+
+    env_funnels: Dict[int, Connection] = {}
+    action_funnels: Dict[int, Connection] = {}
+    action_dist_funnels: Dict[int, Connection] = {}
+    loss_funnels: Dict[int, Connection] = {}
 
     # Set spawn start method for compatibility with torch.
     mp.set_start_method("spawn")
@@ -163,10 +170,10 @@ def train(args: argparse.Namespace) -> float:
                 optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
 
         # Add pipes to pipe maps.
-        env_pipes[agent_id] = mp.Pipe()
-        action_pipes[agent_id] = mp.Pipe()
-        action_dist_pipes[agent_id] = mp.Pipe()
-        loss_pipes[agent_id] = mp.Pipe()
+        env_spouts[agent_id], env_funnels[agent_id] = mp.Pipe()
+        action_spouts[agent_id], action_funnels[agent_id] = mp.Pipe()
+        action_dist_spouts[agent_id], action_dist_funnels[agent_id] = mp.Pipe()
+        loss_spouts[agent_id], loss_funnels[agent_id] = mp.Pipe()
 
         # Create worker processes.
         # TODO: Replace ``num_updates`` argument.
@@ -182,18 +189,15 @@ def train(args: argparse.Namespace) -> float:
                 "env": env,
                 "initial_step": 0,  # TODO: Fix to reflect ``env.iteration``.
                 "initial_ob": obs[agent_id],
-                "env_pipe": env_pipes[agent_id],
-                "action_pipe": action_pipes[agent_id],
-                "action_dist_pipe": action_dist_pipes[agent_id],
-                "loss_pipe": loss_pipes[agent_id],
+                "env_spout": env_spouts[agent_id],
+                "action_funnel": action_funnels[agent_id],
+                "action_dist_funnel": action_dist_funnels[agent_id],
+                "loss_funnel": loss_funnels[agent_id],
             },
         )
 
-        # Copy first observations to rollouts, and send to device.
-        rollouts = rollout_map[agent_id]
-        obs_tensor = torch.FloatTensor([agent_obs])
-        rollouts.obs[0].copy_(obs_tensor)
-        rollouts.to(device)
+    for _, worker in workers.items():
+        worker.start()
 
     # TODO: Could we stagger these?
     backward_pass = False
@@ -213,8 +217,8 @@ def train(args: argparse.Namespace) -> float:
         timestep_scores: Dict[int, float] = {}
 
         # Get actions.
-        for agent_id in action_pipes:
-            action_dict[agent_id] = action_pipes[agent_id].get()
+        for agent_id in action_spouts:
+            action_dict[agent_id] = action_spouts[agent_id].recv()
 
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
@@ -223,7 +227,7 @@ def train(args: argparse.Namespace) -> float:
         if step == 0:
             backward_pass = True
         for agent_id in obs:
-            env_pipes[agent_id].put(
+            env_funnels[agent_id].send(
                 (
                     step,
                     obs[agent_id],
@@ -240,7 +244,7 @@ def train(args: argparse.Namespace) -> float:
 
         # Get policy scores.
         for agent_id in infos:
-            timestep_scores[agent_id] = action_dist_pipes[agent_id]
+            timestep_scores[agent_id] = action_dist_spouts[agent_id].recv()
 
         # Update the policy score.
         if env.iteration % config.policy_score_frequency == 0:
@@ -363,10 +367,13 @@ def train(args: argparse.Namespace) -> float:
                         )
 
                     # Add pipes to pipe maps.
-                    env_pipes[agent_id] = mp.Pipe()
-                    action_pipes[agent_id] = mp.Pipe()
-                    action_dist_pipes[agent_id] = mp.Pipe()
-                    loss_pipes[agent_id] = mp.Pipe()
+                    env_spouts[agent_id], env_funnels[agent_id] = mp.Pipe()
+                    action_spouts[agent_id], action_funnels[agent_id] = mp.Pipe()
+                    (
+                        action_dist_spouts[agent_id],
+                        action_dist_funnels[agent_id],
+                    ) = mp.Pipe()
+                    loss_spouts[agent_id], loss_funnels[agent_id] = mp.Pipe()
 
                     # Create worker processes.
                     # TODO: Replace ``num_updates`` argument.
@@ -382,10 +389,10 @@ def train(args: argparse.Namespace) -> float:
                             "env": env,
                             "initial_step": step,  # TODO: Off by 1?
                             "initial_ob": obs[agent_id],
-                            "env_pipe": env_pipes[agent_id],
-                            "action_pipe": action_pipes[agent_id],
-                            "action_dist_pipe": action_dist_pipes[agent_id],
-                            "loss_pipe": loss_pipes[agent_id],
+                            "env_spout": env_spouts[agent_id],
+                            "action_funnel": action_funnels[agent_id],
+                            "action_dist_funnel": action_dist_funnels[agent_id],
+                            "loss_funnel": loss_funnels[agent_id],
                         },
                     )
 
@@ -429,7 +436,7 @@ def train(args: argparse.Namespace) -> float:
             # Should we iterate over a different object?
             for agent_id in agents:
                 if agent_id not in minted_agents:
-                    value_loss, action_loss, dist_entropy = loss_pipes[agent_id].get()
+                    value_loss, action_loss, dist_entropy = loss_spouts[agent_id].recv()
                     value_losses[agent_id] = value_loss
                     action_losses[agent_id] = action_loss
                     dist_entropies[agent_id] = dist_entropy
