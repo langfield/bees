@@ -200,7 +200,7 @@ def train(args: argparse.Namespace) -> float:
         worker.start()
 
     # TODO: Could we stagger these?
-    backward_pass = False
+    backward_pass: bool = False
 
     num_updates = (
         int(config.time_steps - env.iteration)
@@ -222,15 +222,14 @@ def train(args: argparse.Namespace) -> float:
         for agent_id in action_spouts:
             action_dict[agent_id] = action_spouts[agent_id].recv()
 
-        print("Receive time: %f" % time.time())
+        print("Received at: %f" % time.time())
         print("Received actions in %fs" % (time.time() - t_0,))
 
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
 
         # TODO: Change this condition so there's only one loop.
-        if step == 0:
-            backward_pass = True
+        backward_pass = step % config.num_steps == 0
         for agent_id in obs:
             env_funnels[agent_id].send(
                 (
