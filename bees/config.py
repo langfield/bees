@@ -27,7 +27,7 @@ class Config:
             setattr(self, key, value)
             self.keys.append(key)
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         """ Override to make mypy happy. """
         try:
             settings = super().__getattribute__("settings")
