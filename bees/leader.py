@@ -13,6 +13,7 @@ from multiprocessing.connection import Connection
 
 import gym
 import numpy as np
+from tqdm import tqdm
 
 import torch
 import torch.multiprocessing as mp
@@ -208,7 +209,7 @@ def train(args: argparse.Namespace) -> float:
     )
     iterations = int(config.time_steps - env.iteration) // config.num_processes
     num_updates = iterations // config.num_steps
-    for step in range(iterations):
+    for step in tqdm(range(iterations)):
 
         # Should these all be defined up above with other maps?
         minted_agents = set()

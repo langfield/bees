@@ -27,6 +27,14 @@ class Config(dict):
             setattr(self, key, value)
             self.keys.append(key)
 
+    def __getattr__(self, item):
+        """ Override to make mypy happy. """
+        try:
+            settings = super().__getattribute__("settings")
+            return settings[item]
+        except KeyError:
+            return super().__getattr__(item)
+
     def __repr__(self) -> str:
         """ Return string representation of object. """
 
