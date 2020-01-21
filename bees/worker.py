@@ -1,6 +1,5 @@
 """ Distributed training function for a single agent worker. """
-import collections
-from typing import Dict, Any
+from typing import Dict, Tuple, Any
 
 import torch
 import torch.nn.functional as F
@@ -20,25 +19,6 @@ from bees.config import Config
 STOP_FLAG = 999
 
 # TODO: Consider using Ray for multiprocessing, which is supposedly around 10x faster.
-
-
-def update_learning_rate(agent_id: int, agent: Algo, config: Config, env: Env) -> None:
-    """ Compute age and minimum agent lifetime. """
-    # TODO: Figure out how to share ``env`` in memory.
-    env_agent = env.agents[agent_id]
-    age = env_agent.age
-    min_agent_lifetime = 1.0 / config.aging_rate
-
-    # Decrease learning rate linearly.
-    learning_rate = utils.update_linear_schedule(
-        agent.optimizer,
-        age,
-        min_agent_lifetime,
-        agent.optimizer.lr if config.algo == "acktr" else config.lr,
-        config.min_lr,
-    )
-
-    agent.lr = learning_rate
 
 
 def get_policy_score(action_dist: torch.Tensor, info: Dict[str, Any]) -> float:
@@ -68,6 +48,54 @@ def get_masks(done: bool, info: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Ten
     return masks, bad_masks
 
 
+def act(
+    step: int,
+    decay_lr: bool,
+    agent_id: int,
+    agent: Algo,
+    rollouts: RolloutStorage,
+    config: Config,
+    env: Env,
+    action_pipe: mp.Pipe,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """ Make a forward pass and send the env action to the leader process. """
+    # Should execute only when trainer would make an update/backward pass.
+    if decay_lr:
+
+        min_agent_lifetime = 1.0 / config.aging_rate
+
+        # TODO: Figure out how to share ``env`` in memory.
+        # Decrease learning rate linearly.
+        learning_rate = utils.update_linear_schedule(
+            agent.optimizer,
+            env.agents[agent_id].age,
+            min_agent_lifetime,
+            agent.optimizer.lr if config.algo == "acktr" else config.lr,
+            config.min_lr,
+        )
+
+        agent.lr = learning_rate
+
+    # TODO: Consider moving this block and the above to the bottom so that
+    # ``env_pipe.get()`` is the first statement in the loop.
+    # This would require running it once at the top on agent's first iteration
+    # when step == initial_step, which is gross.
+    with torch.no_grad():
+        act_returns = agent.actor_critic.act(
+            rollouts.obs[step],
+            rollouts.recurrent_hidden_states[step],
+            rollouts.masks[step],
+        )
+
+        # Get integer action to pass to ``env.step()``.
+        env_action: int = int(act_returns[1][0])
+
+    # TODO: Send ``env_action: int`` back to leader to execute step.
+    action_pipe.put(env_action)
+
+    return act_returns
+
+
 def single_agent_loop(
     device: torch.device,
     agent_id: int,
@@ -75,7 +103,6 @@ def single_agent_loop(
     rollouts: RolloutStorage,
     config: Config,
     env: Env,
-    num_updates: int,
     initial_step: int,
     initial_ob: np.ndarray,
     env_pipe: mp.Pipe,
@@ -92,42 +119,25 @@ def single_agent_loop(
     rollouts.obs[0].copy_(initial_observation)
     rollouts.to(device)
 
-    # TODO: Compute/pass this!!!
-    num_updates_condition = float("inf")
+    decay_lr: bool = config.use_linear_decay
+
+    # Initial forward pass.
+    fwds = act(step, decay_lr, agent_id, agent, rollouts, config, env, action_pipe)
 
     while True:
 
-        # Only when trainer would make an update/backward pass.
-        if step % num_updates_condition == 0 and config.use_linear_decay:
-            update_learning_rate(agent_id, agent, config, env)
-
-        # TODO: Consider moving this block and the above to the bottom so that
-        # ``env_pipe.get()`` is the first statement in the loop.
-        # This would require running it once at the top on agent's first iteration
-        # when step == initial_step, which is gross.
-        with torch.no_grad():
-            act_returns = agent.actor_critic.act(
-                rollouts.obs[step],
-                rollouts.recurrent_hidden_states[step],
-                rollouts.masks[step],
-            )
-
-            # Get integer action to pass to ``env.step()``.
-            env_action: int = int(act_returns[1][0])
-
-            # These are all CUDA tensors (on device).
-            value: torch.Tensor = act_returns[0]
-            action: torch.Tensor = act_returns[1]
-            action_log_prob: torch.Tensor = act_returns[2]
-            recurrent_hidden_states: torch.Tensor = act_returns[3]
-            action_dist: torch.Tensor = act_returns[4]
-
-        # TODO: Send ``env_action: int`` back to leader to execute step.
-        action_pipe.put(env_action)
+        # These are all CUDA tensors (on device).
+        value: torch.Tensor = fwds[0]
+        action: torch.Tensor = fwds[1]
+        action_log_prob: torch.Tensor = fwds[2]
+        recurrent_hidden_states: torch.Tensor = fwds[3]
+        action_dist: torch.Tensor = fwds[4]
 
         # Execute environment step.
         # TODO: Grab step index and output from leader (no tensors included).
-        step, ob, reward, done, info = env_pipe.get()
+        step, ob, reward, done, info, backward_pass = env_pipe.get()
+
+        decay_lr = config.use_linear_decay and backward_pass
 
         # Update the policy score.
         # TODO: Send ``action_dist`` back to leader to update_policy_score.
@@ -159,7 +169,7 @@ def single_agent_loop(
         )
 
         # Only when trainer would make an update/backward pass.
-        if step % num_updates_condition == 0 and env.agent.age > 0:
+        if backward_pass and env.agent.age > 0:
 
             with torch.no_grad():
                 next_value = agent.actor_critic.get_value(
@@ -182,3 +192,6 @@ def single_agent_loop(
 
             # TODO: Send losses back to leader for ``update_losses()``.
             loss_pipe.put((value_loss, action_loss, dist_entropy))
+
+        # Make a forward pass.
+        fwds = act(step, decay_lr, agent_id, agent, rollouts, config, env, action_pipe)
