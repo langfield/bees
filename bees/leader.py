@@ -216,7 +216,6 @@ def train(args: argparse.Namespace) -> float:
         action_dict: Dict[int, int] = {}
         timestep_scores: Dict[int, float] = {}
 
-
         t_0 = time.time()
         # Get actions.
         for agent_id in action_spouts:
@@ -280,7 +279,7 @@ def train(args: argparse.Namespace) -> float:
 
         # Print debug output.
         end = "\n" if config.print_repr else "\r"
-        
+
         # DEBUG
         end = "\n"
 

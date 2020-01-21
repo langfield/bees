@@ -230,12 +230,12 @@ def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
     EAT_INDEX = 1
     for action in range(env.num_actions):
         action_tuple = flat_action_to_tuple(action, env.subaction_sizes)
-        if action_tuple[EAT_INDEX] == 1:
+        if action_tuple[EAT_INDEX] == env.config.EAT:
             eat_actions.append(action)
 
     # Compute individual food scores for any new agents.
     # HARDCODE
-    FOOD_TEMPERATURE = 1.0
+    FOOD_TEMPERATURE = 1e-4
     # TODO: Fix this inefficiency.
     # Calling ``env.get_optimal_action_dists()`` is pretty inefficient, because this
     # function will compute the optimal action distribution for each agent, even though
@@ -291,7 +291,10 @@ def get_food_target_dist(env: Env) -> torch.Tensor:
     for flat_action in range(env.num_actions):
         action_tuple = flat_action_to_tuple(flat_action, env.subaction_sizes)
 
-        if action_tuple[EAT_INDEX] == 1 and action_tuple[MATE_INDEX] == 1:
+        if (
+            action_tuple[EAT_INDEX] == env.config.EAT
+            and action_tuple[MATE_INDEX] == env.config.MATE
+        ):
             target_dist[flat_action] = 1.0
             num_correct_actions += 1
 

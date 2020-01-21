@@ -100,7 +100,7 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
         EAT_INDEX = 1
         for action in range(env.num_actions):
             tuple_action = flat_action_to_tuple(action, env.subaction_sizes)
-            if tuple_action[EAT_INDEX] == 1:
+            if tuple_action[EAT_INDEX] == env.config.EAT:
                 correct_actions.append(action)
 
         expected_food_scores[agent_id] = 0.0
