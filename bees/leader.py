@@ -5,14 +5,15 @@ import copy
 import random
 import logging
 import argparse
-import collections
-from collections import deque, OrderedDict
+from collections import OrderedDict
 from typing import Dict, Tuple, Set, List, Any, TextIO
 import pickle
 
 import gym
-import torch
 import numpy as np
+
+import torch
+import torch.multiprocessing as mp
 
 from bees.rl import algo, utils
 from bees.rl.model import Policy, CNNBase, MLPBase
@@ -21,6 +22,7 @@ from bees.rl.algo.algo import Algo
 
 from bees.env import Env
 from bees.config import Config
+from bees.worker import single_agent_loop
 from bees.analysis import (
     update_policy_score,
     update_losses,
@@ -135,15 +137,18 @@ def train(args: argparse.Namespace) -> float:
     if args.load_from:
         raise NotImplementedError
     else:
-
         obs = env.reset()
 
     # Initialize first policies.
     env_done = False
     for agent_id, agent_obs in obs.items():
+
+        # TODO: Implement device assignment.
+        devices[agent_id] = device
+
         if agent_id not in agents:
             agent, actor_critic, rollouts = get_agent(
-                config, env.observation_space, env.action_space, device
+                config, env.observation_space, env.action_space, devices[agent_id]
             )
             agents[agent_id] = agent
             actor_critics[agent_id] = actor_critic
@@ -154,27 +159,31 @@ def train(args: argparse.Namespace) -> float:
                 state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
                 optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
 
-        # TODO: Implement device assignment.
-        devices[agent_id] = device
+        # Add pipes to pipe maps.
+        env_pipes[agent_id] = mp.Pipe()
+        action_pipes[agent_id] = mp.Pipe()
+        action_dist_pipes[agent_id] = mp.Pipe()
+        loss_pipes[agent_id] = mp.Pipe()
 
         # Create worker processes.
         # TODO: Replace ``num_updates`` argument.
+        # TODO: Will torch even let us serialize the model and rollouts objects?
         workers[agent_id] = mp.Process(
             target=single_agent_loop,
             kwargs={
-                device: devices[agent_id],
-                agent_id: agent_id,
-                agent: agents[agent_id],
-                rollouts: rollout_map[agent_id],
-                config: config,
-                env: env,
-                num_updates: 0,
-                initial_step: 0,
-                initial_ob: obs[agent_id],
-                env_pipe: env_pipes[agent_id],
-                action_pipe: action_pipes[agent_id],
-                action_dist_pipe: action_dist_pipes[agent_id],
-                loss_pipe: loss_pipes[agent_id],
+                "device": devices[agent_id],
+                "agent_id": agent_id,
+                "agent": agents[agent_id],
+                "rollouts": rollout_map[agent_id],
+                "config": config,
+                "env": env,
+                "num_updates": 0,
+                "initial_step": 0,
+                "initial_ob": obs[agent_id],
+                "env_pipe": env_pipes[agent_id],
+                "action_pipe": action_pipes[agent_id],
+                "action_dist_pipe": action_dist_pipes[agent_id],
+                "loss_pipe": loss_pipes[agent_id],
             },
         )
 
@@ -191,19 +200,37 @@ def train(args: argparse.Namespace) -> float:
     )
     for j in range(num_updates):
 
-
         for step in range(config.num_steps):
 
+            # Should these all be defined up above with other maps?
             minted_agents = set()
             action_dict: Dict[int, int] = {}
+            timestep_scores: Dict[int, float] = {}
 
+            # Get actions.
+            for agent_id in action_pipes:
+                action_dict[agent_id] = action_pipes[agent_id].get()
 
             # Execute environment step.
             obs, rewards, dones, infos = env.step(action_dict)
+            for agent_id in obs:
+                env_pipes[agent_id].put(
+                    (
+                        step,
+                        obs[agent_id],
+                        rewards[agent_id],
+                        dones[agent_id],
+                        infos[agent_id],
+                    )
+                )
 
             # Write env state and metrics to log.
             env.log_state(env_log, visual_log)
             metrics_log.write(str(metrics.get_summary()) + "\n")
+
+            # Get policy scores.
+            for agent_id in infos:
+                timestep_scores[agent_id] = action_dist_pipes[agent_id]
 
             # Update the policy score.
             if env.iteration % config.policy_score_frequency == 0:
@@ -260,12 +287,17 @@ def train(args: argparse.Namespace) -> float:
                         actor_critic = dead_critics.pop()
                         agent = dead_agents.pop()
 
+                        # TODO: Grab pipes from dead pipes.
+
+                        # TODO: Is this expensive?
                         if config.reuse_state_dicts:
                             state_dict = copy.deepcopy(random.choice(state_dicts))
                             optim_state_dict = copy.deepcopy(
                                 random.choice(optim_state_dicts)
                             )
 
+                            # TODO: We may need to send these in a pipe.
+                            # TODO: This is bound to be expensive.
                             # Load initialized state dicts.
                             actor_critic.load_state_dict(state_dict)
                             agent.optimizer.load_state_dict(optim_state_dict)
@@ -294,6 +326,7 @@ def train(args: argparse.Namespace) -> float:
                                 raise NotImplementedError
 
                         # Create new RolloutStorage object.
+                        # TODO: Is this any slower than clearing data from the old one?
                         rollouts = RolloutStorage(
                             config.num_steps,
                             config.num_processes,
@@ -307,12 +340,50 @@ def train(args: argparse.Namespace) -> float:
                             config, env.observation_space, env.action_space, device
                         )
 
-                        # Save a copy of the state dict.
+                        # TODO: Implement device assignment.
+                        devices[agent_id] = device
+
+                        agent, actor_critic, rollouts = get_agent(
+                            config,
+                            env.observation_space,
+                            env.action_space,
+                            devices[agent_id],
+                        )
+
+                        # If turned on, saves a copy of each state dict for reuse in dead policies.
                         if config.reuse_state_dicts:
                             state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
                             optim_state_dicts.append(
                                 copy.deepcopy(agent.optimizer.state_dict())
                             )
+
+                        # Add pipes to pipe maps.
+                        env_pipes[agent_id] = mp.Pipe()
+                        action_pipes[agent_id] = mp.Pipe()
+                        action_dist_pipes[agent_id] = mp.Pipe()
+                        loss_pipes[agent_id] = mp.Pipe()
+
+                        # Create worker processes.
+                        # TODO: Replace ``num_updates`` argument.
+                        # TODO: Will torch even let us serialize the model and rollouts objects?
+                        workers[agent_id] = mp.Process(
+                            target=single_agent_loop,
+                            kwargs={
+                                "device": devices[agent_id],
+                                "agent_id": agent_id,
+                                "agent": agents[agent_id],
+                                "rollouts": rollout_map[agent_id],
+                                "config": config,
+                                "env": env,
+                                "num_updates": 0,
+                                "initial_step": 0,
+                                "initial_ob": obs[agent_id],
+                                "env_pipe": env_pipes[agent_id],
+                                "action_pipe": action_pipes[agent_id],
+                                "action_dist_pipe": action_dist_pipes[agent_id],
+                                "loss_pipe": loss_pipes[agent_id],
+                            },
+                        )
 
                     # Update dicts.
                     agents[agent_id] = agent
@@ -327,44 +398,16 @@ def train(args: argparse.Namespace) -> float:
 
                 else:
 
-                    # If done then clean the history of observations.
-                    if agent_done:
-                        masks = torch.FloatTensor([[0.0]])
-                    else:
-                        masks = torch.FloatTensor([[1.0]])
-                    if "bad_transition" in agent_info.keys():
-                        bad_masks = torch.FloatTensor([[0.0]])
-                    else:
-                        bad_masks = torch.FloatTensor([[1.0]])
-
                     # If done then remove from environment.
                     if agent_done:
                         actor_critic = actor_critics.pop(agent_id)
                         dead_critics.add(actor_critic)
                         # TODO: should we remove from ``rollout_map``?
+                        # Yes, because otherwise we are relying on garbage collection
+                        # because we reassign keys, which is bad practice.
+                        rollout_map.pop(agent_id)
                         agent = agents.pop(agent_id)
                         dead_agents.add(agent)
-
-                    # Shape correction and casting.
-                    obs_tensor = torch.FloatTensor([agent_obs])
-                    reward_tensor = torch.FloatTensor([agent_reward])
-
-                    # Add to rollouts.
-                    value = value_dict[agent_id]
-                    action_tensor = action_tensor_dict[agent_id]
-                    action_log_prob = action_log_prob_dict[agent_id]
-                    recurrent_hidden_states = recurrent_hidden_states_dict[agent_id]
-
-                    rollout_map[agent_id].insert(
-                        obs_tensor,
-                        recurrent_hidden_states,
-                        action_tensor,
-                        action_log_prob,
-                        value,
-                        reward_tensor,
-                        masks,
-                        bad_masks,
-                    )
 
             # Print out environment state.
             if all(dones.values()):
@@ -375,33 +418,14 @@ def train(args: argparse.Namespace) -> float:
         value_losses: Dict[int, float] = {}
         action_losses: Dict[int, float] = {}
         dist_entropies: Dict[int, float] = {}
-        for agent_id, agent in agents.items():
+
+        # Should we iterate over a different object?
+        for agent_id in agents:
             if agent_id not in minted_agents:
-
-                actor_critic = actor_critics[agent_id]
-                rollouts = rollout_map[agent_id]
-
-                with torch.no_grad():
-                    next_value = actor_critic.get_value(
-                        rollouts.obs[-1],
-                        rollouts.recurrent_hidden_states[-1],
-                        rollouts.masks[-1],
-                    ).detach()
-
-                rollouts.compute_returns(
-                    next_value,
-                    config.use_gae,
-                    config.gamma,
-                    config.gae_lambda,
-                    config.use_proper_time_limits,
-                )
-
-                # Compute weight updates.
-                value_loss, action_loss, dist_entropy = agent.update(rollouts)
+                value_loss, action_loss, dist_entropy = loss_pipes[agent_id].get()
                 value_losses[agent_id] = value_loss
                 action_losses[agent_id] = action_loss
                 dist_entropies[agent_id] = dist_entropy
-                rollouts.after_update()
 
         metrics = update_losses(
             env=env,
@@ -415,14 +439,10 @@ def train(args: argparse.Namespace) -> float:
             j % config.save_interval == 0 or j == num_updates - 1
         ) and args.save_root != "":
 
-            raise NotImplementedError
-
-            """
             # Save trainer state objects
             trainer_state = {
                 "agents": agents,
                 "rollout_map": rollout_map,
-                "episode_rewards": episode_rewards,
                 "minted_agents": minted_agents,
                 "metrics": metrics,
                 "dead_critics": dead_critics,
@@ -433,7 +453,6 @@ def train(args: argparse.Namespace) -> float:
             trainer_state_path = os.path.join(save_dir, "%s_trainer.pkl" % codename)
             with open(trainer_state_path, "wb") as trainer_file:
                 pickle.dump(trainer_state, trainer_file)
-            """
 
             # Save out environment state.
             state_path = os.path.join(save_dir, "%s_env.pkl" % codename)
