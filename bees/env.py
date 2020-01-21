@@ -150,7 +150,10 @@ class Env:
 
     def __getattr__(self, name: str) -> Any:
         """ Override to make mypy happy. """
-        return self.config.settings[name]
+        try:
+            return self.config.settings[name]
+        except KeyError:
+            raise AttributeError(name)
 
     def fill(self) -> None:
         """

@@ -1,9 +1,9 @@
 """ Distributed training function for a single agent worker. """
 from typing import Dict, Tuple, Any
+from multiprocessing.connection import Connection
 
 import torch
 import torch.nn.functional as F
-import torch.multiprocessing as mp
 
 import numpy as np
 
@@ -50,17 +50,17 @@ def get_masks(done: bool, info: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Ten
 
 def act(
     step: int,
-    decay_lr: bool,
+    decay: bool,
     agent_id: int,
     agent: Algo,
     rollouts: RolloutStorage,
     config: Config,
     env: Env,
-    action_pipe: mp.Pipe,
+    action_funnel: Connection,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """ Make a forward pass and send the env action to the leader process. """
     # Should execute only when trainer would make an update/backward pass.
-    if decay_lr:
+    if decay:
 
         min_agent_lifetime = 1.0 / config.aging_rate
 
@@ -77,7 +77,7 @@ def act(
         agent.lr = learning_rate
 
     # TODO: Consider moving this block and the above to the bottom so that
-    # ``env_pipe.get()`` is the first statement in the loop.
+    # ``env_spout.recv()`` is the first statement in the loop.
     # This would require running it once at the top on agent's first iteration
     # when step == initial_step, which is gross.
     with torch.no_grad():
@@ -91,7 +91,7 @@ def act(
         env_action: int = int(act_returns[1][0])
 
     # TODO: Send ``env_action: int`` back to leader to execute step.
-    action_pipe.put(env_action)
+    action_funnel.send(env_action)
 
     return act_returns
 
@@ -105,10 +105,10 @@ def single_agent_loop(
     env: Env,
     initial_step: int,
     initial_ob: np.ndarray,
-    env_pipe: mp.Pipe,
-    action_pipe: mp.Pipe,
-    action_dist_pipe: mp.Pipe,
-    loss_pipe: mp.Pipe,
+    env_spout: Connection,
+    action_funnel: Connection,
+    action_dist_funnel: Connection,
+    loss_funnel: Connection,
 ) -> None:
     """ Training loop for a single agent worker. """
 
@@ -119,10 +119,10 @@ def single_agent_loop(
     rollouts.obs[0].copy_(initial_observation)
     rollouts.to(device)
 
-    decay_lr: bool = config.use_linear_decay
+    decay: bool = config.use_linear_decay
 
     # Initial forward pass.
-    fwds = act(step, decay_lr, agent_id, agent, rollouts, config, env, action_pipe)
+    fwds = act(step, decay, agent_id, agent, rollouts, config, env, action_funnel)
 
     while True:
 
@@ -135,20 +135,20 @@ def single_agent_loop(
 
         # Execute environment step.
         # TODO: Grab step index and output from leader (no tensors included).
-        step, ob, reward, done, info, backward_pass = env_pipe.get()
+        step, ob, reward, done, info, backward_pass = env_spout.recv()
 
-        decay_lr = config.use_linear_decay and backward_pass
+        decay = config.use_linear_decay and backward_pass
 
         # Update the policy score.
         # TODO: Send ``action_dist`` back to leader to update_policy_score.
         # TODO: This should be done every k steps on workers instead of leader.
         # Then we just send the floats back to leader, which is cheaper.
         timestep_score = get_policy_score(action_dist, info)
-        action_dist_pipe.put(timestep_score)
+        action_dist_funnel.send(timestep_score)
 
         # If done then remove from environment.
         if done:
-            action_pipe.put(STOP_FLAG)
+            action_funnel.send(STOP_FLAG)
 
         # Shape correction and casting.
         # TODO: Change names so everything is statically-typed.
@@ -191,7 +191,7 @@ def single_agent_loop(
             rollouts.after_update()
 
             # TODO: Send losses back to leader for ``update_losses()``.
-            loss_pipe.put((value_loss, action_loss, dist_entropy))
+            loss_funnel.send((value_loss, action_loss, dist_entropy))
 
         # Make a forward pass.
-        fwds = act(step, decay_lr, agent_id, agent, rollouts, config, env, action_pipe)
+        fwds = act(step, decay, agent_id, agent, rollouts, config, env, action_funnel)
