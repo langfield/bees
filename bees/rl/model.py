@@ -90,7 +90,7 @@ class Policy(nn.Module):
         rnn_hxs: torch.Tensor,
         masks: torch.Tensor,
         deterministic: bool = False,
-    ) -> Tuple[torch.Tensor, ...]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Computes a forward pass by passing observation inputs and policy hidden state
         (in the case that the policy is recurrent) to the policy, which subsequently
