@@ -105,6 +105,14 @@ class Agent:
         self.num_children = 0
         self.is_mature = False
 
+    def __getattr__(self, item):
+        """ Override to make mypy happy. """
+        try:
+            settings = super().__getattribute__("settings")
+            return settings[item]
+        except KeyError:
+            return super().__getattr__(item)
+
     def initialize_reward_weights(self) -> None:
         """ Initializes the weights of the reward function. """
 
