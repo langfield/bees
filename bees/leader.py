@@ -23,7 +23,7 @@ from bees.rl.algo.algo import Algo
 
 from bees.env import Env
 from bees.config import Config
-from bees.worker import single_agent_loop
+from bees.worker import worker_loop
 from bees.analysis import (
     update_policy_score,
     update_losses,
@@ -179,7 +179,7 @@ def train(args: argparse.Namespace) -> float:
         # TODO: Replace ``num_updates`` argument.
         # TODO: Will torch even let us serialize the model and rollouts objects?
         workers[agent_id] = mp.Process(
-            target=single_agent_loop,
+            target=worker_loop,
             kwargs={
                 "device": devices[agent_id],
                 "agent_id": agent_id,
@@ -274,6 +274,10 @@ def train(args: argparse.Namespace) -> float:
 
         # Print debug output.
         end = "\n" if config.print_repr else "\r"
+        
+        # DEBUG
+        end = "\n"
+
         print("Iteration: %d| " % env.iteration, end="")
         print("Num agents: %d| " % len(agents), end="")
         print("Policy score loss: %.6f" % metrics.policy_score, end="")
@@ -381,7 +385,7 @@ def train(args: argparse.Namespace) -> float:
                     # TODO: Replace ``num_updates`` argument.
                     # TODO: Will torch even let us serialize the model and rollouts objects?
                     workers[agent_id] = mp.Process(
-                        target=single_agent_loop,
+                        target=worker_loop,
                         kwargs={
                             "device": devices[agent_id],
                             "agent_id": agent_id,
