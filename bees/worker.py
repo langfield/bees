@@ -126,13 +126,8 @@ def worker_loop(
         recurrent_hidden_states: torch.Tensor = fwds[3]
         action_dist: torch.Tensor = fwds[4]
 
-        t_0 = time.time()
-
         # Grab step index and env output from leader (no tensors included).
         step, ob, reward, done, info, backward_pass = env_spout.recv()
-
-        print("Received step %d in %fs" % (step, time.time() - t_0))
-        sys.stdout.flush()
 
         decay = config.use_linear_lr_decay and backward_pass
 
@@ -156,8 +151,6 @@ def worker_loop(
         reward = torch.FloatTensor([reward])
         masks, bad_masks = get_masks(done, info)
 
-        t_0 = time.time()
-
         # Add to rollouts.
         rollouts.insert(
             observation,
@@ -170,14 +163,10 @@ def worker_loop(
             bad_masks,
         )
 
-        print("Rollout insertion: %fs" % (time.time() - t_0,))
-        sys.stdout.flush()
-
         # Only when trainer would make an update/backward pass.
         age = info["age"]
         # TODO: Will age always be positive here?
         if backward_pass and age > 0:
-            print("!!! Making a backward pass. !!!")
             with torch.no_grad():
                 next_value = agent.actor_critic.get_value(
                     rollouts.obs[-1],

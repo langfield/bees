@@ -111,7 +111,7 @@ class Agent:
             settings = super().__getattribute__("settings")
             return settings[item]
         except KeyError:
-            return super().__getattr__(item)
+            return super().__getattribute__(item)
 
     def initialize_reward_weights(self) -> None:
         """ Initializes the weights of the reward function. """
