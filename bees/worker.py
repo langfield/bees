@@ -13,7 +13,6 @@ from bees.rl import utils
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
-from bees.env import Env
 from bees.utils import DEBUG, timing
 from bees.config import Config
 
@@ -28,7 +27,6 @@ def get_policy_score(action_dist: torch.Tensor, info: Dict[str, Any]) -> float:
     """ Compute the policy score given current and optimal distributions. """
     optimal_action_dist = info["optimal_action_dist"]
     action_dist = action_dist.cpu()
-
     timestep_score = float(
         F.kl_div(torch.log(action_dist), optimal_action_dist, reduction="sum")
     )
@@ -63,11 +61,8 @@ def act(
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """ Make a forward pass and send the env action to the leader process. """
     # Should execute only when trainer would make an update/backward pass.
-
     t_0 = time.time()
-
     if decay:
-
         min_agent_lifetime = 1.0 / config.aging_rate
 
         # Decrease learning rate linearly.
@@ -78,13 +73,7 @@ def act(
             agent.optimizer.lr if config.algo == "acktr" else config.lr,
             config.min_lr,
         )
-
         agent.lr = learning_rate
-
-    # TODO: Consider moving this block and the above to the bottom so that
-    # ``env_spout.recv()`` is the first statement in the loop.
-    # This would require running it once at the top on agent's first iteration
-    # when step == initial_step, which is gross.
     with torch.no_grad():
         act_returns = agent.actor_critic.act(
             rollouts.obs[step],
@@ -95,12 +84,8 @@ def act(
         # Get integer action to pass to ``env.step()``.
         env_action: int = int(act_returns[1][0])
 
-    print("About to send: %f" % time.time())
-
-    # TODO: Send ``env_action: int`` back to leader to execute step.
+    # Send ``env_action: int`` back to leader to execute step.
     action_funnel.send(env_action)
-
-    print("act fn: %fs" % (time.time() - t_0,))
 
     return act_returns
 
@@ -119,7 +104,6 @@ def worker_loop(
     loss_funnel: Connection,
 ) -> None:
     """ Training loop for a single agent worker. """
-
     age: int = 0
     step: int = initial_step
 
@@ -144,8 +128,7 @@ def worker_loop(
 
         t_0 = time.time()
 
-        # Execute environment step.
-        # TODO: Grab step index and output from leader (no tensors included).
+        # Grab step index and env output from leader (no tensors included).
         step, ob, reward, done, info, backward_pass = env_spout.recv()
 
         print("Received step %d in %fs" % (step, time.time() - t_0))
@@ -157,9 +140,7 @@ def worker_loop(
         # TODO: Send ``action_dist`` back to leader to update_policy_score.
         # TODO: This should be done every k steps on workers instead of leader.
         # Then we just send the floats back to leader, which is cheaper.
-
-
-        # TODO: Only compute on policy_score_frequency.
+        # TODO: Only compute on policy_score_frequency timesteps.
         """
         timestep_score = get_policy_score(action_dist, info)
         action_dist_funnel.send(timestep_score)
@@ -169,16 +150,12 @@ def worker_loop(
         if done:
             action_funnel.send(STOP_FLAG)
 
-        t_0 = time.time()
-
         # Shape correction and casting.
         # TODO: Change names so everything is statically-typed.
         observation = torch.FloatTensor([ob])
         reward = torch.FloatTensor([reward])
         masks, bad_masks = get_masks(done, info)
 
-        print("Tensor creation: %fs" % (time.time() - t_0,))
-        sys.stdout.flush()
         t_0 = time.time()
 
         # Add to rollouts.
@@ -197,21 +174,16 @@ def worker_loop(
         sys.stdout.flush()
 
         # Only when trainer would make an update/backward pass.
-        # TODO: Environment is updating age, but we can't see it because of a shared
-        # memory issue.
         age = info["age"]
         # TODO: Will age always be positive here?
         if backward_pass and age > 0:
-
             print("!!! Making a backward pass. !!!")
-
             with torch.no_grad():
                 next_value = agent.actor_critic.get_value(
                     rollouts.obs[-1],
                     rollouts.recurrent_hidden_states[-1],
                     rollouts.masks[-1],
                 ).detach()
-
             rollouts.compute_returns(
                 next_value,
                 config.use_gae,
@@ -224,7 +196,7 @@ def worker_loop(
             value_loss, action_loss, dist_entropy = agent.update(rollouts)
             rollouts.after_update()
 
-            # TODO: Send losses back to leader for ``update_losses()``.
+            # Send losses back to leader for ``update_losses()``.
             loss_funnel.send((value_loss, action_loss, dist_entropy))
 
         # Make a forward pass.
