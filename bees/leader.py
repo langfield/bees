@@ -156,7 +156,6 @@ def train(args: argparse.Namespace) -> float:
 
         # TODO: Implement device assignment.
         devices[agent_id] = device
-
         if agent_id not in agents:
             agent, actor_critic, rollouts = get_agent(
                 config, env.observation_space, env.action_space, devices[agent_id]
@@ -215,7 +214,6 @@ def train(args: argparse.Namespace) -> float:
         minted_agents = set()
         action_dict: Dict[int, int] = {}
         timestep_scores: Dict[int, float] = {}
-
 
         t_0 = time.time()
         # Get actions.
@@ -279,7 +277,7 @@ def train(args: argparse.Namespace) -> float:
 
         # Print debug output.
         end = "\n" if config.print_repr else "\r"
-        
+
         # DEBUG
         end = "\n"
 
