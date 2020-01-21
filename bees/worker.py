@@ -17,6 +17,8 @@ from bees.config import Config
 
 STOP_FLAG = 999
 
+# TODO: Consider using Ray for multiprocessing, which is supposedly around 10x faster.
+
 
 def update_learning_rate(agent_id: int, agent: Algo, config: Config, env: Env) -> None:
     """ Compute age and minimum agent lifetime. """
@@ -50,6 +52,7 @@ def get_policy_score(action_dist: torch.Tensor, info: Dict[str, Any]) -> float:
 
 
 def single_agent_loop(
+    device: torch.device,
     agent_id: int,
     agent: Algo,
     rollouts: RolloutStorage,
@@ -57,15 +60,21 @@ def single_agent_loop(
     env: Env,
     num_updates: int,
     initial_step: int,
-    env_queue: mp.Queue,
-    action_queue: mp.Queue,
-    action_dist_queue: mp.Queue,
-    loss_queue: mp.Queue,
+    initial_ob: np.ndarray,
+    env_pipe: mp.Pipe,
+    action_pipe: mp.Pipe,
+    action_dist_pipe: mp.Pipe,
+    loss_pipe: mp.Pipe,
 ) -> None:
     """ Training loop for a single agent worker. """
 
     step = initial_step
     agent_episode_rewards: collections.deque = collections.deque(maxlen=10)
+
+    # Copy first observations to rollouts, and send to device.
+    initial_observation: torch.Tensor = torch.FloatTensor([initial_ob])
+    rollouts.obs[0].copy_(initial_observation)
+    rollouts.to(device)
 
     # TODO: Compute/pass this!!!
     num_updates_condition = float("inf")
@@ -77,7 +86,7 @@ def single_agent_loop(
             update_learning_rate(agent_id, agent, config, env)
 
         # TODO: Consider moving this block and the above to the bottom so that
-        # ``env_queue.get()`` is the first statement in the loop.
+        # ``env_pipe.get()`` is the first statement in the loop.
         # This would require running it once at the top on agent's first iteration
         # when step == initial_step, which is gross.
         with torch.no_grad():
@@ -98,24 +107,24 @@ def single_agent_loop(
             action_dist: torch.Tensor = act_returns[4]
 
         # TODO: Send ``env_action: int`` back to leader to execute step.
-        action_queue.put(env_action)
+        action_pipe.put(env_action)
 
         # Execute environment step.
         # TODO: Grab step index and output from leader (no tensors included).
-        step, ob, reward, done, info = env_queue.get()
+        step, ob, reward, done, info = env_pipe.get()
 
         # Update the policy score.
         # TODO: Send ``action_dist`` back to leader to update_policy_score.
         # TODO: This should be done every k steps on workers instead of leader.
         # Then we just send the floats back to leader, which is cheaper.
         timestep_score = get_policy_score(action_dist, info)
-        action_dist_queue.put(timestep_score)
+        action_dist_pipe.put(timestep_score)
 
         # Rollout stacking.
         # TODO: Figure out this condition.
         if agent_id in agents:
             if "episode" in info.keys():
-                agent_episode_rewards[agent_id].append(info["episode"]["r"])
+                agent_episode_rewards.append(info["episode"]["r"])
 
             # If done then clean the history of observations.
             if done:
@@ -130,7 +139,7 @@ def single_agent_loop(
             # If done then remove from environment.
             # TODO: Tell leader to remove from environment.
             if done:
-                action_queue.put(STOP_FLAG)
+                action_pipe.put(STOP_FLAG)
                 pass
 
             # Shape correction and casting.
@@ -173,4 +182,4 @@ def single_agent_loop(
             rollouts.after_update()
 
             # TODO: Send losses back to leader for ``update_losses()``.
-            loss_queue.put((value_loss, action_loss, dist_entropy))
+            loss_pipe.put((value_loss, action_loss, dist_entropy))

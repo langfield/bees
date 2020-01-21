@@ -114,7 +114,6 @@ def train(args: argparse.Namespace) -> float:
     actor_critics: Dict[int, Policy] = {}
     agents: Dict[int, Algo] = {}
     rollout_map: Dict[int, RolloutStorage] = {}
-    episode_rewards: Dict[int, collections.deque] = {}
     minted_agents: Set[int] = set()
     metrics = Metrics()
     agent_action_dists: Dict[int, torch.Tensor] = {}
@@ -125,33 +124,16 @@ def train(args: argparse.Namespace) -> float:
     state_dicts: List[OrderedDict] = []
     optim_state_dicts: List[OrderedDict] = []
 
+    # Multiprocessing maps.
+    workers: Dict[int, mp.Process] = {}
+    devices: Dict[int, torch.device] = {}
+    env_pipes: Dict[int, mp.Pipe] = {}
+    action_pipes: Dict[int, mp.Pipe] = {}
+    action_dist_pipes: Dict[int, mp.Pipe] = {}
+    loss_pipes: Dict[int, mp.Pipe] = {}
+
     if args.load_from:
-
-        # Load the environment state from file.
-        env.load(env_state_path)
-
-        # Load in multiagent maps.
-        agents = trainer_state["agents"]
-        rollout_map = trainer_state["rollout_map"]
-        episode_rewards = trainer_state["episode_rewards"]
-        minted_agents = trainer_state["minted_agents"]
-        metrics = trainer_state["metrics"]
-        agent_action_dists = trainer_state["agent_action_dists"]
-
-        # Load in dead objects.
-        dead_critics = trainer_state["dead_critics"]
-        dead_agents = trainer_state["dead_agents"]
-        state_dicts = trainer_state["state_dicts"]
-        optim_state_dicts = trainer_state["optim_state_dicts"]
-
-        # Create actor_critics object from state in ``agents``.
-        actor_critics = {
-            agent_id: agent.actor_critic for agent_id, agent in agents.items()
-        }
-
-        # Don't reset environment if we are resuming a previous run.
-        obs = {agent_id: agent.observation for agent_id, agent in env.agents.items()}
-
+        raise NotImplementedError
     else:
 
         obs = env.reset()
@@ -166,12 +148,35 @@ def train(args: argparse.Namespace) -> float:
             agents[agent_id] = agent
             actor_critics[agent_id] = actor_critic
             rollout_map[agent_id] = rollouts
-            episode_rewards[agent_id] = deque(maxlen=10)
 
+            # If turned on, saves a copy of each state dict for reuse in dead policies.
             if config.reuse_state_dicts:
-                # Save a copy of the state dict.
                 state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
                 optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
+
+        # TODO: Implement device assignment.
+        devices[agent_id] = device
+
+        # Create worker processes.
+        # TODO: Replace ``num_updates`` argument.
+        workers[agent_id] = mp.Process(
+            target=single_agent_loop,
+            kwargs={
+                device: devices[agent_id],
+                agent_id: agent_id,
+                agent: agents[agent_id],
+                rollouts: rollout_map[agent_id],
+                config: config,
+                env: env,
+                num_updates: 0,
+                initial_step: 0,
+                initial_ob: obs[agent_id],
+                env_pipe: env_pipes[agent_id],
+                action_pipe: action_pipes[agent_id],
+                action_dist_pipe: action_dist_pipes[agent_id],
+                loss_pipe: loss_pipes[agent_id],
+            },
+        )
 
         # Copy first observations to rollouts, and send to device.
         rollouts = rollout_map[agent_id]
@@ -186,50 +191,12 @@ def train(args: argparse.Namespace) -> float:
     )
     for j in range(num_updates):
 
-        if config.use_linear_lr_decay:
-
-            # Decrease learning rate linearly.
-            for agent_id, agent in agents.items():
-
-                # Compute age and minimum agent lifetime.
-                env_agent = env.agents[agent_id]
-                age = env_agent.age
-                min_agent_lifetime = 1.0 / config.aging_rate
-
-                learning_rate = utils.update_linear_schedule(
-                    agent.optimizer,
-                    age,
-                    min_agent_lifetime,
-                    agent.optimizer.lr if config.algo == "acktr" else config.lr,
-                    config.min_lr,
-                )
-
-                agent.lr = learning_rate
 
         for step in range(config.num_steps):
 
             minted_agents = set()
-            value_dict: Dict[int, torch.Tensor] = {}
             action_dict: Dict[int, int] = {}
-            action_tensor_dict: Dict[int, torch.Tensor] = {}
-            action_log_prob_dict: Dict[int, torch.Tensor] = {}
-            recurrent_hidden_states_dict: Dict[int, torch.Tensor] = {}
 
-            # Sample actions.
-            with torch.no_grad():
-                for agent_id, actor_critic in actor_critics.items():
-                    rollouts = rollout_map[agent_id]
-                    ac_tuple = actor_critic.act(
-                        rollouts.obs[step],
-                        rollouts.recurrent_hidden_states[step],
-                        rollouts.masks[step],
-                    )
-                    value_dict[agent_id] = ac_tuple[0]
-                    action_dict[agent_id] = int(ac_tuple[1][0])
-                    action_tensor_dict[agent_id] = ac_tuple[1]
-                    action_log_prob_dict[agent_id] = ac_tuple[2]
-                    recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
-                    agent_action_dists[agent_id] = ac_tuple[4]
 
             # Execute environment step.
             obs, rewards, dones, infos = env.step(action_dict)
@@ -351,7 +318,6 @@ def train(args: argparse.Namespace) -> float:
                     agents[agent_id] = agent
                     actor_critics[agent_id] = actor_critic
                     rollout_map[agent_id] = rollouts
-                    episode_rewards[agent_id] = deque(maxlen=10)
 
                     # Copy first observations to rollouts, and send to device.
                     rollouts = rollout_map[agent_id]
@@ -360,8 +326,6 @@ def train(args: argparse.Namespace) -> float:
                     rollouts.to(device)
 
                 else:
-                    if "episode" in agent_info.keys():
-                        episode_rewards[agent_id].append(agent_info["episode"]["r"])
 
                     # If done then clean the history of observations.
                     if agent_done:
@@ -451,6 +415,9 @@ def train(args: argparse.Namespace) -> float:
             j % config.save_interval == 0 or j == num_updates - 1
         ) and args.save_root != "":
 
+            raise NotImplementedError
+
+            """
             # Save trainer state objects
             trainer_state = {
                 "agents": agents,
@@ -466,6 +433,7 @@ def train(args: argparse.Namespace) -> float:
             trainer_state_path = os.path.join(save_dir, "%s_trainer.pkl" % codename)
             with open(trainer_state_path, "wb") as trainer_file:
                 pickle.dump(trainer_state, trainer_file)
+            """
 
             # Save out environment state.
             state_path = os.path.join(save_dir, "%s_env.pkl" % codename)
