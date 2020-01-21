@@ -6,6 +6,8 @@ import torch
 import torch.nn.functional as F
 import torch.multiprocessing as mp
 
+import numpy as np
+
 from bees.rl import utils
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
@@ -51,6 +53,21 @@ def get_policy_score(action_dist: torch.Tensor, info: Dict[str, Any]) -> float:
     return timestep_score
 
 
+def get_masks(done: bool, info: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Tensor]:
+    """ Compute masks to insert into ``rollouts``. """
+    # If done then clean the history of observations.
+    if done:
+        masks = torch.FloatTensor([[0.0]])
+    else:
+        masks = torch.FloatTensor([[1.0]])
+    if "bad_transition" in info.keys():
+        bad_masks = torch.FloatTensor([[0.0]])
+    else:
+        bad_masks = torch.FloatTensor([[1.0]])
+
+    return masks, bad_masks
+
+
 def single_agent_loop(
     device: torch.device,
     agent_id: int,
@@ -69,7 +86,6 @@ def single_agent_loop(
     """ Training loop for a single agent worker. """
 
     step = initial_step
-    agent_episode_rewards: collections.deque = collections.deque(maxlen=10)
 
     # Copy first observations to rollouts, and send to device.
     initial_observation: torch.Tensor = torch.FloatTensor([initial_ob])
@@ -120,44 +136,27 @@ def single_agent_loop(
         timestep_score = get_policy_score(action_dist, info)
         action_dist_pipe.put(timestep_score)
 
-        # Rollout stacking.
-        # TODO: Figure out this condition.
-        if agent_id in agents:
-            if "episode" in info.keys():
-                agent_episode_rewards.append(info["episode"]["r"])
+        # If done then remove from environment.
+        if done:
+            action_pipe.put(STOP_FLAG)
 
-            # If done then clean the history of observations.
-            if done:
-                masks = torch.FloatTensor([[0.0]])
-            else:
-                masks = torch.FloatTensor([[1.0]])
-            if "bad_transition" in info.keys():
-                bad_masks = torch.FloatTensor([[0.0]])
-            else:
-                bad_masks = torch.FloatTensor([[1.0]])
+        # Shape correction and casting.
+        # TODO: Change names so everything is statically-typed.
+        observation = torch.FloatTensor([ob])
+        reward = torch.FloatTensor([reward])
+        masks, bad_masks = get_masks(done, info)
 
-            # If done then remove from environment.
-            # TODO: Tell leader to remove from environment.
-            if done:
-                action_pipe.put(STOP_FLAG)
-                pass
-
-            # Shape correction and casting.
-            # TODO: Change names so everything is statically-typed.
-            observation = torch.FloatTensor([ob])
-            reward = torch.FloatTensor([reward])
-
-            # Add to rollouts.
-            rollouts.insert(
-                observation,
-                recurrent_hidden_states,
-                action,
-                action_log_prob,
-                value,
-                reward,
-                masks,
-                bad_masks,
-            )
+        # Add to rollouts.
+        rollouts.insert(
+            observation,
+            recurrent_hidden_states,
+            action,
+            action_log_prob,
+            value,
+            reward,
+            masks,
+            bad_masks,
+        )
 
         # Only when trainer would make an update/backward pass.
         if step % num_updates_condition == 0 and env.agent.age > 0:
