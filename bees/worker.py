@@ -97,7 +97,7 @@ def act(
     return act_returns
 
 
-def single_agent_loop(
+def worker_loop(
     device: torch.device,
     agent_id: int,
     agent: Algo,
@@ -141,14 +141,23 @@ def single_agent_loop(
         # TODO: Grab step index and output from leader (no tensors included).
         step, ob, reward, done, info, backward_pass = env_spout.recv()
 
+        print("Received step %d" % step)
+        print("Age %d" % info["age"])
+        sys.stdout.flush()
+
         decay = config.use_linear_lr_decay and backward_pass
 
         # Update the policy score.
         # TODO: Send ``action_dist`` back to leader to update_policy_score.
         # TODO: This should be done every k steps on workers instead of leader.
         # Then we just send the floats back to leader, which is cheaper.
+
+
+        # TODO: Only compute on policy_score_frequency.
+        """
         timestep_score = get_policy_score(action_dist, info)
         action_dist_funnel.send(timestep_score)
+        """
 
         # If done then remove from environment.
         if done:
@@ -173,7 +182,6 @@ def single_agent_loop(
         )
 
         # Only when trainer would make an update/backward pass.
-        DEBUG(backward_pass)
         # TODO: Environment is updating age, but we can't see it because of a shared
         # memory issue.
         age = info["age"]
