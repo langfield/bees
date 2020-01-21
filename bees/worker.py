@@ -63,6 +63,9 @@ def act(
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """ Make a forward pass and send the env action to the leader process. """
     # Should execute only when trainer would make an update/backward pass.
+
+    t_0 = time.time()
+
     if decay:
 
         min_agent_lifetime = 1.0 / config.aging_rate
@@ -92,10 +95,12 @@ def act(
         # Get integer action to pass to ``env.step()``.
         env_action: int = int(act_returns[1][0])
 
+    print("About to send: %f" % time.time())
+
     # TODO: Send ``env_action: int`` back to leader to execute step.
     action_funnel.send(env_action)
 
-    print("Action send time: %f" % (time.time()))
+    print("act fn: %fs" % (time.time() - t_0,))
 
     return act_returns
 
@@ -196,6 +201,8 @@ def worker_loop(
         age = info["age"]
         # TODO: Will age always be positive here?
         if backward_pass and age > 0:
+
+            print("!!! Making a backward pass. !!!")
 
             with torch.no_grad():
                 next_value = agent.actor_critic.get_value(
