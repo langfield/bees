@@ -148,13 +148,6 @@ class Env:
         self.resetted = False
         self.iteration = 0
 
-    def __getattr__(self, name: str) -> Any:
-        """ Override to make mypy happy. """
-        try:
-            return self.config.settings[name]
-        except KeyError:
-            raise AttributeError(name)
-
     def fill(self) -> None:
         """
         Populate the environment with food and agents.
