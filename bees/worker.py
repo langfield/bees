@@ -119,7 +119,7 @@ def single_agent_loop(
     rollouts.obs[0].copy_(initial_observation)
     rollouts.to(device)
 
-    decay: bool = config.use_linear_decay
+    decay: bool = config.use_linear_lr_decay
 
     # Initial forward pass.
     fwds = act(step, decay, agent_id, agent, rollouts, config, env, action_funnel)
@@ -137,7 +137,7 @@ def single_agent_loop(
         # TODO: Grab step index and output from leader (no tensors included).
         step, ob, reward, done, info, backward_pass = env_spout.recv()
 
-        decay = config.use_linear_decay and backward_pass
+        decay = config.use_linear_lr_decay and backward_pass
 
         # Update the policy score.
         # TODO: Send ``action_dist`` back to leader to update_policy_score.

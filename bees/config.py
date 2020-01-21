@@ -5,7 +5,7 @@ from pprint import pformat
 from typing import List, Dict, Any
 
 
-class Config:
+class Config(dict):
     """
     Configuration object.
 
@@ -26,13 +26,6 @@ class Config:
                 self.settings[key] = value
             setattr(self, key, value)
             self.keys.append(key)
-
-    def __getattr__(self, name: str) -> Any:
-        """ Override to make mypy happy. """
-        try:
-            return self.settings[name]
-        except KeyError:
-            raise AttributeError(name)
 
     def __repr__(self) -> str:
         """ Return string representation of object. """
