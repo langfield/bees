@@ -186,7 +186,6 @@ def train(args: argparse.Namespace) -> float:
                 "agent": agents[agent_id],
                 "rollouts": rollout_map[agent_id],
                 "config": config,
-                "env": env,
                 "initial_step": 0,  # TODO: Fix to reflect ``env.iteration``.
                 "initial_ob": obs[agent_id],
                 "env_spout": env_spouts[agent_id],
@@ -243,8 +242,11 @@ def train(args: argparse.Namespace) -> float:
         metrics_log.write(str(metrics.get_summary()) + "\n")
 
         # Get policy scores.
+        # TODO: Fix race condition.
+        """
         for agent_id in infos:
             timestep_scores[agent_id] = action_dist_spouts[agent_id].recv()
+        """
 
         # Update the policy score.
         if env.iteration % config.policy_score_frequency == 0:
@@ -386,7 +388,6 @@ def train(args: argparse.Namespace) -> float:
                             "agent": agents[agent_id],
                             "rollouts": rollout_map[agent_id],
                             "config": config,
-                            "env": env,
                             "initial_step": step,  # TODO: Off by 1?
                             "initial_ob": obs[agent_id],
                             "env_spout": env_spouts[agent_id],

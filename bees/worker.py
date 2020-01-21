@@ -1,4 +1,5 @@
 """ Distributed training function for a single agent worker. """
+import sys
 from typing import Dict, Tuple, Any
 from multiprocessing.connection import Connection
 
@@ -12,6 +13,7 @@ from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
 from bees.env import Env
+from bees.utils import DEBUG
 from bees.config import Config
 
 # pylint: disable=duplicate-code
@@ -55,7 +57,7 @@ def act(
     agent: Algo,
     rollouts: RolloutStorage,
     config: Config,
-    env: Env,
+    age: int,
     action_funnel: Connection,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """ Make a forward pass and send the env action to the leader process. """
@@ -64,11 +66,10 @@ def act(
 
         min_agent_lifetime = 1.0 / config.aging_rate
 
-        # TODO: Figure out how to share ``env`` in memory.
         # Decrease learning rate linearly.
         learning_rate = utils.update_linear_schedule(
             agent.optimizer,
-            env.agents[agent_id].age,
+            age,
             min_agent_lifetime,
             agent.optimizer.lr if config.algo == "acktr" else config.lr,
             config.min_lr,
@@ -102,7 +103,6 @@ def single_agent_loop(
     agent: Algo,
     rollouts: RolloutStorage,
     config: Config,
-    env: Env,
     initial_step: int,
     initial_ob: np.ndarray,
     env_spout: Connection,
@@ -112,7 +112,8 @@ def single_agent_loop(
 ) -> None:
     """ Training loop for a single agent worker. """
 
-    step = initial_step
+    age: int = 0
+    step: int = initial_step
 
     # Copy first observations to rollouts, and send to device.
     initial_observation: torch.Tensor = torch.FloatTensor([initial_ob])
@@ -122,7 +123,7 @@ def single_agent_loop(
     decay: bool = config.use_linear_lr_decay
 
     # Initial forward pass.
-    fwds = act(step, decay, agent_id, agent, rollouts, config, env, action_funnel)
+    fwds = act(step, decay, agent_id, agent, rollouts, config, age, action_funnel)
 
     while True:
 
@@ -132,6 +133,9 @@ def single_agent_loop(
         action_log_prob: torch.Tensor = fwds[2]
         recurrent_hidden_states: torch.Tensor = fwds[3]
         action_dist: torch.Tensor = fwds[4]
+
+        print("Waiting at env spout.")
+        sys.stdout.flush()
 
         # Execute environment step.
         # TODO: Grab step index and output from leader (no tensors included).
@@ -169,7 +173,12 @@ def single_agent_loop(
         )
 
         # Only when trainer would make an update/backward pass.
-        if backward_pass and env.agent.age > 0:
+        DEBUG(backward_pass)
+        # TODO: Environment is updating age, but we can't see it because of a shared
+        # memory issue.
+        age = info["age"]
+        # TODO: Will age always be positive here?
+        if backward_pass and age > 0:
 
             with torch.no_grad():
                 next_value = agent.actor_critic.get_value(
@@ -194,4 +203,4 @@ def single_agent_loop(
             loss_funnel.send((value_loss, action_loss, dist_entropy))
 
         # Make a forward pass.
-        fwds = act(step, decay, agent_id, agent, rollouts, config, env, action_funnel)
+        fwds = act(step, decay, agent_id, agent, rollouts, config, age, action_funnel)
