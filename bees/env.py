@@ -154,7 +154,7 @@ class Env:
             settings = super().__getattribute__("settings")
             return settings[item]
         except KeyError:
-            return super().__getattr__(item)
+            return super().__getattribute__(item)
 
     def fill(self) -> None:
         """
@@ -578,7 +578,7 @@ class Env:
         child_ids: Set[int] = set()
 
         # HARDCODE
-        wants = lambda x: True if x == self.MATE else False
+        wants = lambda x: x == self.MATE
         wants_child = {
             agent_id: wants(action[2]) for agent_id, action in action_dict.items()
         }

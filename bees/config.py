@@ -5,7 +5,7 @@ from pprint import pformat
 from typing import List, Dict, Any
 
 
-class Config(dict):
+class Config:
     """
     Configuration object.
 
@@ -33,7 +33,7 @@ class Config(dict):
             settings = super().__getattribute__("settings")
             return settings[item]
         except KeyError:
-            return super().__getattr__(item)
+            return super().__getattribute__(item)
 
     def __repr__(self) -> str:
         """ Return string representation of object. """

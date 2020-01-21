@@ -37,6 +37,7 @@ from bees.initialization import Setup
 # pylint: disable=bad-continuation, too-many-branches, duplicate-code
 # pylint: disable=too-many-statements, too-many-locals
 
+ALPHA = 0.99
 
 def train(args: argparse.Namespace) -> float:
     """
@@ -153,6 +154,8 @@ def train(args: argparse.Namespace) -> float:
 
     # Initialize first policies.
     env_done = False
+    step_ema = 1
+    last_time = time.time()
     for agent_id, agent_obs in obs.items():
 
         # TODO: Implement device assignment.
@@ -209,20 +212,16 @@ def train(args: argparse.Namespace) -> float:
     )
     iterations = int(config.time_steps - env.iteration) // config.num_processes
     num_updates = iterations // config.num_steps
-    for step in tqdm(range(iterations)):
+    for step in range(iterations):
 
         # Should these all be defined up above with other maps?
         minted_agents = set()
         action_dict: Dict[int, int] = {}
         timestep_scores: Dict[int, float] = {}
 
-        t_0 = time.time()
         # Get actions.
         for agent_id in action_spouts:
             action_dict[agent_id] = action_spouts[agent_id].recv()
-
-        print("Received at: %f" % time.time())
-        print("Received actions in %fs" % (time.time() - t_0,))
 
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
@@ -276,6 +275,9 @@ def train(args: argparse.Namespace) -> float:
         if env.iteration == 1 or set(obs.keys()) != set(agents.keys()):
             metrics = update_food_scores(env, metrics)
 
+        step_ema = (ALPHA * step_ema) + ((1 - ALPHA) * (time.time() - last_time))
+        last_time = time.time()
+
         # Print debug output.
         end = "\n" if config.print_repr else "\r"
 
@@ -286,7 +288,8 @@ def train(args: argparse.Namespace) -> float:
         print("Num agents: %d| " % len(agents), end="")
         print("Policy score loss: %.6f" % metrics.policy_score, end="")
         print("/%.6f| " % metrics.initial_policy_score, end="")
-        print("Food score: %.6f" % metrics.food_score, end="")
+        print("Food score: %.6f|" % metrics.food_score, end="")
+        print("Step EMA: %.6f" % step_ema, end="")
         print("||||||", end=end)
 
         # Agent creation and termination, rollout stacking.
