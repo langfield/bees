@@ -1,5 +1,6 @@
 """ PyTorch environment trainer. """
 import os
+import time
 import json
 import copy
 import random
@@ -215,9 +216,14 @@ def train(args: argparse.Namespace) -> float:
         action_dict: Dict[int, int] = {}
         timestep_scores: Dict[int, float] = {}
 
+
+        t_0 = time.time()
         # Get actions.
         for agent_id in action_spouts:
             action_dict[agent_id] = action_spouts[agent_id].recv()
+
+        print("Receive time: %f" % time.time())
+        print("Received actions in %fs" % (time.time() - t_0,))
 
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
