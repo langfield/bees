@@ -74,11 +74,14 @@ def act(
             config.min_lr,
         )
         agent.lr = learning_rate
+
+    # Rollout tensors have dimension ``0`` size of ``config.num_steps``.
+    rollout_step = step % config.num_steps
     with torch.no_grad():
         act_returns = agent.actor_critic.act(
-            rollouts.obs[step],
-            rollouts.recurrent_hidden_states[step],
-            rollouts.masks[step],
+            rollouts.obs[rollout_step],
+            rollouts.recurrent_hidden_states[rollout_step],
+            rollouts.masks[rollout_step],
         )
 
         # Get integer action to pass to ``env.step()``.
@@ -129,6 +132,9 @@ def worker_loop(
         # Grab step index and env output from leader (no tensors included).
         step, ob, reward, done, info, backward_pass = env_spout.recv()
 
+        print("Just made environment step: %d" % step)
+        time.sleep(1)
+
         decay = config.use_linear_lr_decay and backward_pass
 
         # Update the policy score.
@@ -151,6 +157,9 @@ def worker_loop(
         reward = torch.FloatTensor([reward])
         masks, bad_masks = get_masks(done, info)
 
+        print("Adding to rollouts: %d" % step)
+        time.sleep(1)
+
         # Add to rollouts.
         rollouts.insert(
             observation,
@@ -164,9 +173,11 @@ def worker_loop(
         )
 
         # Only when trainer would make an update/backward pass.
-        age = info["age"]
-        # TODO: Will age always be positive here?
-        if backward_pass and age > 0:
+        if backward_pass and step > 0:
+
+            print("Making backward pass: %d" % step)
+            time.sleep(1)
+
             with torch.no_grad():
                 next_value = agent.actor_critic.get_value(
                     rollouts.obs[-1],
@@ -187,6 +198,9 @@ def worker_loop(
 
             # Send losses back to leader for ``update_losses()``.
             loss_funnel.send((value_loss, action_loss, dist_entropy))
+
+        print("Making forward pass: %d" % step)
+        time.sleep(1)
 
         # Make a forward pass.
         fwds = act(step, decay, agent_id, agent, rollouts, config, age, action_funnel)

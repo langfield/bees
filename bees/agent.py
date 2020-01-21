@@ -105,7 +105,7 @@ class Agent:
         self.num_children = 0
         self.is_mature = False
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         """ Override to make mypy happy. """
         try:
             settings = super().__getattribute__("settings")
