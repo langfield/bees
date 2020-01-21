@@ -153,7 +153,6 @@ def worker_loop(
         # TODO: This should be done every k steps on workers instead of leader.
         # Then we just send the floats back to leader, which is cheaper.
 
-
         # TODO: Only compute on policy_score_frequency.
         """
         timestep_score = get_policy_score(action_dist, info)
