@@ -885,7 +885,9 @@ class Env(Config):
 
         self.dones = dict(done)
 
-        self.iteration += 1
+        if self.increment:
+            env.iteration += 1
+
         return obs, rew, done, info
 
     def _get_adj_positions(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
