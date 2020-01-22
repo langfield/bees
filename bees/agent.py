@@ -154,15 +154,21 @@ class Agent(Config):
 
         input_arrays: List[np.ndarray] = []
 
-        if "obs" in self.reward_inputs:
+        remaining_inputs = list(self.reward_inputs)
+        if "obs" in remaining_inputs:
             flat_obs = np.array(self.observation).flatten()
             input_arrays.append(flat_obs)
-        if "actions" in self.reward_inputs:
+            remaining_inputs.remove("obs")
+        if "actions" in remaining_inputs:
             flat_action = one_hot(action, self.num_actions)
             input_arrays.append(flat_action)
-        if "health" in self.reward_inputs:
+            remaining_inputs.remove("actions")
+        if "health" in remaining_inputs:
             flat_healths = np.array([self.prev_health, self.health])
             input_arrays.append(flat_healths)
+            remaining_inputs.remove("health")
+        if len(remaining_inputs) > 0:
+            raise ValueError("Unrecognized inputs to reward network: %s" % str(remaining_inputs))
 
         inputs = np.concatenate(input_arrays)
         reward = np.copy(inputs)

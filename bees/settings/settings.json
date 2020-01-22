@@ -34,7 +34,7 @@
     "hidden_dim": 32,
     "reward_weight_mean": 0.0,
     "reward_weight_stddev": 0.4,
-    "reward_inputs": ["actions", "observation", "health"],
+    "reward_inputs": ["actions", "obs", "health"],
 
     "4": "====================GENETICS====================",
 
