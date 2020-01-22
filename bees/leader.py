@@ -38,7 +38,8 @@ from bees.initialization import Setup
 # pylint: disable=too-many-statements, too-many-locals
 
 ALPHA = 0.99
-DEBUG = True
+DEBUG = False
+
 
 def train(args: argparse.Namespace) -> float:
     """
@@ -86,6 +87,9 @@ def train(args: argparse.Namespace) -> float:
     metrics_log: TextIO = setup.metrics_log
     env_state_path: str = setup.env_state_path
     trainer_state: Dict[str, Any] = setup.trainer_state
+
+    # Make sure environment allows us to handle incrementing ``env.iteration`` here.
+    assert not config.increment
 
     # Create environment.
     if config.print_repr:
@@ -181,8 +185,7 @@ def train(args: argparse.Namespace) -> float:
         loss_spouts[agent_id], loss_funnels[agent_id] = mp.Pipe()
 
         # Create worker processes.
-        # TODO: Replace ``num_updates`` argument.
-        # TODO: Will torch even let us serialize the model and rollouts objects?
+        # TODO:  Consider initializing ``agent`` and ``rollouts`` in workers.
         workers[agent_id] = mp.Process(
             target=worker_loop,
             kwargs={
@@ -191,7 +194,7 @@ def train(args: argparse.Namespace) -> float:
                 "agent": agents[agent_id],
                 "rollouts": rollout_map[agent_id],
                 "config": config,
-                "initial_step": 0,  # TODO: Fix to reflect ``env.iteration``.
+                "initial_step": env.iteration,
                 "initial_ob": obs[agent_id],
                 "env_spout": env_spouts[agent_id],
                 "action_funnel": action_funnels[agent_id],
@@ -213,7 +216,7 @@ def train(args: argparse.Namespace) -> float:
     )
     iterations = int(config.time_steps - env.iteration) // config.num_processes
     num_updates = iterations // config.num_steps
-    for step in range(iterations):
+    while env.iteration > iterations:
 
         # Should these all be defined up above with other maps?
         minted_agents = set()
@@ -228,11 +231,11 @@ def train(args: argparse.Namespace) -> float:
         obs, rewards, dones, infos = env.step(action_dict)
 
         # TODO: Change this condition so there's only one loop.
-        backward_pass = step % config.num_steps == 0
+        backward_pass = env.iteration % config.num_steps == 0 and step > 0
         for agent_id in obs:
             env_funnels[agent_id].send(
                 (
-                    step,
+                    env.iteration,
                     obs[agent_id],
                     rewards[agent_id],
                     dones[agent_id],
@@ -401,7 +404,7 @@ def train(args: argparse.Namespace) -> float:
                             "agent": agents[agent_id],
                             "rollouts": rollout_map[agent_id],
                             "config": config,
-                            "initial_step": step,  # TODO: Off by 1?
+                            "initial_step": env.iteration,  # TODO: Off by 1?
                             "initial_ob": obs[agent_id],
                             "env_spout": env_spouts[agent_id],
                             "action_funnel": action_funnels[agent_id],
@@ -441,7 +444,7 @@ def train(args: argparse.Namespace) -> float:
             env_done = True
 
         # Only update losses and save on backward passes.
-        if step % config.num_steps == 0 and step > 0:
+        if env.iteration % config.num_steps == 0 and env.iteration > 0:
 
             value_losses: Dict[int, float] = {}
             action_losses: Dict[int, float] = {}
@@ -462,11 +465,10 @@ def train(args: argparse.Namespace) -> float:
                 metrics=metrics,
             )
 
-            # save for every interval-th episode or for the last epoch
-            if (
-                step % config.save_interval == 0
-                or step // config.num_steps == num_updates - 1
-            ) and args.save_root != "":
+            # Save for every ``save_interval``-th step or on the last update.
+            save_state: bool = env.iteration % config.save_interval == 0
+            update_index: int = env.iteration // config.num_steps
+            if (save_state or update_index == num_updates - 1) and args.save_root:
 
                 # Save trainer state objects
                 trainer_state = {
@@ -494,6 +496,8 @@ def train(args: argparse.Namespace) -> float:
 
             if env_done:
                 break
+
+        env.iteration += 1
 
     logging.getLogger().info(
         "Steps completed during episode out of total: %d / %d",

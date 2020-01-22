@@ -18,6 +18,7 @@
     "target_agent_density": 0.07,
     "print_repr": false,
     "num_displayed_agents": 20,
+    "increment": true,
 
     "2": "====================TRAINER====================",
 

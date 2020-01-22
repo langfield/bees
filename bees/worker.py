@@ -49,10 +49,10 @@ def get_masks(done: bool, info: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Ten
     return masks, bad_masks
 
 
+# TODO: Consider adding ``age`` as an attribute of ``agent: Algo``.
 def act(
-    step: int,
+    iteration: int,
     decay: bool,
-    agent_id: int,
     agent: Algo,
     rollouts: RolloutStorage,
     config: Config,
@@ -76,12 +76,12 @@ def act(
         agent.lr = learning_rate
 
     # Rollout tensors have dimension ``0`` size of ``config.num_steps``.
-    rollout_step = step % config.num_steps
+    rollout_index = iteration % config.num_steps
     with torch.no_grad():
         act_returns = agent.actor_critic.act(
-            rollouts.obs[rollout_step],
-            rollouts.recurrent_hidden_states[rollout_step],
-            rollouts.masks[rollout_step],
+            rollouts.obs[rollout_index],
+            rollouts.recurrent_hidden_states[rollout_index],
+            rollouts.masks[rollout_index],
         )
 
         # Get integer action to pass to ``env.step()``.
@@ -99,7 +99,7 @@ def worker_loop(
     agent: Algo,
     rollouts: RolloutStorage,
     config: Config,
-    initial_step: int,
+    initial_iteration: int,
     initial_ob: np.ndarray,
     env_spout: Connection,
     action_funnel: Connection,
@@ -108,7 +108,7 @@ def worker_loop(
 ) -> None:
     """ Training loop for a single agent worker. """
     age: int = 0
-    step: int = initial_step
+    iteration: int = initial_iteration
 
     # Copy first observations to rollouts, and send to device.
     initial_observation: torch.Tensor = torch.FloatTensor([initial_ob])
@@ -118,7 +118,7 @@ def worker_loop(
     decay: bool = config.use_linear_lr_decay
 
     # Initial forward pass.
-    fwds = act(step, decay, agent_id, agent, rollouts, config, age, action_funnel)
+    fwds = act(iteration, decay, agent, rollouts, config, age, action_funnel)
 
     while True:
 
@@ -129,14 +129,14 @@ def worker_loop(
         recurrent_hidden_states: torch.Tensor = fwds[3]
         action_dist: torch.Tensor = fwds[4]
 
-        # Grab step index and env output from leader (no tensors included).
-        step, ob, reward, done, info, backward_pass = env_spout.recv()
+        # Grab iteration index and env output from leader (no tensors included).
+        iteration, ob, reward, done, info, backward_pass = env_spout.recv()
 
         decay = config.use_linear_lr_decay and backward_pass
 
         # Update the policy score.
         # TODO: Send ``action_dist`` back to leader to update_policy_score.
-        # TODO: This should be done every k steps on workers instead of leader.
+        # TODO: This should be done every k iterations on workers instead of leader.
         # Then we just send the floats back to leader, which is cheaper.
         # TODO: Only compute on policy_score_frequency timesteps.
         """
@@ -167,7 +167,7 @@ def worker_loop(
         )
 
         # Only when trainer would make an update/backward pass.
-        if backward_pass and step > 0:
+        if backward_pass:
             with torch.no_grad():
                 next_value = agent.actor_critic.get_value(
                     rollouts.obs[-1],
@@ -190,4 +190,4 @@ def worker_loop(
             loss_funnel.send((value_loss, action_loss, dist_entropy))
 
         # Make a forward pass.
-        fwds = act(step, decay, agent_id, agent, rollouts, config, age, action_funnel)
+        fwds = act(iteration, decay, agent, rollouts, config, age, action_funnel)
