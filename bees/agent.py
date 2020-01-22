@@ -168,7 +168,9 @@ class Agent(Config):
             input_arrays.append(flat_healths)
             remaining_inputs.remove("health")
         if len(remaining_inputs) > 0:
-            raise ValueError("Unrecognized inputs to reward network: %s" % str(remaining_inputs))
+            raise ValueError(
+                "Unrecognized inputs to reward network: %s" % str(remaining_inputs)
+            )
 
         inputs = np.concatenate(input_arrays)
         reward = np.copy(inputs)
