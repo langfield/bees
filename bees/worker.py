@@ -74,11 +74,14 @@ def act(
             config.min_lr,
         )
         agent.lr = learning_rate
+
+    # Rollout tensors have dimension ``0`` size of ``config.num_steps``.
+    rollout_step = step % config.num_steps
     with torch.no_grad():
         act_returns = agent.actor_critic.act(
-            rollouts.obs[step],
-            rollouts.recurrent_hidden_states[step],
-            rollouts.masks[step],
+            rollouts.obs[rollout_step],
+            rollouts.recurrent_hidden_states[rollout_step],
+            rollouts.masks[rollout_step],
         )
 
         # Get integer action to pass to ``env.step()``.
@@ -164,9 +167,7 @@ def worker_loop(
         )
 
         # Only when trainer would make an update/backward pass.
-        age = info["age"]
-        # TODO: Will age always be positive here?
-        if backward_pass and age > 0:
+        if backward_pass and step > 0:
             with torch.no_grad():
                 next_value = agent.actor_critic.get_value(
                     rollouts.obs[-1],

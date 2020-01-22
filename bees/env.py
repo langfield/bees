@@ -38,7 +38,7 @@ NORMALIZER = 1000
 # pylint: disable=bad-continuation
 
 
-class Env:
+class Env(Config):
     """
     Environment with bees in it. Note that all of the parameters are contained in the
     ``config`` argument.
@@ -90,10 +90,11 @@ class Env:
 
     def __init__(self, config: Config) -> None:
 
-        # Parse settings from config.
+        # TODO: Consider replacing all ``env.config.<attr>`` with ``env.<attr>``.
         self.config = config
-        for key in config.keys:
-            setattr(self, key, config.settings[key])
+
+        # Initialize ``__dict__``.
+        super().__init__(config.settings, mutable=True)
 
         # Cast ``self.HEAVEN`` to tuple because json doesn't support tuples.
         self.HEAVEN: Tuple[int, int] = tuple(self.HEAVEN)  # type: ignore
@@ -147,14 +148,6 @@ class Env:
         self.dones: Dict[int, bool] = {}
         self.resetted = False
         self.iteration = 0
-
-    def __getattr__(self, item):
-        """ Override to make mypy happy. """
-        try:
-            settings = super().__getattribute__("settings")
-            return settings[item]
-        except KeyError:
-            return super().__getattribute__(item)
 
     def fill(self) -> None:
         """
