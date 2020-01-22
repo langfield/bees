@@ -17,7 +17,7 @@ def test_config_adds_all_keys_from_nested_dicts(settings: Dict[str, Any]) -> Non
         for key, value in mapping.items():
             if isinstance(value, dict):
                 check_keys(value, getattr(config, key))
-            assert key in config.keys
+            assert key in config.keys()
 
     check_keys(settings, config)
 

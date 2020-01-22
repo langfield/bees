@@ -5,12 +5,12 @@ from typing import Tuple, List, Dict, Any, Optional
 import numpy as np
 
 from bees.config import Config
-from bees.utils import one_hot, DEBUG
+from bees.utils import one_hot
 
 # pylint: disable=bad-continuation, too-many-arguments, too-many-instance-attributes
 
 
-class Agent:
+class Agent(Config):
     """
     An agent with position and health attributes. Note that all of the parameters are
     contained in the ``config`` argument.
@@ -58,10 +58,8 @@ class Agent:
     ) -> None:
         """ __init__ function for Agent class. """
 
-        # Parse settings from config.
-        self.config = config
-        for key in config.keys:
-            setattr(self, key, config.settings[key])
+        # Initialize ``__dict__``.
+        super().__init__(config.settings, mutable=True)
 
         # Agent state.
         self.num_actions = num_actions
@@ -104,14 +102,6 @@ class Agent:
         self.age = 0
         self.num_children = 0
         self.is_mature = False
-
-    def __getattr__(self, item: str) -> Any:
-        """ Override to make mypy happy. """
-        try:
-            settings = super().__getattribute__("settings")
-            return settings[item]
-        except KeyError:
-            return super().__getattribute__(item)
 
     def initialize_reward_weights(self) -> None:
         """ Initializes the weights of the reward function. """
