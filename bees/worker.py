@@ -1,6 +1,4 @@
 """ Distributed training function for a single agent worker. """
-import sys
-import time
 from typing import Dict, Tuple, Any
 from multiprocessing.connection import Connection
 
@@ -13,7 +11,6 @@ from bees.rl import utils
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
-from bees.utils import DEBUG, timing
 from bees.config import Config
 
 # pylint: disable=duplicate-code
@@ -61,7 +58,6 @@ def act(
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """ Make a forward pass and send the env action to the leader process. """
     # Should execute only when trainer would make an update/backward pass.
-    t_0 = time.time()
     if decay:
         min_agent_lifetime = 1.0 / config.aging_rate
 
@@ -95,7 +91,6 @@ def act(
 
 def worker_loop(
     device: torch.device,
-    agent_id: int,
     agent: Algo,
     rollouts: RolloutStorage,
     config: Config,

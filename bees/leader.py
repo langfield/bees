@@ -7,25 +7,22 @@ import random
 import pickle
 import logging
 import argparse
-from collections import OrderedDict
-from typing import Dict, Tuple, Set, List, Any, TextIO
-from multiprocessing.connection import Connection
+import collections
+from typing import Dict, Set, List, Any, TextIO
 
-import gym
 import numpy as np
-from tqdm import tqdm
 
 import torch
 import torch.multiprocessing as mp
 
-from bees.rl import algo, utils
-from bees.rl.model import Policy, CNNBase, MLPBase
+from bees.rl import utils
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
 from bees.env import Env
+from bees.pipe import Pipe
 from bees.config import Config
-from bees.worker import worker_loop
+from bees.creation import get_agent
 from bees.analysis import (
     update_policy_score,
     update_losses,
@@ -123,7 +120,6 @@ def train(args: argparse.Namespace) -> float:
 
     # Create multiagent maps.
     # TODO: Consider removing ``actor_critic`` and only referencing ``agent``.
-    actor_critics: Dict[int, Policy] = {}
     agents: Dict[int, Algo] = {}
     rollout_map: Dict[int, RolloutStorage] = {}
     minted_agents: Set[int] = set()
@@ -131,24 +127,15 @@ def train(args: argparse.Namespace) -> float:
     agent_action_dists: Dict[int, torch.Tensor] = {}
 
     # Save dead objects to make creation faster.
-    dead_critics: Set[Policy] = set()
     dead_agents: Set[Algo] = set()
-    state_dicts: List[OrderedDict] = []
-    optim_state_dicts: List[OrderedDict] = []
+    dead_pipes: Dict[int, Pipe] = {}
+    state_dicts: List[collections.OrderedDict] = []
+    optim_state_dicts: List[collections.OrderedDict] = []
 
     # Multiprocessing maps.
     workers: Dict[int, mp.Process] = {}
     devices: Dict[int, torch.device] = {}
-
-    env_spouts: Dict[int, Connection] = {}
-    action_spouts: Dict[int, Connection] = {}
-    action_dist_spouts: Dict[int, Connection] = {}
-    loss_spouts: Dict[int, Connection] = {}
-
-    env_funnels: Dict[int, Connection] = {}
-    action_funnels: Dict[int, Connection] = {}
-    action_dist_funnels: Dict[int, Connection] = {}
-    loss_funnels: Dict[int, Connection] = {}
+    pipes: Dict[int, Pipe] = {}
 
     # Set spawn start method for compatibility with torch.
     mp.set_start_method("spawn")
@@ -162,50 +149,35 @@ def train(args: argparse.Namespace) -> float:
     env_done = False
     step_ema = 1.0
     last_time = time.time()
-    for agent_id, agent_obs in obs.items():
+    for agent_id, ob in obs.items():
 
-        # TODO: Implement device assignment.
-        devices[agent_id] = device
-        if agent_id not in agents:
-            agent, actor_critic, rollouts = get_agent(
-                config, env.observation_space, env.action_space, devices[agent_id]
-            )
-            agents[agent_id] = agent
-            actor_critics[agent_id] = actor_critic
-            rollout_map[agent_id] = rollouts
-
-            # If turned on, saves a copy of each state dict for reuse in dead policies.
-            if config.reuse_state_dicts:
-                state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
-                optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
-
-        # Add pipes to pipe maps.
-        env_spouts[agent_id], env_funnels[agent_id] = mp.Pipe()
-        action_spouts[agent_id], action_funnels[agent_id] = mp.Pipe()
-        action_dist_spouts[agent_id], action_dist_funnels[agent_id] = mp.Pipe()
-        loss_spouts[agent_id], loss_funnels[agent_id] = mp.Pipe()
-
-        # Create worker processes.
-        # TODO:  Consider initializing ``agent`` and ``rollouts`` in workers.
-        workers[agent_id] = mp.Process(
-            target=worker_loop,
-            kwargs={
-                "device": devices[agent_id],
-                "agent_id": agent_id,
-                "agent": agents[agent_id],
-                "rollouts": rollout_map[agent_id],
-                "config": config,
-                "initial_step": env.iteration,
-                "initial_ob": obs[agent_id],
-                "env_spout": env_spouts[agent_id],
-                "action_funnel": action_funnels[agent_id],
-                "action_dist_funnel": action_dist_funnels[agent_id],
-                "loss_funnel": loss_funnels[agent_id],
-            },
+        agent, rollouts, worker, device, pipe = get_agent(
+            agent_id,
+            env.iteration,
+            ob,
+            config,
+            env.observation_space,
+            env.action_space,
+            agents,
+            rollout_map,
+            dead_agents,
+            dead_pipes,
+            state_dicts,
+            optim_state_dicts,
         )
 
-    for _, worker in workers.items():
-        worker.start()
+        # Optionally save a copy of each state dict for reuse in dead policies.
+        if config.reuse_state_dicts and agent_id not in agents:
+            state_dict = agent.actor_critic.state_dict()
+            optim_state_dict = agent.optimizer.state_dict()
+            state_dicts.append(copy.deepcopy(state_dict))
+            optim_state_dicts.append(copy.deepcopy(optim_state_dict))
+
+        agents[agent_id] = agent
+        workers[agent_id] = worker
+        devices[agent_id] = device
+        pipes[agent_id] = pipe
+        rollout_map[agent_id] = rollouts
 
     # TODO: Could we stagger these?
     backward_pass: bool = False
@@ -225,16 +197,16 @@ def train(args: argparse.Namespace) -> float:
         timestep_scores: Dict[int, float] = {}
 
         # Get actions.
-        for agent_id in action_spouts:
-            action_dict[agent_id] = action_spouts[agent_id].recv()
+        for agent_id in pipes:
+            action_dict[agent_id] = pipes[agent_id].action_spout.recv()
 
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
 
         # TODO: Change this condition so there's only one loop.
-        backward_pass = env.iteration % config.num_steps == 0 and step > 0
+        backward_pass = env.iteration % config.num_steps == 0 and env.iteration > 0
         for agent_id in obs:
-            env_funnels[agent_id].send(
+            pipes[agent_id].env_funnel.send(
                 (
                     env.iteration,
                     obs[agent_id],
@@ -300,143 +272,47 @@ def train(args: argparse.Namespace) -> float:
 
         # Agent creation and termination, rollout stacking.
         for agent_id in obs:
-            agent_obs = obs[agent_id]
-            agent_reward = rewards[agent_id]
-            agent_done = dones[agent_id]
-            agent_info = infos[agent_id]
+            ob = obs[agent_id]
+            done = dones[agent_id]
 
             # Initialize new policies.
             # TODO: Consider making this its own function.
             if agent_id not in agents:
+                agent, rollouts, worker, device, pipe = get_agent(
+                    agent_id,
+                    env.iteration,
+                    ob,
+                    config,
+                    env.observation_space,
+                    env.action_space,
+                    agents,
+                    rollout_map,
+                    dead_agents,
+                    dead_pipes,
+                    state_dicts,
+                    optim_state_dicts,
+                )
+                agents[agent_id] = agent
+                workers[agent_id] = worker
+                devices[agent_id] = device
+                pipes[agent_id] = pipe
+                rollout_map[agent_id] = rollouts
                 minted_agents.add(agent_id)
 
-                # Test whether we can reuse previously instantiated policy
-                # objects, or if we need to create new ones.
-                if len(dead_critics) > 0:
-
-                    actor_critic = dead_critics.pop()
-                    agent = dead_agents.pop()
-
-                    # TODO: Grab pipes from dead pipes.
-
-                    # TODO: Is this expensive?
-                    if config.reuse_state_dicts:
-                        state_dict = copy.deepcopy(random.choice(state_dicts))
-                        optim_state_dict = copy.deepcopy(
-                            random.choice(optim_state_dicts)
-                        )
-
-                        # TODO: We may need to send these in a pipe.
-                        # TODO: This is bound to be expensive.
-                        # Load initialized state dicts.
-                        actor_critic.load_state_dict(state_dict)
-                        agent.optimizer.load_state_dict(optim_state_dict)
-                    else:
-
-                        # Reinitialize the policy of ``actor_critic``.
-                        if isinstance(actor_critic.base, CNNBase):
-                            (
-                                actor_critic.base.main,
-                                actor_critic.base.critic_linear,
-                            ) = CNNBase.init_weights(
-                                actor_critic.base.main, actor_critic.base.critic_linear,
-                            )
-                        elif isinstance(actor_critic.base, MLPBase):
-                            (
-                                actor_critic.base.actor,
-                                actor_critic.base.critic,
-                                actor_critic.base.critic_linear,
-                            ) = MLPBase.init_weights(
-                                actor_critic.base.actor,
-                                actor_critic.base.critic,
-                                actor_critic.base.critic_linear,
-                            )
-                        else:
-                            raise NotImplementedError
-
-                    # Create new RolloutStorage object.
-                    # TODO: Is this any slower than clearing data from the old one?
-                    rollouts = RolloutStorage(
-                        config.num_steps,
-                        config.num_processes,
-                        env.observation_space.shape,
-                        env.action_space,
-                        actor_critic.recurrent_hidden_state_size,
-                    )
-
-                else:
-                    agent, actor_critic, rollouts = get_agent(
-                        config, env.observation_space, env.action_space, device
-                    )
-
-                    # TODO: Implement device assignment.
-                    devices[agent_id] = device
-
-                    agent, actor_critic, rollouts = get_agent(
-                        config,
-                        env.observation_space,
-                        env.action_space,
-                        devices[agent_id],
-                    )
-
-                    # If turned on, saves a copy of each state dict for reuse in dead policies.
-                    if config.reuse_state_dicts:
-                        state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
-                        optim_state_dicts.append(
-                            copy.deepcopy(agent.optimizer.state_dict())
-                        )
-
-                    # Add pipes to pipe maps.
-                    env_spouts[agent_id], env_funnels[agent_id] = mp.Pipe()
-                    action_spouts[agent_id], action_funnels[agent_id] = mp.Pipe()
-                    (
-                        action_dist_spouts[agent_id],
-                        action_dist_funnels[agent_id],
-                    ) = mp.Pipe()
-                    loss_spouts[agent_id], loss_funnels[agent_id] = mp.Pipe()
-
-                    # Create worker processes.
-                    # TODO: Replace ``num_updates`` argument.
-                    # TODO: Will torch even let us serialize the model and rollouts objects?
-                    workers[agent_id] = mp.Process(
-                        target=worker_loop,
-                        kwargs={
-                            "device": devices[agent_id],
-                            "agent_id": agent_id,
-                            "agent": agents[agent_id],
-                            "rollouts": rollout_map[agent_id],
-                            "config": config,
-                            "initial_step": env.iteration,  # TODO: Off by 1?
-                            "initial_ob": obs[agent_id],
-                            "env_spout": env_spouts[agent_id],
-                            "action_funnel": action_funnels[agent_id],
-                            "action_dist_funnel": action_dist_funnels[agent_id],
-                            "loss_funnel": loss_funnels[agent_id],
-                        },
-                    )
-
-                # Update dicts.
-                agents[agent_id] = agent
-                actor_critics[agent_id] = actor_critic
-                rollout_map[agent_id] = rollouts
-
-                # Copy first observations to rollouts, and send to device.
-                rollouts = rollout_map[agent_id]
-                obs_tensor = torch.FloatTensor([agent_obs])
-                rollouts.obs[0].copy_(obs_tensor)
-                rollouts.to(device)
+                # Optionally save a copy of each state dict for reuse in dead policies.
+                if config.reuse_state_dicts:
+                    state_dict = agent.actor_critic.state_dict()
+                    optim_state_dict = agent.optimizer.state_dict()
+                    state_dicts.append(copy.deepcopy(state_dict))
+                    optim_state_dicts.append(copy.deepcopy(optim_state_dict))
 
             else:
 
                 # If done then remove from environment.
-                if agent_done:
-                    actor_critic = actor_critics.pop(agent_id)
-                    dead_critics.add(actor_critic)
-                    # TODO: should we remove from ``rollout_map``?
-                    # Yes, because otherwise we are relying on garbage collection
-                    # because we reassign keys, which is bad practice.
-                    rollout_map.pop(agent_id)
+                if done:
                     agent = agents.pop(agent_id)
+                    # TODO: Should we save a reference to dead ``rollouts``?
+                    rollout_map.pop(agent_id)
                     dead_agents.add(agent)
 
         # Print out environment state.
@@ -455,10 +331,10 @@ def train(args: argparse.Namespace) -> float:
             # Should we iterate over a different object?
             for agent_id in agents:
                 if agent_id not in minted_agents:
-                    value_loss, action_loss, dist_entropy = loss_spouts[agent_id].recv()
-                    value_losses[agent_id] = value_loss
-                    action_losses[agent_id] = action_loss
-                    dist_entropies[agent_id] = dist_entropy
+                    losses = pipes[agent_id].loss_spout.recv()
+                    value_losses[agent_id] = losses[0]
+                    action_losses[agent_id] = losses[1]
+                    dist_entropies[agent_id] = losses[2]
 
             metrics = update_losses(
                 env=env,
@@ -478,7 +354,6 @@ def train(args: argparse.Namespace) -> float:
                     "rollout_map": rollout_map,
                     "minted_agents": minted_agents,
                     "metrics": metrics,
-                    "dead_critics": dead_critics,
                     "dead_agents": dead_agents,
                     "state_dicts": state_dicts,
                     "optim_state_dicts": optim_state_dicts,
@@ -508,73 +383,3 @@ def train(args: argparse.Namespace) -> float:
     )
 
     return metrics.policy_score
-
-
-def get_agent(
-    config: Config, obs_space: gym.Space, act_space: gym.Space, device: torch.device,
-) -> Tuple[Algo, Policy, RolloutStorage]:
-    """
-    Spins up a new agent/policy.
-
-    Parameters
-    ----------
-    config : ``Config``.
-        Config object parsed from settings file.
-    obs_space : ``gym.Space``.
-        Observation space from the environment.
-    act_space : ``gym.Space``.
-        Action space from the environment.
-    device : ``torch.device``.
-        The GPU/TPU/CPU.
-
-    Returns
-    -------
-    agent : ``Algo``.
-        Agent object from a2c-ppo-acktr.
-    actor_critic : ``Policy``.
-        The policy object.
-    rollouts : ``RolloutStorage``.
-        The rollout object.
-    """
-
-    actor_critic = Policy(
-        obs_space.shape, act_space, base_kwargs={"recurrent": config.recurrent_policy}
-    )
-    actor_critic.to(device)
-    agent: Algo
-
-    if config.algo == "a2c":
-        agent = algo.A2C_ACKTR(
-            actor_critic,
-            config.value_loss_coef,
-            config.entropy_coef,
-            lr=config.lr,
-            eps=config.eps,
-            alpha=config.alpha,
-            max_grad_norm=config.max_grad_norm,
-        )
-    elif config.algo == "ppo":
-        agent = algo.PPO(
-            actor_critic,
-            config.clip_param,
-            config.ppo_epoch,
-            config.num_mini_batch,
-            config.value_loss_coef,
-            config.entropy_coef,
-            lr=config.lr,
-            eps=config.eps,
-            max_grad_norm=config.max_grad_norm,
-        )
-    elif config.algo == "acktr":
-        agent = algo.A2C_ACKTR(
-            actor_critic, config.value_loss_coef, config.entropy_coef, acktr=True
-        )
-
-    rollouts = RolloutStorage(
-        config.num_steps,
-        config.num_processes,
-        obs_space.shape,
-        act_space,
-        actor_critic.recurrent_hidden_state_size,
-    )
-    return agent, actor_critic, rollouts
