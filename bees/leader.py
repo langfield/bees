@@ -122,6 +122,7 @@ def train(args: argparse.Namespace) -> float:
     device = torch.device("cuda:0" if config.cuda else "cpu")
 
     # Create multiagent maps.
+    # TODO: Consider removing ``actor_critic`` and only referencing ``agent``.
     actor_critics: Dict[int, Policy] = {}
     agents: Dict[int, Algo] = {}
     rollout_map: Dict[int, RolloutStorage] = {}
@@ -305,6 +306,7 @@ def train(args: argparse.Namespace) -> float:
             agent_info = infos[agent_id]
 
             # Initialize new policies.
+            # TODO: Consider making this its own function.
             if agent_id not in agents:
                 minted_agents.add(agent_id)
 
