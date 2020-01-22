@@ -38,6 +38,7 @@ from bees.initialization import Setup
 # pylint: disable=too-many-statements, too-many-locals
 
 ALPHA = 0.99
+DEBUG = True
 
 def train(args: argparse.Namespace) -> float:
     """
@@ -154,7 +155,7 @@ def train(args: argparse.Namespace) -> float:
 
     # Initialize first policies.
     env_done = False
-    step_ema = 1
+    step_ema = 1.0
     last_time = time.time()
     for agent_id, agent_obs in obs.items():
 
@@ -284,13 +285,14 @@ def train(args: argparse.Namespace) -> float:
         # DEBUG
         end = "\n"
 
-        print("Iteration: %d| " % env.iteration, end="")
-        print("Num agents: %d| " % len(agents), end="")
-        print("Policy score loss: %.6f" % metrics.policy_score, end="")
-        print("/%.6f| " % metrics.initial_policy_score, end="")
-        print("Food score: %.6f|" % metrics.food_score, end="")
-        print("Step EMA: %.6f" % step_ema, end="")
-        print("||||||", end=end)
+        if not DEBUG:
+            print("Iteration: %d| " % env.iteration, end="")
+            print("Num agents: %d| " % len(agents), end="")
+            print("Policy score loss: %.6f" % metrics.policy_score, end="")
+            print("/%.6f| " % metrics.initial_policy_score, end="")
+            print("Food score: %.6f|" % metrics.food_score, end="")
+            print("Step EMA: %.6f" % step_ema, end="")
+            print("||||||", end=end)
 
         # Agent creation and termination, rollout stacking.
         for agent_id in obs:
@@ -439,7 +441,7 @@ def train(args: argparse.Namespace) -> float:
             env_done = True
 
         # Only update losses and save on backward passes.
-        if step % config.num_steps == 0:
+        if step % config.num_steps == 0 and step > 0:
 
             value_losses: Dict[int, float] = {}
             action_losses: Dict[int, float] = {}

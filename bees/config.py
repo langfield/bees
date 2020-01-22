@@ -1,11 +1,12 @@
 """ Converts settings dictionary into config object. """
-# NOTE: https://stackoverflow.com/questions/42272335/how-to-make-a-class-which-has-getattr-properly-pickable
+# NOTE: StackOverflow reference:
+# /questions/42272335/how-to-make-a-class-which-has-getattr-properly-pickable
 import copy
 from pprint import pformat
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 
-class Config:
+class Config(dict):
     """
     Configuration object.
 
@@ -14,26 +15,43 @@ class Config:
     settings : ``Dict[str, Any]``.
     """
 
-    def __init__(self, settings: Dict[str, Any]):
+    def __init__(self, settings: Dict[str, Any], mutable: bool = False):
 
-        self.keys: List[str] = []
+        # Set any attributes here - before initialisation (they remain normal attrs).
         self.settings: Dict[str, Any] = copy.deepcopy(settings)
+        self.mutable: bool = mutable
+        dict.__init__(self, settings)
 
         # Add all key-value pairs.
         for key, value in self.settings.items():
             if isinstance(value, dict):
                 value = Config(value)
-                self.settings[key] = value
             setattr(self, key, value)
-            self.keys.append(key)
 
-    def __getattr__(self, item):
-        """ Override to make mypy happy. """
+        # After initialisation, setting attributes is the same as setting an item.
+        self.__initialised = True
+
+    def __getattr__(self, item: str) -> Any:
+        """Maps values to attrs. Only called if there's NO attr with this name. """
         try:
-            settings = super().__getattribute__("settings")
-            return settings[item]
+            return self.__getitem__(item)
         except KeyError:
-            return super().__getattribute__(item)
+            raise AttributeError(item)
+
+    def __setattr__(self, item: str, value: Any) -> None:
+        """ Maps attributes to values. Only if we are initialised. """
+        # This test allows attributes to be set in the ``__init__()`` method.
+        # TODO: Settings validation should disallow leading underscores.
+        if "_Config__initialized" not in self.__dict__:
+            dict.__setattr__(self, item, value)
+        # Any normal attributes are handled normally.
+        # TODO: Consider raising an error here so it's immutable (not for Env).
+        elif not self.mutable:
+            raise AttributeError("Can't assign attribute. Config object is immutable.")
+        elif item in self.__dict__:
+            dict.__setattr__(self, item, value)
+        else:
+            self.__setitem__(item, value)
 
     def __repr__(self) -> str:
         """ Return string representation of object. """
