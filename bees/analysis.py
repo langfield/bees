@@ -54,6 +54,20 @@ class Metrics:
         attrs = ["policy_score", "total_loss", "food_score"]
         for attr in attrs:
             summary[attr] = getattr(self, attr)
+
+        edians = []
+        NUM_EDIANS = 5
+        sorted_scores = sorted(list(self.policy_scores.values()))
+        for i in range(NUM_EDIANS):
+            edian_index = int((i / (NUM_EDIANS - 1)) * len(sorted_scores))
+            if edian_index == len(sorted_scores):
+                edian_index -= 1
+            if edian_index not in range(len(sorted_scores)):
+                break
+
+            edians.append(sorted_scores[edian_index])
+        summary["edians"] = list(edians)
+
         return summary
 
 

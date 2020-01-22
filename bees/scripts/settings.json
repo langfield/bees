@@ -19,7 +19,7 @@
     "text_opacity": 0.75,
     "x_axis_opacity": 0.7,
     "tick_label_size": 14,
-    "legend_size": 14,
+    "legend_size": 1,
     "y_axis_label_size": 14, 
     "x_axis_label_size": 14, 
     "banner_text_size": 14,

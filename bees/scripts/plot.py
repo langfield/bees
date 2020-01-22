@@ -9,7 +9,7 @@ import pandas as pd
 from plotplotplot.draw import graph
 
 
-EMA_ALPHA = 0.9
+EMA_ALPHA = 0.999
 
 
 def parse_agent_data(steps: List[Dict[str, Any]]) -> Dict[int, Dict[str, List[Any]]]:
