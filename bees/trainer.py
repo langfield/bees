@@ -9,6 +9,7 @@ import collections
 from collections import deque, OrderedDict
 from typing import Dict, Tuple, Set, List, Any, TextIO
 import pickle
+from pprint import pformat
 
 import gym
 import torch
@@ -20,6 +21,7 @@ from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
 from bees.env import Env
+from bees.timer import Timer
 from bees.config import Config
 from bees.analysis import (
     update_policy_score,
@@ -70,6 +72,13 @@ def train(args: argparse.Namespace) -> float:
         Contains arguments as described above.
     """
 
+    # Create metrics and timer.
+    metrics = Metrics()
+    timer = Timer()
+
+    # TIMER
+    timer.start_interval("initialization")
+
     setup = Setup(args)
     config: Config = setup.config
     save_dir: str = setup.save_dir
@@ -116,7 +125,6 @@ def train(args: argparse.Namespace) -> float:
     rollout_map: Dict[int, RolloutStorage] = {}
     episode_rewards: Dict[int, collections.deque] = {}
     minted_agents: Set[int] = set()
-    metrics = Metrics()
     agent_action_dists: Dict[int, torch.Tensor] = {}
 
     # Save dead objects to make creation faster.
@@ -179,6 +187,7 @@ def train(args: argparse.Namespace) -> float:
         rollouts.obs[0].copy_(obs_tensor)
         rollouts.to(device)
 
+    timer.end_interval("initialization")
     num_updates = (
         int(config.time_steps - env.iteration)
         // config.num_steps
@@ -208,6 +217,8 @@ def train(args: argparse.Namespace) -> float:
 
         for step in range(config.num_steps):
 
+            timer.start_interval("act")
+
             minted_agents = set()
             value_dict: Dict[int, torch.Tensor] = {}
             action_dict: Dict[int, int] = {}
@@ -230,15 +241,22 @@ def train(args: argparse.Namespace) -> float:
                     action_log_prob_dict[agent_id] = ac_tuple[2]
                     recurrent_hidden_states_dict[agent_id] = ac_tuple[3]
                     agent_action_dists[agent_id] = ac_tuple[4]
+            timer.end_interval("act")
 
             # Execute environment step.
+            timer.start_interval("step")
             obs, rewards, dones, infos = env.step(action_dict)
+            timer.end_interval("step")
 
             # Write env state and metrics to log.
+            timer.start_interval("logging")
             env.log_state(env_log, visual_log)
             metrics_log.write(str(metrics.get_summary()) + "\n")
+            timer.end_interval("logging")
+
 
             # Update the policy score.
+            timer.start_interval("metrics")
             if env.iteration % config.policy_score_frequency == 0:
                 metrics = update_policy_score(
                     env=env,
@@ -266,7 +284,10 @@ def train(args: argparse.Namespace) -> float:
             if env.iteration == 1 or set(obs.keys()) != set(agents.keys()):
                 metrics = update_food_scores(env, metrics)
 
+            timer.end_interval("metrics")
+
             # Print debug output.
+            timer.start_interval("printing")
             end = "\n" if config.print_repr else "\r"
             print("Iteration: %d| " % env.iteration, end="")
             print("Num agents: %d| " % len(agents), end="")
@@ -274,8 +295,11 @@ def train(args: argparse.Namespace) -> float:
             print("/%.6f| " % metrics.initial_policy_score, end="")
             print("Food score: %.6f" % metrics.food_score, end="")
             print("||||||", end=end)
+            timer.end_interval("printing")
+
 
             # Agent creation and termination, rollout stacking.
+            timer.start_interval("agent creation/removal")
             for agent_id in obs:
                 agent_obs = obs[agent_id]
                 agent_reward = rewards[agent_id]
@@ -408,6 +432,9 @@ def train(args: argparse.Namespace) -> float:
                     print("All agents have died.")
                 env_done = True
 
+            timer.end_interval("agent creation/removal")
+
+        timer.start_interval("training")
         value_losses: Dict[int, float] = {}
         action_losses: Dict[int, float] = {}
         dist_entropies: Dict[int, float] = {}
@@ -439,12 +466,17 @@ def train(args: argparse.Namespace) -> float:
                 dist_entropies[agent_id] = dist_entropy
                 rollouts.after_update()
 
+        timer.end_interval("training")
+        """
         metrics = update_losses(
             env=env,
             config=config,
             losses=(value_losses, action_losses, dist_entropies),
             metrics=metrics,
         )
+        """
+
+        timer.start_interval("saving")
 
         # save for every interval-th episode or for the last epoch
         if (
@@ -476,9 +508,14 @@ def train(args: argparse.Namespace) -> float:
             with open(settings_path, "w") as settings_file:
                 json.dump(config.settings, settings_file)
 
+        timer.end_interval("saving")
         if env_done:
             break
 
+    summary = timer.get_summary()
+    percentages = {interval: summary[interval]["percentage"] for interval in summary}
+    print("Time summary:")
+    print(pformat(percentages))
     logging.getLogger().info(
         "Steps completed during episode out of total: %d / %d",
         env.iteration,
