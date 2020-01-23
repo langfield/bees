@@ -130,14 +130,9 @@ def worker_loop(
         decay = config.use_linear_lr_decay and backward_pass
 
         # Update the policy score.
-        # TODO: Send ``action_dist`` back to leader to update_policy_score.
-        # TODO: This should be done every k iterations on workers instead of leader.
-        # Then we just send the floats back to leader, which is cheaper.
-        # TODO: Only compute on policy_score_frequency timesteps.
-        """
-        timestep_score = get_policy_score(action_dist, info)
-        action_dist_funnel.send(timestep_score)
-        """
+        if iteration % config.policy_score_frequency == 0:
+            timestep_score = get_policy_score(action_dist, info)
+            action_dist_funnel.send(timestep_score)
 
         # If done then remove from environment.
         if done:
