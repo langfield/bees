@@ -5,7 +5,6 @@ import json
 import copy
 import random
 import pickle
-import logging
 import argparse
 import collections
 from typing import Dict, Set, List, Any, TextIO
@@ -106,6 +105,9 @@ def train(args: argparse.Namespace) -> float:
     torch.manual_seed(config.seed)
     torch.cuda.manual_seed_all(config.seed)
 
+    # GPU setup.
+    torch.set_num_threads(2)
+    device = torch.device("cuda:0" if config.cuda else "cpu")
     if config.cuda and torch.cuda.is_available() and config.cuda_deterministic:
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
@@ -115,11 +117,7 @@ def train(args: argparse.Namespace) -> float:
     utils.cleanup_log_dir(log_dir)
     utils.cleanup_log_dir(eval_log_dir)
 
-    torch.set_num_threads(2)
-    device = torch.device("cuda:0" if config.cuda else "cpu")
-
     # Create multiagent maps.
-    # TODO: Consider removing ``actor_critic`` and only referencing ``agent``.
     agents: Dict[int, Algo] = {}
     rollout_map: Dict[int, RolloutStorage] = {}
     minted_agents: Set[int] = set()
@@ -150,7 +148,6 @@ def train(args: argparse.Namespace) -> float:
     step_ema = 1.0
     last_time = time.time()
     for agent_id, ob in obs.items():
-
         agent, rollouts, worker, device, pipe = get_agent(
             agent_id,
             env.iteration,
@@ -179,14 +176,8 @@ def train(args: argparse.Namespace) -> float:
         pipes[agent_id] = pipe
         rollout_map[agent_id] = rollouts
 
-    # TODO: Could we stagger these?
+    # Whether or not we make a weight update on this iteration.
     backward_pass: bool = False
-
-    num_updates = (
-        int(config.time_steps - env.iteration)
-        // config.num_steps
-        // config.num_processes
-    )
     iterations = int(config.time_steps - env.iteration) // config.num_processes
     num_updates = iterations // config.num_steps
     while env.iteration > iterations:
@@ -202,8 +193,6 @@ def train(args: argparse.Namespace) -> float:
 
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
-
-        # TODO: Change this condition so there's only one loop.
         backward_pass = env.iteration % config.num_steps == 0 and env.iteration > 0
         for agent_id in obs:
             pipes[agent_id].env_funnel.send(
@@ -221,15 +210,12 @@ def train(args: argparse.Namespace) -> float:
         env.log_state(env_log, visual_log)
         metrics_log.write(str(metrics.get_summary()) + "\n")
 
-        # Get policy scores.
-        # TODO: Fix race condition.
-        """
-        for agent_id in infos:
-            timestep_scores[agent_id] = action_dist_spouts[agent_id].recv()
-        """
-
         # Update the policy score.
         if env.iteration % config.policy_score_frequency == 0:
+            for agent_id in infos:
+                timestep_scores[agent_id] = pipes[agent_id].action_dist_spout.recv()
+
+            # TODO: Make an analogue of this function.
             metrics = update_policy_score(
                 env=env,
                 config=config,
@@ -276,7 +262,6 @@ def train(args: argparse.Namespace) -> float:
             done = dones[agent_id]
 
             # Initialize new policies.
-            # TODO: Consider making this its own function.
             if agent_id not in agents:
                 agent, rollouts, worker, device, pipe = get_agent(
                     agent_id,
@@ -343,7 +328,7 @@ def train(args: argparse.Namespace) -> float:
                 metrics=metrics,
             )
 
-            # Save for every ``save_interval``-th step or on the last update.
+            # Save for every ``config.save_interval``-th step or on the last update.
             save_state: bool = env.iteration % config.save_interval == 0
             update_index: int = env.iteration // config.num_steps
             if (save_state or update_index == num_updates - 1) and args.save_root:
@@ -375,11 +360,5 @@ def train(args: argparse.Namespace) -> float:
                 break
 
         env.iteration += 1
-
-    logging.getLogger().info(
-        "Steps completed during episode out of total: %d / %d",
-        env.iteration,
-        config.time_steps,
-    )
 
     return metrics.policy_score

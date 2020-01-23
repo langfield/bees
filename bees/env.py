@@ -886,7 +886,7 @@ class Env(Config):
         self.dones = dict(done)
 
         if self.increment:
-            env.iteration += 1
+            self.iteration += 1
 
         return obs, rew, done, info
 
