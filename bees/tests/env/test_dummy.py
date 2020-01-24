@@ -53,10 +53,12 @@ class EnvironmentMachine(RuleBasedStateMachine):
         super(EnvironmentMachine, self).__init__()
         self.env = env
 
+    """
     @initialize()
     @timing
     def reset(self) -> None:
         pass
+    """
 
     @rule()
     def dummy(self) -> None:
@@ -65,8 +67,8 @@ class EnvironmentMachine(RuleBasedStateMachine):
 
 env_state_machine = EnvironmentMachine.TestCase
 env_state_machine.settings = settings(
-    max_examples=100,
-    stateful_step_count=20,
+    max_examples=1,
+    stateful_step_count=1,
     deadline=None,
     suppress_health_check=[hc.too_slow],
 )

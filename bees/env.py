@@ -123,6 +123,8 @@ class Env(Config):
 
         # Each observation is a k * k matrix with values from a discrete
         # space of size self.num_obj_types, where k = 2 * self.sight_len + 1
+        # TODO: This block is why hypothesis takes so long.
+        """
         outer_list = []
         for _x in range(-self.sight_len, self.sight_len + 1):
             inner_list = []
@@ -133,6 +135,7 @@ class Env(Config):
             inner_space = gym.spaces.Tuple(tuple(inner_list))
             outer_list.append(inner_space)
         self.observation_space = gym.spaces.Tuple(tuple(outer_list))
+        """
 
         obs_len = 2 * self.sight_len + 1
         low_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
