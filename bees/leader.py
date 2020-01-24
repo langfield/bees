@@ -23,7 +23,7 @@ from bees.pipe import Pipe
 from bees.config import Config
 from bees.creation import get_agent
 from bees.analysis import (
-    update_policy_score,
+    update_policy_score_multiprocessed,
     update_losses,
     update_food_scores,
     Metrics,
@@ -34,7 +34,7 @@ from bees.initialization import Setup
 # pylint: disable=too-many-statements, too-many-locals
 
 ALPHA = 0.99
-DEBUG = True
+DEBUG = False
 
 
 def train(args: argparse.Namespace) -> float:
@@ -122,7 +122,6 @@ def train(args: argparse.Namespace) -> float:
     rollout_map: Dict[int, RolloutStorage] = {}
     minted_agents: Set[int] = set()
     metrics = Metrics()
-    agent_action_dists: Dict[int, torch.Tensor] = {}
 
     # Save dead objects to make creation faster.
     dead_agents: Set[Algo] = set()
@@ -138,6 +137,7 @@ def train(args: argparse.Namespace) -> float:
     # Set spawn start method for compatibility with torch.
     mp.set_start_method("spawn")
 
+    # TODO: Implement this.
     if args.load_from:
         raise NotImplementedError
     else:
@@ -194,7 +194,8 @@ def train(args: argparse.Namespace) -> float:
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
         backward_pass = env.iteration % config.num_steps == 0 and env.iteration > 0
-        for agent_id in obs:
+        # TODO: Check for keyerror: for agent_id in obs:
+        for agent_id in pipes:
             pipes[agent_id].env_funnel.send(
                 (
                     env.iteration,
@@ -212,15 +213,15 @@ def train(args: argparse.Namespace) -> float:
 
         # Update the policy score.
         if (env.iteration + 1) % config.policy_score_frequency == 0:
-            for agent_id in infos:
+            # TODO: Check for keyerror: for agent_id in infos:
+            for agent_id in pipes:
                 timestep_scores[agent_id] = pipes[agent_id].action_dist_spout.recv()
 
-            # TODO: Make an analogue of this function.
-            metrics = update_policy_score(
+            metrics = update_policy_score_multiprocessed(
                 env=env,
                 config=config,
                 infos=infos,
-                agent_action_dists=agent_action_dists,
+                timestep_scores=timestep_scores,
                 metrics=metrics,
             )
 
@@ -294,7 +295,9 @@ def train(args: argparse.Namespace) -> float:
                 if done:
                     agent = agents.pop(agent_id)
                     # TODO: Should we save a reference to dead ``rollouts``?
+                    # TODO: Does garbage collection get these? Use ``del``?
                     rollout_map.pop(agent_id)
+                    pipes.pop(agent_id)
                     dead_agents.add(agent)
 
         # Print out environment state.
