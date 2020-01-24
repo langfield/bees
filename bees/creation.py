@@ -31,7 +31,7 @@ def get_agent(
     dead_pipes: Dict[int, Pipe],
     state_dicts: List[collections.OrderedDict],
     optim_state_dicts: List[collections.OrderedDict],
-) -> Tuple[Algo, RolloutStorage, mp.Process, Pipe, torch.Device]:
+) -> Tuple[Algo, RolloutStorage, mp.Process, Pipe, torch.device]:
 
     # REMOVE
     device = torch.device("cuda:0" if config.cuda else "cpu")
@@ -106,7 +106,7 @@ def get_agent(
                 "agent": agent,
                 "rollouts": rollouts,
                 "config": config,
-                "initial_step": iteration,
+                "initial_iteration": iteration,
                 "initial_ob": ob,
                 "env_spout": pipe.env_spout,
                 "action_funnel": pipe.action_funnel,
