@@ -36,13 +36,15 @@ def get_agent(
     # REMOVE
     device = torch.device("cuda:0" if config.cuda else "cpu")
 
+    pipe = Pipe()
+
     # Test whether we can reuse previously instantiated policy
     # objects, or if we need to create new ones.
     if len(dead_agents) > 0:
 
         agent = dead_agents.pop()
 
-        # TODO: Grab pipe from dead pipes.
+        # TODO: Consider reusing dead pipes.
 
         # TODO: Is this expensive?
         if config.reuse_state_dicts:
@@ -94,8 +96,6 @@ def get_agent(
         else:
             agent = agents[agent_id]
             rollouts = rollout_map[agent_id]
-
-        pipe = Pipe()
 
         # Create worker processes.
         # TODO: Consider calling ``get_policy`` in ``worker_loop()``.
