@@ -211,7 +211,7 @@ def train(args: argparse.Namespace) -> float:
         metrics_log.write(str(metrics.get_summary()) + "\n")
 
         # Update the policy score.
-        if env.iteration % config.policy_score_frequency == 0:
+        if (env.iteration + 1) % config.policy_score_frequency == 0:
             for agent_id in infos:
                 timestep_scores[agent_id] = pipes[agent_id].action_dist_spout.recv()
 
@@ -243,9 +243,6 @@ def train(args: argparse.Namespace) -> float:
 
         # Print debug output.
         end = "\n" if config.print_repr else "\r"
-
-        # DEBUG
-        end = "\n"
 
         if not DEBUG:
             print("Iteration: %d| " % env.iteration, end="")
