@@ -34,7 +34,7 @@ from bees.initialization import Setup
 # pylint: disable=too-many-statements, too-many-locals
 
 ALPHA = 0.99
-DEBUG = False
+DEBUG = True
 
 
 def train(args: argparse.Namespace) -> float:
@@ -178,7 +178,7 @@ def train(args: argparse.Namespace) -> float:
 
     # Whether or not we make a weight update on this iteration.
     backward_pass: bool = False
-    iterations = int(config.time_steps - env.iteration) // config.num_processes
+    iterations = config.time_steps // config.num_processes
     num_updates = iterations // config.num_steps
     while env.iteration < iterations:
 

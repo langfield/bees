@@ -145,9 +145,11 @@ class Env(Config):
         self.avg_agent_lifetime: float = -1.0
 
         # Misc settings.
+        # TODO: Why do we even have this?
         self.dones: Dict[int, bool] = {}
         self.resetted = False
         self.iteration = 0
+        self.iterations = self.time_steps // self.num_processes
 
     def fill(self) -> None:
         """
@@ -783,11 +785,11 @@ class Env(Config):
         -------
         obs : ``Dict[int, np.ndarray]``.
             Maps agent ids to observations.
-        rew : ``Dict[int, float]``.
+        rewards : ``Dict[int, float]``.
             Maps agent ids to rewards.
-        done : ``Dict[int, bool]``.
+        dones : ``Dict[int, bool]``.
             Maps agent ids to done status.
-        info : ``Dict[int, Any]``.
+        infos : ``Dict[int, Any]``.
             Maps agent ids to various per-agent info.
         """
 
@@ -799,9 +801,9 @@ class Env(Config):
 
         # Execute move, consume, and mate actions, and calculate reward
         obs: Dict[int, np.ndarray] = {}
-        rew: Dict[int, float] = {}
-        done: Dict[int, bool] = {}
-        info: Dict[int, Any] = {}
+        rewards: Dict[int, float] = {}
+        dones: Dict[int, bool] = {}
+        infos: Dict[int, Any] = {}
 
         # Set previous health values.
         for agent_id, agent in self.agents.items():
@@ -812,11 +814,11 @@ class Env(Config):
         self._consume(tuple_action_dict)
         child_ids = self._mate(tuple_action_dict)
 
-        # Initialize ``info`` dicts. This must happen after the actions are
+        # Initialize ``infos`` dicts. This must happen after the actions are
         # executed so that agents which are born from the call to _mate() are included
-        # as keys in ``info``.
+        # as keys in ``infos``.
         for agent_id in self.agents:
-            info[agent_id] = {}
+            infos[agent_id] = {}
 
         # Plant new food.
         self._plant()
@@ -826,10 +828,10 @@ class Env(Config):
             if agent_id not in child_ids:
                 # Note that ``compute_reward`` takes the action in integer form, so we
                 # use ``action_dict`` here instead of ``tuple_action_dict``.
-                rew[agent_id] = agent.compute_reward(action_dict[agent_id])
+                rewards[agent_id] = agent.compute_reward(action_dict[agent_id])
             # First reward for children is zero.
             elif agent_id in child_ids:
-                rew[agent_id] = 0
+                rewards[agent_id] = 0
 
         # Compute optimal action distribution for each agent for this timestep.
         # This "+1" is here because we don't increment ``self.iteration`` until
@@ -840,7 +842,7 @@ class Env(Config):
                 greedy_temperature=self.greedy_temperature
             )
             for agent_id in self.agents:
-                info[agent_id]["optimal_action_dist"] = optimal_action_dists[agent_id]
+                infos[agent_id]["optimal_action_dist"] = optimal_action_dists[agent_id]
 
         # Decrease agent health, compute observations and dones.
         killed_agent_ids = []
@@ -858,10 +860,10 @@ class Env(Config):
             obs[agent_id] = self._get_obs(agent.pos)
             agent.observation = obs[agent_id]
 
-            done[agent_id] = agent.health <= 0.0
+            dones[agent_id] = agent.health <= 0.0
 
-            # Kill agent if ``done[agent_id]`` and remove from ``self.grid``.
-            if done[agent_id]:
+            # Kill agent if ``dones[agent_id]`` and remove from ``self.grid``.
+            if dones[agent_id]:
 
                 self._remove(self.obj_type_ids["agent"], agent.pos, agent_id)
                 agent.pos = self.HEAVEN
@@ -875,20 +877,25 @@ class Env(Config):
                         ALPHA * self.avg_agent_lifetime + (1 - ALPHA) * agent.age
                     )
 
-            # Update agent ages and update info dictionary
+            # Update agent ages and update infos dictionary
             agent.age += 1
-            info[agent_id]["age"] = agent.age
+            infos[agent_id]["age"] = agent.age
 
         # Remove killed agents from self.agents
         for killed_agent_id in killed_agent_ids:
             self.agents.pop(killed_agent_id)
 
-        self.dones = dict(done)
-
+        # NOTE: This will NOT execute when multiprocessed.
         if self.increment:
             self.iteration += 1
 
-        return obs, rew, done, info
+        if self.iteration == self.iterations - 1:
+            print("END OF TRAINING.")
+            for agent_id in dones.keys():
+                dones[agent_id] = True
+        self.dones = dict(dones)
+
+        return obs, rewards, dones, infos
 
     def _get_adj_positions(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         """
