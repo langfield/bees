@@ -180,7 +180,7 @@ def train(args: argparse.Namespace) -> float:
     backward_pass: bool = False
     iterations = int(config.time_steps - env.iteration) // config.num_processes
     num_updates = iterations // config.num_steps
-    while env.iteration > iterations:
+    while env.iteration < iterations:
 
         # Should these all be defined up above with other maps?
         minted_agents = set()
