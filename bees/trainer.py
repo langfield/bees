@@ -254,7 +254,6 @@ def train(args: argparse.Namespace) -> float:
             metrics_log.write(str(metrics.get_summary()) + "\n")
             timer.end_interval("logging")
 
-
             # Update the policy score.
             timer.start_interval("metrics")
             if env.iteration % config.policy_score_frequency == 0:
@@ -296,7 +295,6 @@ def train(args: argparse.Namespace) -> float:
             print("Food score: %.6f" % metrics.food_score, end="")
             print("||||||", end=end)
             timer.end_interval("printing")
-
 
             # Agent creation and termination, rollout stacking.
             timer.start_interval("agent creation/removal")
