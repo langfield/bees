@@ -4,6 +4,7 @@ import unittest
 from typing import Callable, Any, Tuple, Dict
 
 import hypothesis.strategies as st
+from hypothesis import HealthCheck as hc
 from hypothesis import given, settings
 from hypothesis.stateful import rule, initialize, Bundle, RuleBasedStateMachine
 
@@ -46,23 +47,26 @@ class EnvironmentMachine(RuleBasedStateMachine):
     """ Finite-state machine for testing ``Env`` multi agent environment. """
 
     @timing
+    @settings(suppress_health_check=[hc.too_slow])
     @given(env=envs())
     def __init__(self, env: Env):
         super(EnvironmentMachine, self).__init__()
         self.env = env
+
+    @initialize()
+    @timing
+    def reset(self) -> None:
+        pass
 
     @rule()
     def dummy(self) -> None:
         assert True
 
 
-"""
 env_state_machine = EnvironmentMachine.TestCase
 env_state_machine.settings = settings(
-    max_examples=100, stateful_step_count=20, deadline=None
+    max_examples=100,
+    stateful_step_count=20,
+    deadline=None,
+    suppress_health_check=[hc.too_slow],
 )
-"""
-
-if __name__ == "__main__":
-    # unittest.main()
-    pass
