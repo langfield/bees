@@ -136,7 +136,7 @@ def worker_loop(
 
         # If done then remove from environment.
         if done:
-            action_funnel.send(STOP_FLAG)
+            break
 
         # Shape correction and casting.
         # TODO: Change names so everything is statically-typed.
