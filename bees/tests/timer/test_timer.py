@@ -1,6 +1,7 @@
 """ Test that ``Metrics.start_interval()`` works correctly. """
 import time
 import random
+from typing import Dict, List
 
 import numpy as np
 
@@ -19,7 +20,7 @@ def test_timer_computes_times_correctly() -> None:
     for _ in range(NUM_TRIALS):
         interval_executions = []
         interval_times = []
-        expected_timed_intervals = {}
+        expected_timed_intervals: Dict[str, List[float]] = {}
 
         # Generate test case and expected results.
         for _ in range(NUM_INTERVAL_EXECUTIONS):

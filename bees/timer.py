@@ -84,9 +84,9 @@ class Timer:
     def get_summary(self) -> Dict[str, Dict[str, float]]:
         """ Returns a summary of the current timed interval values.  """
 
-        summary = {}
-        total_times = {}
-        avg_times = {}
+        summary: Dict[str, Dict[str, float]] = {}
+        total_times: Dict[str, float] = {}
+        avg_times: Dict[str, float] = {}
 
         for interval, times in self.timed_intervals.items():
             total_times[interval] = sum(times)
