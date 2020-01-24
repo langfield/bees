@@ -392,6 +392,8 @@ Things to come back to:
      - Tweak hyperparameters (especially reward network parameters) (DONE?)
      - Reward network analysis to determine rewarded behavior (DONE?)
 
+#===========================================================================================
+
    January sprint:
    - Reward engineering
      - Compute policy score (DONE)
@@ -402,22 +404,39 @@ Things to come back to:
      - Fix printing, get analysis to work for all algorithms
      - Keep moving functionality out of trainer.py and into modular pieces.
    - Run experiments (zero to food)
-     - Implement reward network evaluation
+     - Implement reward network evaluation (DONE)
      - Choose good hyperparameters
-     - Run 'em
-   - Analyze results
+     - Run 'em (DONE)
+   - Analyze results (DONE)
    - Refactor
      - Universal config file (DONE)
      - Move arguments from arguments.py into settings file (DONE)
      - Fix mixture of arguments (DONE)
      - Make arguments not positional
      - Minimize hardcoding
-     - Clean up A2C code
+     - Clean up A2C code (DONE)
      - Make functionality more modular (separate training functionality and environment functionality)
      - Make all RNG depend on seed (DONE)
-     - Add setup.py?
      - Add options for which metrics to compute/print?
    - Merge
+
+   - Write tests
+   - Add multiprocessing
+     - Merge trainer versions
+     - Add profiling
+     - Multiprocess more functionality
+   - Profile
+     - Log profile statistics
+     - Real time output
+   - Run experiments
+     - Vary batch size
+     - Vary reward network complexity
+     - Other reward network parameterizations
+     - Better evaluation than policy score loss (normalized rewards?)
+   - Refactor
+     - Make arguments not positional
+     - Remove food score and other functionality specific to non-observation reward functions
+     - Reorganize repo
 
    Other things:
    - Parallelize env.step function
