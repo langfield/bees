@@ -100,8 +100,9 @@ class Env(Config):
         self.HEAVEN: Tuple[int, int] = tuple(self.HEAVEN)  # type: ignore
 
         # Construct object identifier dictionary.
+        # HARDCODE
         self.obj_type_ids = {"agent": 0, "food": 1}
-        self.obj_type_name = {0: "agent", 1: "food"}
+        self.obj_type_names = {0: "agent", 1: "food"}
 
         # Compute number of foods.
         num_squares = self.width * self.height
@@ -289,7 +290,7 @@ class Env(Config):
         if self.grid[grid_idx] != 1:
             raise ValueError(
                 "Object '%s' does not exist at grid position '(%d, %d)'."
-                % (self.obj_type_name[obj_type_id], x, y)
+                % (self.obj_type_names[obj_type_id], x, y)
             )
         self.grid[grid_idx] = 0
 
@@ -301,7 +302,7 @@ class Env(Config):
                 raise ValueError(
                     "Object of type '%s' with identifier '%d' cannot be removed from\
                      grid position '(%d, %d)' since it does not exist there."
-                    % (self.obj_type_name[obj_type_id], obj_id, x, y)
+                    % (self.obj_type_names[obj_type_id], obj_id, x, y)
                 )
             self.id_map[x][y][obj_type_id].remove(obj_id)
 
@@ -350,7 +351,7 @@ class Env(Config):
             objects = object_map[obj_type_id]
             if obj_id in objects:
                 raise ValueError(
-                    "Object of type '%s' with " % self.obj_type_name[obj_type_id]
+                    "Object of type '%s' with " % self.obj_type_names[obj_type_id]
                     + "identifier '%d' cannot be placed at grid position " % obj_id
                     + "'(%d, %d)' since an object of the same type with the " % (x, y)
                     + "same id already exists there."
@@ -359,7 +360,7 @@ class Env(Config):
 
     def _obj_exists(self, obj_type_id: int, pos: Tuple[int, int]) -> bool:
         """
-        Check if an object of object type ``obj_typ_id`` exists at the given position.
+        Check if an object of object type ``obj_type_id`` exists at the given position.
 
         Parameters
         ----------
@@ -372,10 +373,28 @@ class Env(Config):
         -------
         in_grid : ``bool``.
             Whether there is an object of that object type at ``pos``.
+
+        Raises
+        ------
+        ValueError
+            If ``pos[i]`` < 0 for any i, or if ``obj_type_id`` is invalid, or if
+            ``self.grid`` and ``self.ip_map`` don't agree.
         """
 
+        # Make sure position indices are nonnegative.
+        # TODO: Convert all error strings to f-strings, or externalize them.
+        if pos[0] < 0 or pos[1] < 0:
+            raise ValueError(f"Pos ``{pos}`` shouldn't have negative elements.")
+
+        # Make sure ``obj_type_id`` is valid.
+        if (
+            obj_type_id not in self.obj_type_ids.values()
+            or obj_type_id not in self.obj_type_names
+        ):
+            raise ValueError(f"Object type id ``{obj_type_id}`` invalid.")
+
         # Check grid.
-        grid_idx = pos + (obj_type_id,)
+        grid_idx: Tuple[int, int, int] = pos + (obj_type_id,)
         in_grid: bool = self.grid[grid_idx] == 1
 
         # HARDCODE: foods do not have unique identifiers, not in ``id_map``.
@@ -400,7 +419,7 @@ class Env(Config):
                 "Conflict between ``self.grid`` and ``self.id_map``: ``self.grid`` returns '"
                 + str(in_grid)
                 + "' when asked if an object of type '"
-                + self.obj_type_name[obj_type_id]
+                + self.obj_type_names[obj_type_id]
                 + "' is at grid position '(%d, %d)', while ``self.id_map`` returns '"
                 % (x, y)
                 + str(in_id_map)

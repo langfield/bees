@@ -68,12 +68,6 @@ def envs(draw: Callable[[st.SearchStrategy], Any]) -> Env:
     sample["recurrent_policy"] = draw(st.booleans())
     sample["use_linear_lr_decay"] = draw(st.booleans())
 
-    print("Reward inputs:", sample["reward_inputs"])
-
-    # Get variable names. It is important that the call to locals() stays at the top
-    # of this function, before any other local variables are made.
-    # arg_names = list(locals())
-
     # Read settings file for defaults.
     settings_path = "bees/settings/settings.json"
     with open(settings_path, "r") as settings_file:
@@ -169,3 +163,33 @@ def settings_dicts(draw: Callable[[st.SearchStrategy], Any]) -> Dict[str, Any]:
         )
     )
     return settings
+
+
+@st.composite
+def positions(draw: Callable[[st.SearchStrategy], Any], env: Env) -> Tuple[int, int]:
+    pos: Tuple[int, int] = draw(
+        st.tuples(
+            st.integers(min_value=0, max_value=env.width - 1),
+            st.integers(min_value=0, max_value=env.height - 1),
+        )
+    )
+    return pos
+
+
+@st.composite
+def obj_type_ids(draw: Callable[[st.SearchStrategy], Any], env: Env) -> int:
+    obj_type_id: int = draw(st.sampled_from(list(env.obj_type_ids.values())))
+    return obj_type_id
+
+
+@st.composite
+def moves(draw: Callable[[st.SearchStrategy], Any], env: Env) -> int:
+    valid_moves = [
+        env.config.STAY,
+        env.config.LEFT,
+        env.config.RIGHT,
+        env.config.UP,
+        env.config.DOWN,
+    ]
+    move: int = draw(st.sampled_from(valid_moves))
+    return move
