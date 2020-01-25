@@ -380,6 +380,7 @@ def train(args: argparse.Namespace) -> float:
                 config=config,
                 losses=(value_losses, action_losses, dist_entropies),
                 metrics=metrics,
+                minted_agents=minted_agents,
             )
 
             # Save for every ``config.save_interval``-th step or on the last update.

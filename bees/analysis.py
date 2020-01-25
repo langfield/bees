@@ -1,7 +1,7 @@
 """ Print live training debug output and do reward analysis. """
 import copy
 from pprint import pformat
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Set
 
 import numpy as np
 import torch
@@ -250,6 +250,7 @@ def update_losses(
     config: Config,
     losses: Tuple[Dict[int, float], Dict[int, float], Dict[int, float]],
     metrics: Metrics,
+    minted_agents: Set[int],
 ) -> Metrics:
     """
     Computes updated loss metrics from training losses.
@@ -280,7 +281,7 @@ def update_losses(
 
     # Compute total loss as a function of training losses.
     new_metrics.total_losses = {}
-    for agent_id in env.agents:
+    for agent_id in (set(env.agents.keys()) - minted_agents):
         new_metrics.total_losses[agent_id] = (
             new_metrics.value_losses[agent_id] * config.value_loss_coef
             + new_metrics.action_losses[agent_id]
