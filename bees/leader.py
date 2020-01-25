@@ -4,21 +4,26 @@ import time
 import json
 import copy
 import random
+import logging
 import pickle
 import argparse
 import collections
-from typing import Dict, Set, List, Any, TextIO
+from collections import deque, OrderedDict
+from typing import Dict, Tuple, Set, List, Any, TextIO
+from pprint import pformat
 
-import numpy as np
-
+import gym
 import torch
 import torch.multiprocessing as mp
+import numpy as np
 
-from bees.rl import utils
+from bees.rl import algo, utils
+from bees.rl.model import Policy, CNNBase, MLPBase
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
 from bees.env import Env
+from bees.timer import Timer
 from bees.pipe import Pipe
 from bees.config import Config
 from bees.creation import get_agent
@@ -74,6 +79,13 @@ def train(args: argparse.Namespace) -> float:
         Contains arguments as described above.
     """
 
+    # Create metrics and timer.
+    metrics = Metrics()
+    timer = Timer()
+
+    # TIMER
+    timer.start_interval("initialization")
+
     setup = Setup(args)
     config: Config = setup.config
     save_dir: str = setup.save_dir
@@ -121,7 +133,6 @@ def train(args: argparse.Namespace) -> float:
     agents: Dict[int, Algo] = {}
     rollout_map: Dict[int, RolloutStorage] = {}
     minted_agents: Set[int] = set()
-    metrics = Metrics()
 
     # Save dead objects to make creation faster.
     dead_agents: Set[Algo] = set()
