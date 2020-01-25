@@ -4,21 +4,16 @@ import time
 import json
 import copy
 import random
-import logging
 import pickle
 import argparse
 import collections
-from collections import deque, OrderedDict
 from typing import Dict, Tuple, Set, List, Any, TextIO
-from pprint import pformat
 
-import gym
 import torch
 import torch.multiprocessing as mp
 import numpy as np
 
-from bees.rl import algo, utils
-from bees.rl.model import Policy, CNNBase, MLPBase
+from bees.rl import utils
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
@@ -26,6 +21,7 @@ from bees.env import Env
 from bees.timer import Timer
 from bees.pipe import Pipe
 from bees.config import Config
+from bees.worker import act, get_policy_score, get_masks
 from bees.creation import get_agent
 from bees.analysis import (
     update_policy_score_multiprocessed,
@@ -95,9 +91,6 @@ def train(args: argparse.Namespace) -> float:
     metrics_log: TextIO = setup.metrics_log
     env_state_path: str = setup.env_state_path
     trainer_state: Dict[str, Any] = setup.trainer_state
-
-    # Make sure environment allows us to handle incrementing ``env.iteration`` here.
-    assert not config.increment
 
     # Create environment.
     if config.print_repr:
@@ -181,6 +174,12 @@ def train(args: argparse.Namespace) -> float:
             state_dicts.append(copy.deepcopy(state_dict))
             optim_state_dicts.append(copy.deepcopy(optim_state_dict))
 
+        # Copy first observations to rollouts, and send to device.
+        if not config.mp:
+            initial_observation: torch.Tensor = torch.FloatTensor([ob])
+            rollouts.obs[0].copy_(initial_observation)
+            rollouts.to(device)
+
         agents[agent_id] = agent
         workers[agent_id] = worker
         devices[agent_id] = device
@@ -196,27 +195,47 @@ def train(args: argparse.Namespace) -> float:
         # Should these all be defined up above with other maps?
         minted_agents = set()
         action_dict: Dict[int, int] = {}
+        act_map: Dict[
+            int,
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        ] = {}
         timestep_scores: Dict[int, float] = {}
 
         # Get actions.
-        for agent_id in pipes:
-            action_dict[agent_id] = pipes[agent_id].action_spout.recv()
+        if config.mp:
+            for agent_id in pipes:
+                action_dict[agent_id] = pipes[agent_id].action_spout.recv()
+        else:
+            decay = config.use_linear_lr_decay and backward_pass
+            for agent_id in agents:
+                act_map[agent_id] = act(
+                    env.iteration,
+                    decay,
+                    agents[agent_id],
+                    rollout_map[agent_id],
+                    config,
+                    env.agents[agent_id].age,
+                    None,
+                )
+                action_dict[agent_id] = int(act_map[agent_id][1][0])
 
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
         backward_pass = env.iteration % config.num_steps == 0 and env.iteration > 0
+
         # TODO: Check for keyerror: for agent_id in obs:
-        for agent_id in pipes:
-            pipes[agent_id].env_funnel.send(
-                (
-                    env.iteration,
-                    obs[agent_id],
-                    rewards[agent_id],
-                    dones[agent_id],
-                    infos[agent_id],
-                    backward_pass,
+        if config.mp:
+            for agent_id in pipes:
+                pipes[agent_id].env_funnel.send(
+                    (
+                        env.iteration,
+                        obs[agent_id],
+                        rewards[agent_id],
+                        dones[agent_id],
+                        infos[agent_id],
+                        backward_pass,
+                    )
                 )
-            )
 
         # Write env state and metrics to log.
         env.log_state(env_log, visual_log)
@@ -225,8 +244,14 @@ def train(args: argparse.Namespace) -> float:
         # Update the policy score.
         if (env.iteration + 1) % config.policy_score_frequency == 0:
             # TODO: Check for keyerror: for agent_id in infos:
-            for agent_id in pipes:
-                timestep_scores[agent_id] = pipes[agent_id].action_dist_spout.recv()
+            if config.mp:
+                for agent_id in pipes:
+                    timestep_scores[agent_id] = pipes[agent_id].action_dist_spout.recv()
+            else:
+                for agent_id in act_map:
+                    action_dist = act_map[agent_id][4]
+                    timestep_score = get_policy_score(action_dist, infos[agent_id])
+                    timestep_scores[agent_id] = timestep_score
 
             metrics = update_policy_score_multiprocessed(
                 env=env,
@@ -268,7 +293,9 @@ def train(args: argparse.Namespace) -> float:
         # Agent creation and termination, rollout stacking.
         for agent_id in obs:
             ob = obs[agent_id]
+            reward = rewards[agent_id]
             done = dones[agent_id]
+            info = infos[agent_id]
 
             # Initialize new policies.
             if agent_id not in agents:
@@ -286,6 +313,13 @@ def train(args: argparse.Namespace) -> float:
                     state_dicts,
                     optim_state_dicts,
                 )
+
+                # Copy first observations to rollouts, and send to device.
+                if not config.mp:
+                    initial_observation: torch.Tensor = torch.FloatTensor([ob])
+                    rollouts.obs[0].copy_(initial_observation)
+                    rollouts.to(device)
+
                 agents[agent_id] = agent
                 workers[agent_id] = worker
                 devices[agent_id] = device
@@ -311,6 +345,11 @@ def train(args: argparse.Namespace) -> float:
                     pipes.pop(agent_id)
                     dead_agents.add(agent)
 
+                elif not config.mp:
+                    rollouts = rollout_map[agent_id]
+                    fwds = act_map[agent_id]
+                    stack_rollouts(rollouts, ob, reward, done, info, fwds)
+
         # Print out environment state.
         if all(dones.values()):
             if config.print_repr:
@@ -325,9 +364,13 @@ def train(args: argparse.Namespace) -> float:
             dist_entropies: Dict[int, float] = {}
 
             # Should we iterate over a different object?
-            for agent_id in agents:
+            for agent_id, agent in agents.items():
                 if agent_id not in minted_agents:
-                    losses = pipes[agent_id].loss_spout.recv()
+                    if config.mp:
+                        losses = pipes[agent_id].loss_spout.recv()
+                    else:
+                        rollouts = rollout_map[agent_id]
+                        losses = update(agent, rollouts, config)
                     value_losses[agent_id] = losses[0]
                     action_losses[agent_id] = losses[1]
                     dist_entropies[agent_id] = losses[2]
@@ -373,3 +416,58 @@ def train(args: argparse.Namespace) -> float:
         env.iteration += 1
 
     return metrics.policy_score
+
+
+# TODO: Consider calling these functions in ``worker.py`` as well.
+def stack_rollouts(
+    rollouts: RolloutStorage,
+    ob: torch.Tensor,
+    reward: float,
+    done: bool,
+    info: Dict[str, Any],
+    fwds: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,],
+) -> None:
+    # Shape correction and casting.
+    # TODO: Change names so everything is statically-typed.
+    observation = torch.FloatTensor([ob])
+    reward = torch.FloatTensor([reward])
+    masks, bad_masks = get_masks(done, info)
+
+    # These are all CUDA tensors (on device).
+    value: torch.Tensor = fwds[0]
+    action: torch.Tensor = fwds[1]
+    action_log_prob: torch.Tensor = fwds[2]
+    recurrent_hidden_states: torch.Tensor = fwds[3]
+
+    # Add to rollouts.
+    rollouts.insert(
+        observation,
+        recurrent_hidden_states,
+        action,
+        action_log_prob,
+        value,
+        reward,
+        masks,
+        bad_masks,
+    )
+
+
+def update(
+    agent: Algo, rollouts: RolloutStorage, config: Config
+) -> Tuple[float, float, float]:
+    with torch.no_grad():
+        next_value = agent.actor_critic.get_value(
+            rollouts.obs[-1], rollouts.recurrent_hidden_states[-1], rollouts.masks[-1],
+        ).detach()
+    rollouts.compute_returns(
+        next_value,
+        config.use_gae,
+        config.gamma,
+        config.gae_lambda,
+        config.use_proper_time_limits,
+    )
+
+    # Compute weight updates.
+    value_loss, action_loss, dist_entropy = agent.update(rollouts)
+
+    return value_loss, action_loss, dist_entropy

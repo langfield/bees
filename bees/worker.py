@@ -1,5 +1,5 @@
 """ Distributed training function for a single agent worker. """
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Optional
 from multiprocessing.connection import Connection
 
 import torch
@@ -54,7 +54,7 @@ def act(
     rollouts: RolloutStorage,
     config: Config,
     age: int,
-    action_funnel: Connection,
+    action_funnel: Optional[Connection],
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """ Make a forward pass and send the env action to the leader process. """
     # Should execute only when trainer would make an update/backward pass.
@@ -84,7 +84,8 @@ def act(
         env_action: int = int(act_returns[1][0])
 
     # Send ``env_action: int`` back to leader to execute step.
-    action_funnel.send(env_action)
+    if config.mp and action_funnel:
+        action_funnel.send(env_action)
 
     return act_returns
 

@@ -878,10 +878,6 @@ class Env(Config):
                 dones[agent_id] = True
         self.dones = dict(dones)
 
-        # NOTE: This will NOT execute when multiprocessed.
-        if self.increment:
-            self.iteration += 1
-
         return obs, rewards, dones, infos
 
     def _get_adj_positions(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
