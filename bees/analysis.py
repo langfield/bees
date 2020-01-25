@@ -1,6 +1,7 @@
 """ Print live training debug output and do reward analysis. """
-from typing import Dict, Any, Tuple
 import copy
+from pprint import pformat
+from typing import Dict, Any, Tuple
 
 import numpy as np
 import torch
@@ -69,6 +70,17 @@ class Metrics:
         summary["edians"] = list(edians)
 
         return summary
+
+    def __repr__(self) -> str:
+        """ Return string representation of object. """
+
+        # Try to use ``sort_dicts`` option, only available in Python 3.8.
+        try:
+            # pylint: disable=unexpected-keyword-arg
+            formatted = pformat(self.get_summary(), sort_dicts=False)  # type: ignore
+        except TypeError:
+            formatted = pformat(self.get_summary())
+        return formatted
 
 
 def aggregate_loss(env: Env, losses: Dict[int, float]) -> float:
