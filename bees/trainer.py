@@ -270,7 +270,9 @@ def train(args: argparse.Namespace) -> float:
                 )
                 """
                 for agent_id, action_dist in agent_action_dists.items():
-                    timestep_scores[agent_id] = get_policy_score(action_dist, infos[agent_id])
+                    timestep_scores[agent_id] = get_policy_score(
+                        action_dist, infos[agent_id]
+                    )
 
                 metrics = update_policy_score_multiprocessed(
                     env=env,
@@ -378,7 +380,9 @@ def train(args: argparse.Namespace) -> float:
 
                         # Save a copy of the state dict.
                         if config.reuse_state_dicts:
-                            state_dicts.append(copy.deepcopy(agent.actor_critic.state_dict()))
+                            state_dicts.append(
+                                copy.deepcopy(agent.actor_critic.state_dict())
+                            )
                             optim_state_dicts.append(
                                 copy.deepcopy(agent.optimizer.state_dict())
                             )
