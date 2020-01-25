@@ -872,15 +872,15 @@ class Env(Config):
         for killed_agent_id in killed_agent_ids:
             self.agents.pop(killed_agent_id)
 
-        # NOTE: This will NOT execute when multiprocessed.
-        if self.increment:
-            self.iteration += 1
-
         if self.iteration == self.iterations - 1:
             print("END OF TRAINING.")
             for agent_id in dones.keys():
                 dones[agent_id] = True
         self.dones = dict(dones)
+
+        # NOTE: This will NOT execute when multiprocessed.
+        if self.increment:
+            self.iteration += 1
 
         return obs, rewards, dones, infos
 

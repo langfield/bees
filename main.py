@@ -1,6 +1,6 @@
 """ Run the environment. """
 import argparse
-from bees.leader import train
+from bees.trainer import train
 
 
 def main() -> None:
