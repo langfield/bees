@@ -89,6 +89,9 @@ def train(args: argparse.Namespace) -> float:
     env_state_path: str = setup.env_state_path
     trainer_state: Dict[str, Any] = setup.trainer_state
 
+    # This is for compatibility with the parallel trainer.
+    assert config.increment
+
     # Create environment.
     if config.print_repr:
         print("Arguments:", str(config))

@@ -353,6 +353,11 @@ Things to come back to:
     fixed percentage of the mean policy score, where the mean policy score is computed
     over the space of randomly initialized policy networks and reward networks.
 
+    Ideas for more general metrics:
+    - Eating frequency
+    - Mating frequency
+    - Timesteps for policy to learn reward function
+
 #===========================================================================================
 
     October sprint:
