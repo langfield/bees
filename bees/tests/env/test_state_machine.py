@@ -71,10 +71,5 @@ class EnvironmentMachine(RuleBasedStateMachine):
         assert True
 
 
-env_state_machine = EnvironmentMachine.TestCase
-env_state_machine.settings = settings(
-    max_examples=100, stateful_step_count=20, deadline=None
-)
-
-if __name__ == "__main__":
-    unittest.main()
+esm = EnvironmentMachine.TestCase
+esm.settings = settings(max_examples=20, stateful_step_count=10, deadline=None)

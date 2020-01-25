@@ -74,8 +74,7 @@ def test_analysis_update_food_scores_computes_uniform_dist_correctly() -> None:
     # Compare expected vs. actual.
     metrics = Metrics()
     new_metrics = update_food_scores(env, metrics)
-    # TODO: Use numpy almostequal check.
-    assert abs(new_metrics.food_score - expected_food_score) < 1e-5
+    np.testing.assert_almost_equal(new_metrics.food_score, expected_food_score)
 
 
 @given(strategies.envs())
@@ -112,5 +111,4 @@ def test_analysis_update_food_scores_computes_scores_correctly(env: Env) -> None
     # Compare expected vs. actual.
     metrics = Metrics()
     new_metrics = update_food_scores(env, metrics)
-    # TODO: Use numpy almostequal check.
-    assert abs(new_metrics.food_score - expected_food_score) < 1e-5
+    np.testing.assert_almost_equal(new_metrics.food_score, expected_food_score)
