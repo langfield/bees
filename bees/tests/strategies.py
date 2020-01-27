@@ -1,6 +1,6 @@
 """ Custom hypothesis strategies for bees. """
 import json
-from typing import Dict, Tuple, Callable, Any
+from typing import Dict, Tuple, Callable, Any, Optional
 
 import hypothesis
 import hypothesis.strategies as st
@@ -163,6 +163,18 @@ def settings_dicts(draw: Callable[[st.SearchStrategy], Any]) -> Dict[str, Any]:
         )
     )
     return settings
+
+
+@st.composite
+def empty_positions(
+    draw: Callable[[st.SearchStrategy], Any], env: Env, obj_type_id: int
+) -> Optional[Tuple[int, int]]:
+    """ Strategy for grid positions with any objects of type ``obj_type_id``. """
+    for x in range(env.width):
+        for y in range(env.height):
+            if not env._obj_exists(obj_type_id, (x, y)):
+                return (x, y)
+    return None
 
 
 @st.composite
