@@ -143,7 +143,24 @@ def train(args: argparse.Namespace) -> float:
 
     # TODO: Implement this.
     if args.load_from:
-        raise NotImplementedError
+
+        # Load the environment state from file.
+        env.load(env_state_path)
+
+        # Load in multiagent maps.
+        agents = trainer_state["agents"]
+        rollout_map = trainer_state["rollout_map"]
+        minted_agents = trainer_state["minted_agents"]
+        metrics = trainer_state["metrics"]
+
+        # Load in dead objects.
+        dead_agents = trainer_state["dead_agents"]
+        state_dicts = trainer_state["state_dicts"]
+        optim_state_dicts = trainer_state["optim_state_dicts"]
+
+        # Don't reset environment if we are resuming a previous run.
+        obs = {agent_id: agent.observation for agent_id, agent in env.agents.items()}
+
     else:
         obs = env.reset()
 
@@ -275,7 +292,7 @@ def train(args: argparse.Namespace) -> float:
         if env.iteration == 1 or set(obs.keys()) != set(agents.keys()):
             metrics = update_food_scores(env, metrics)
 
-        step_ema = (ALPHA * step_ema) + ((1 - ALPHA) * (time.time() - last_time))
+        step_ema = (config.ema_alpha * step_ema) + ((1 - config.ema_alpha) * (time.time() - last_time))
         last_time = time.time()
 
         # Print debug output.
@@ -383,38 +400,41 @@ def train(args: argparse.Namespace) -> float:
                 minted_agents=minted_agents,
             )
 
-            # Save for every ``config.save_interval``-th step or on the last update.
-            save_state: bool = env.iteration % config.save_interval == 0
-            update_index: int = env.iteration // config.num_steps
-            if (save_state or update_index == num_updates - 1) and args.save_root:
+        # Save for every ``config.save_interval``-th step or on the last update.
+        # TODO: Ensure that we aren't saving out an empty state on the last interation.
+        save_state: bool = env.iteration % config.save_interval == 0
+        if (save_state or env.iteration == iterations - 1):
 
-                # Save trainer state objects
-                trainer_state = {
-                    "agents": agents,
-                    "rollout_map": rollout_map,
-                    "minted_agents": minted_agents,
-                    "metrics": metrics,
-                    "dead_agents": dead_agents,
-                    "state_dicts": state_dicts,
-                    "optim_state_dicts": optim_state_dicts,
-                }
-                trainer_state_path = os.path.join(save_dir, "%s_trainer.pkl" % codename)
-                with open(trainer_state_path, "wb") as trainer_file:
-                    pickle.dump(trainer_state, trainer_file)
+            # Save trainer state objects
+            trainer_state = {
+                "agents": agents,
+                "rollout_map": rollout_map,
+                "minted_agents": minted_agents,
+                "metrics": metrics,
+                "dead_agents": dead_agents,
+                "state_dicts": state_dicts,
+                "optim_state_dicts": optim_state_dicts,
+            }
+            trainer_state_path = os.path.join(save_dir, "%s_trainer.pkl" % codename)
+            with open(trainer_state_path, "wb") as trainer_file:
+                pickle.dump(trainer_state, trainer_file)
 
-                # Save out environment state.
-                state_path = os.path.join(save_dir, "%s_env.pkl" % codename)
-                env.save(state_path)
+            # Save out environment state.
+            state_path = os.path.join(save_dir, "%s_env.pkl" % codename)
+            env.save(state_path)
 
-                # Save out settings, removing log files (not paths) from object.
-                settings_path = os.path.join(save_dir, "%s_settings.json" % codename)
-                with open(settings_path, "w") as settings_file:
-                    json.dump(config.settings, settings_file)
+            # Save out settings, removing log files (not paths) from object.
+            settings_path = os.path.join(save_dir, "%s_settings.json" % codename)
+            with open(settings_path, "w") as settings_file:
+                json.dump(config.settings, settings_file)
 
             if env_done:
                 break
 
         env.iteration += 1
+
+    # Prints a single line to reset carriage.
+    print("")
 
     return metrics.policy_score
 
