@@ -101,8 +101,12 @@ class Env(Config):
 
         # Construct object identifier dictionary.
         # HARDCODE
-        self.obj_type_ids = {"agent": 0, "food": 1}
-        self.obj_type_names = {0: "agent", 1: "food"}
+        self.obj_type_ids: Dict[str, int] = {"agent": 0, "food": 1}
+        self.obj_type_names: Dict[int, str] = {0: "agent", 1: "food"}
+        self.heterogeneous_obj_types: Set[str] = {"agent"}
+        self.heterogeneous_obj_type_ids: Set[int] = {
+            self.obj_type_ids[name] for name in self.heterogeneous_obj_types
+        }
 
         # Compute number of foods.
         num_squares = self.width * self.height
@@ -334,12 +338,17 @@ class Env(Config):
         x = pos[0]
         y = pos[1]
 
+        if obj_type_id in self.heterogeneous_obj_type_ids and obj_id == None:
+            obj_type_name = self.obj_type_names[obj_type_id]
+            raise TypeError(
+                "Argument 'obj_id' requird to place object "
+                + f"of heterogeneous type '{obj_type_name}'."
+            )
+
         # Add to ``self.grid``.
         grid_idx = pos + (obj_type_id,)
         if obj_type_id == self.obj_type_ids["agent"] and self.grid[grid_idx] == 1:
-            raise ValueError(
-                "An agent already exists at grid position '(%d, %d)'." % (x, y)
-            )
+            raise ValueError(f"An agent already exists at grid position '({x}, {y})'.")
 
         self.grid[grid_idx] = 1
 
@@ -350,11 +359,11 @@ class Env(Config):
                 object_map[obj_type_id] = set()
             objects = object_map[obj_type_id]
             if obj_id in objects:
+                obj_type_name = self.obj_type_names[obj_type_id]
                 raise ValueError(
-                    "Object of type '%s' with " % self.obj_type_names[obj_type_id]
-                    + "identifier '%d' cannot be placed at grid position " % obj_id
-                    + "'(%d, %d)' since an object of the same type with the " % (x, y)
-                    + "same id already exists there."
+                    f"Object of type '{obj_type_name}' with id '{obj_id}' cannot be "
+                    + f"placed at grid position '({x}, {y})' since an object of the "
+                    + "same type with the same id already exists there."
                 )
             self.id_map[x][y][obj_type_id].add(obj_id)
 
