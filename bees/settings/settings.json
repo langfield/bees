@@ -5,7 +5,7 @@
     "height": 10,
     "sight_len": 2,
     "num_obj_types": 2,
-    "num_agents": 2,
+    "num_agents": 5,
     "initial_food_density": 1.0,
     "initial_food_regen_prob": 1.0,
     "adaptive_food": false,
@@ -21,7 +21,7 @@
 
     "2": "====================TRAINER====================",
 
-    "time_steps": 128,
+    "time_steps": 10240,
     "reuse_state_dicts": true,
     "policy_score_frequency": 8,
     "ema_alpha": 0.9,
@@ -30,11 +30,11 @@
 
     "3": "====================REWARD====================",
 
-    "n_layers": 2,
+    "n_layers": 1,
     "hidden_dim": 32,
     "reward_weight_mean": 0.0,
     "reward_weight_stddev": 0.4,
-    "reward_inputs": ["actions", "obs", "health"],
+    "reward_inputs": ["actions"],
 
     "4": "====================GENETICS====================",
 
@@ -70,13 +70,12 @@
     "seed": 2,
     "cuda_deterministic": false,
     "num_processes": 1,
-    "num_steps": 32,
+    "num_steps": 1024,
     "ppo_epoch": 4,
     "num_mini_batch": 1,
     "clip_param": 0.3,
     "log_interval": 10,
-    "save_interval": 100,
-    "eval_interval": 100,
+    "save_interval": 1024,
     "env_name": "bees",
     "log_dir": "/tmp/gym/",
     "cuda": true,

@@ -873,7 +873,6 @@ class Env(Config):
             self.agents.pop(killed_agent_id)
 
         if self.iteration == self.iterations - 1:
-            print("END OF TRAINING.")
             for agent_id in dones.keys():
                 dones[agent_id] = True
         self.dones = dict(dones)
