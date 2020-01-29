@@ -1,4 +1,5 @@
 """ Distributed training function for a single agent worker. """
+import copy
 from typing import Dict, Tuple, Any, Optional
 from multiprocessing.connection import Connection
 
@@ -95,15 +96,17 @@ def worker_loop(
     agent: Algo,
     rollouts: RolloutStorage,
     config: Config,
+    initial_age: int,
     initial_iteration: int,
     initial_ob: np.ndarray,
     env_spout: Connection,
     action_funnel: Connection,
     action_dist_funnel: Connection,
     loss_funnel: Connection,
+    save_funnel: Connection,
 ) -> None:
     """ Training loop for a single agent worker. """
-    age: int = 0
+    age: int = initial_age
     iteration: int = initial_iteration
 
     # Copy first observations to rollouts, and send to device.
@@ -127,6 +130,9 @@ def worker_loop(
 
         # Grab iteration index and env output from leader (no tensors included).
         iteration, ob, reward, done, info, backward_pass = env_spout.recv()
+
+        # Get updated age from env.
+        age = info["age"]
 
         decay = config.use_linear_lr_decay and backward_pass
 
@@ -179,6 +185,16 @@ def worker_loop(
 
             # Send losses back to leader for ``update_losses()``.
             loss_funnel.send((value_loss, action_loss, dist_entropy))
+
+        # Send state back to the leader.
+        save_state: bool = iteration % config.save_interval == 0
+        if (save_state or iteration == config.time_steps - 1):
+
+            # This is becuase torch.multiprocessing will not allow you to send a tensor
+            # created in another process to a different process.
+            agent_copy = copy.deepcopy(agent)
+            rollouts_copy = copy.deepcopy(rollouts)
+            save_funnel.send((agent_copy, rollouts_copy))
 
         # Make a forward pass.
         fwds = act(iteration, decay, agent, rollouts, config, age, action_funnel)

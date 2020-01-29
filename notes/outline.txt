@@ -455,3 +455,5 @@ Things to come back to:
    - Some mechanic to make reproduction happen at later ages (minimum mating age?)
    - Run experiment with one agent, analyze learning curve to maximize intrinsic reward
    - Rewrite PPO implementation
+   - Garbage collection for agents in multi processed case
+   - Record RAM usage

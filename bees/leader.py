@@ -172,6 +172,7 @@ def train(args: argparse.Namespace) -> float:
         agent, rollouts, worker, device, pipe = get_agent(
             agent_id,
             env.iteration,
+            env.agents[agent_id].age,
             ob,
             config,
             env.observation_space,
@@ -205,9 +206,8 @@ def train(args: argparse.Namespace) -> float:
 
     # Whether or not we make a weight update on this iteration.
     backward_pass: bool = False
-    iterations = config.time_steps // config.num_processes
-    num_updates = iterations // config.num_steps
-    while env.iteration < iterations:
+    num_updates = config.time_steps // config.num_steps
+    while env.iteration < config.time_steps:
 
         # Should these all be defined up above with other maps?
         minted_agents = set()
@@ -319,6 +319,7 @@ def train(args: argparse.Namespace) -> float:
                 agent, rollouts, worker, device, pipe = get_agent(
                     agent_id,
                     env.iteration,
+                    env.agents[agent_id].age,
                     ob,
                     config,
                     env.observation_space,
@@ -403,7 +404,14 @@ def train(args: argparse.Namespace) -> float:
         # Save for every ``config.save_interval``-th step or on the last update.
         # TODO: Ensure that we aren't saving out an empty state on the last interation.
         save_state: bool = env.iteration % config.save_interval == 0
-        if (save_state or env.iteration == iterations - 1):
+        if (save_state or env.iteration == config.time_steps - 1):
+
+            # Update ``agents`` and ``rollouts`` from worker processes.
+            if config.mp:
+                for agent_id, agent in agents.items():
+                    agent, rollouts = pipes[agent_id].save_spout.recv()
+                    agents[agent_id] = agent
+                    rollout_map[agent_id] = rollouts
 
             # Save trainer state objects
             trainer_state = {
