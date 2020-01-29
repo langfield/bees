@@ -28,7 +28,6 @@ def test_env_place_without_id(place_args: Tuple[Env, Tuple[int, int]]) -> None:
 def test_env_place_with_id(place_args: Tuple[Env, Tuple[int, int]]) -> None:
     """ Tests placement of an object with id (such as an agent). """
     env, pos = place_args
-    x, y = pos
     env.reset()
     obj_type_id = env.obj_type_ids["agent"]
     if not env._obj_exists(obj_type_id, pos):
@@ -42,7 +41,6 @@ def test_env_place_with_id(place_args: Tuple[Env, Tuple[int, int]]) -> None:
 def test_env_place_with_id_requires_id(place_args: Tuple[Env, Tuple[int, int]]) -> None:
     """ Tests that env gets angry if you don't pass an object id for het object. """
     env, pos = place_args
-    x, y = pos
     env.reset()
     obj_type_id = env.obj_type_ids["agent"]
     if not env._obj_exists(obj_type_id, pos):
@@ -55,7 +53,6 @@ def test_env_place_with_id_requires_id(place_args: Tuple[Env, Tuple[int, int]]) 
 def test_env_place_no_double_place(place_args: Tuple[Env, Tuple[int, int]]) -> None:
     """ Tests that env gets angry if you try to double up het objs with same id. """
     env, pos = place_args
-    x, y = pos
     env.reset()
     obj_type_id = env.obj_type_ids["agent"]
     if not env._obj_exists(obj_type_id, pos):
@@ -70,7 +67,6 @@ def test_env_place_no_double_place_homo(data: st.DataObject) -> None:
     """ Tests that env gets angry if you try to double up homo objs. """
     env = data.draw(strategies.envs())
     pos = data.draw(strategies.positions(env=env))
-    x, y = pos
     env.reset()
     homo_obj_type_ids = set(env.obj_type_ids.values()) - env.heterogeneous_obj_type_ids
     obj_type_id = data.draw(st.sampled_from(list(homo_obj_type_ids)))
