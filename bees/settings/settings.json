@@ -26,7 +26,7 @@
     "policy_score_frequency": 8,
     "ema_alpha": 0.9,
     "greedy_temperature": 1e-4,
-    "mp": false,
+    "mp": true,
 
     "3": "====================REWARD====================",
 
@@ -70,12 +70,12 @@
     "seed": 2,
     "cuda_deterministic": false,
     "num_processes": 1,
-    "num_steps": 1024,
+    "num_steps": 2048,
     "ppo_epoch": 4,
     "num_mini_batch": 1,
     "clip_param": 0.3,
     "log_interval": 10,
-    "save_interval": 1024,
+    "save_interval": 2048,
     "env_name": "bees",
     "log_dir": "/tmp/gym/",
     "cuda": true,

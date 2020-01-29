@@ -21,6 +21,7 @@ from bees.worker import worker_loop
 def get_agent(
     agent_id: int,
     iteration: int,
+    age: int,
     ob: np.ndarray,
     config: Config,
     obs_space: gym.Space,
@@ -113,12 +114,14 @@ def get_agent(
                     "agent": agent,
                     "rollouts": rollouts,
                     "config": config,
+                    "initial_age": age,
                     "initial_iteration": iteration,
                     "initial_ob": ob,
                     "env_spout": pipe.env_spout,
                     "action_funnel": pipe.action_funnel,
                     "action_dist_funnel": pipe.action_dist_funnel,
                     "loss_funnel": pipe.loss_funnel,
+                    "save_funnel": pipe.save_funnel,
                 },
             )
             worker.start()
