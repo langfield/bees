@@ -3,6 +3,7 @@ from hypothesis import given
 
 from bees.env import Env
 from bees.tests import strategies as bst
+
 # pylint: disable=no-value-for-parameter
 
 

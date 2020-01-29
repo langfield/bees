@@ -2,18 +2,20 @@
 import json
 from typing import Dict, Tuple, Callable, Any, Optional
 
-import hypothesis
 import hypothesis.strategies as st
+from hypothesis.strategies import SearchStrategy
 
 from bees.env import Env
+from bees.utils import flat_action_to_tuple
 from bees.config import Config
 from bees.analysis import Metrics
 
 # pylint: disable=no-value-for-parameter
 
 
+# TODO: Are any of these return type annotations correct? Don't they return strategies?
 @st.composite
-def envs(draw: Callable[[st.SearchStrategy], Any]) -> Env:
+def envs(draw: Callable[[SearchStrategy], Any]) -> Env:
     """ A hypothesis strategy for generating ``Env`` objects. """
 
     sample: Dict[str, Any] = {}
@@ -85,7 +87,7 @@ def envs(draw: Callable[[st.SearchStrategy], Any]) -> Env:
 
 @st.composite
 def grid_positions_and_moves(
-    draw: Callable[[st.SearchStrategy], Any]
+    draw: Callable[[SearchStrategy], Any]
 ) -> Tuple[Env, Tuple[int, int], int]:
     """ Strategy for ``Env`` instances and valid grid positions. """
     env = draw(envs())
@@ -107,7 +109,9 @@ def grid_positions_and_moves(
 
 
 @st.composite
-def env_and_metrics(draw: Callable[[st.SearchStrategy], Any]) -> Tuple[Env, Metrics]:
+def env_and_metrics(
+    draw: Callable[[SearchStrategy], Any]
+) -> Tuple[Env, Metrics]:
     """ Strategy for ``Env`` instances and ``Metric`` objects. """
     metrics = Metrics()
     env = draw(envs())
@@ -117,7 +121,7 @@ def env_and_metrics(draw: Callable[[st.SearchStrategy], Any]) -> Tuple[Env, Metr
 
 @st.composite
 def grid_positions(
-    draw: Callable[[st.SearchStrategy], Any]
+    draw: Callable[[SearchStrategy], Any]
 ) -> Tuple[Env, Tuple[int, int]]:
     """ Strategy for ``Env`` instances and valid grid positions. """
     env = draw(envs())
@@ -132,7 +136,7 @@ def grid_positions(
 
 @st.composite
 def recursive_extension_dicts(
-    draw: Callable[[st.SearchStrategy], Any], values: st.SearchStrategy
+    draw: Callable[[SearchStrategy], Any], values: SearchStrategy
 ) -> Dict[str, Any]:
     """ Returns a strategy for dictionaries to be used in ``st.recursive()``. """
     dictionary: Dict[str, Any] = draw(
@@ -142,7 +146,9 @@ def recursive_extension_dicts(
 
 
 @st.composite
-def settings_dicts(draw: Callable[[st.SearchStrategy], Any]) -> Dict[str, Any]:
+def settings_dicts(
+    draw: Callable[[SearchStrategy], Any]
+) -> Dict[str, Any]:
     """ Strategy for settings dicts. """
     settings: Dict[str, Any] = draw(
         st.dictionaries(
@@ -167,7 +173,7 @@ def settings_dicts(draw: Callable[[st.SearchStrategy], Any]) -> Dict[str, Any]:
 
 @st.composite
 def empty_positions(
-    draw: Callable[[st.SearchStrategy], Any], env: Env, obj_type_id: int
+    _draw: Callable[[SearchStrategy], Any], env: Env, obj_type_id: int
 ) -> Optional[Tuple[int, int]]:
     """ Strategy for grid positions with any objects of type ``obj_type_id``. """
     for x in range(env.width):
@@ -178,7 +184,9 @@ def empty_positions(
 
 
 @st.composite
-def positions(draw: Callable[[st.SearchStrategy], Any], env: Env) -> Tuple[int, int]:
+def positions(
+    draw: Callable[[SearchStrategy], Any], env: Env
+) -> Tuple[int, int]:
     pos: Tuple[int, int] = draw(
         st.tuples(
             st.integers(min_value=0, max_value=env.width - 1),
@@ -189,13 +197,15 @@ def positions(draw: Callable[[st.SearchStrategy], Any], env: Env) -> Tuple[int, 
 
 
 @st.composite
-def obj_type_ids(draw: Callable[[st.SearchStrategy], Any], env: Env) -> int:
+def obj_type_ids(
+    draw: Callable[[SearchStrategy], Any], env: Env
+) -> int:
     obj_type_id: int = draw(st.sampled_from(list(env.obj_type_ids.values())))
     return obj_type_id
 
 
 @st.composite
-def moves(draw: Callable[[st.SearchStrategy], Any], env: Env) -> int:
+def moves(draw: Callable[[SearchStrategy], Any], env: Env) -> int:
     valid_moves = [
         env.config.STAY,
         env.config.LEFT,
@@ -205,3 +215,30 @@ def moves(draw: Callable[[st.SearchStrategy], Any], env: Env) -> int:
     ]
     move: int = draw(st.sampled_from(valid_moves))
     return move
+
+
+@st.composite
+def action_dicts(
+    draw: Callable[[SearchStrategy], Any], env: Env
+) -> Dict[int, int]:
+    """ Strategy for flat action dictionaries. """
+    action_dict: Dict[int, int] = {}
+    max_action: int = env.action_space.n - 1
+    for agent_id in env.agents:
+        action_dict[agent_id] = draw(st.integers(min_value=0, max_value=max_action))
+    return action_dict
+
+
+@st.composite
+def tuple_action_dicts(
+    draw: Callable[[SearchStrategy], Any], env: Env
+) -> Dict[int, Tuple[int, int, int]]:
+    """ Strategy for tuple action dictionaries. """
+    action_dict: Dict[str, int] = draw(action_dicts(env=env))
+
+    # Convert flat action_dict to tuple.
+    tuple_action_dict: Dict[int, Tuple[int, int, int]] = {
+        agent_id: flat_action_to_tuple(action, env.subaction_sizes)  # type: ignore
+        for agent_id, action in action_dict.items()
+    }
+    return tuple_action_dict
