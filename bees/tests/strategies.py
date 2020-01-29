@@ -109,9 +109,7 @@ def grid_positions_and_moves(
 
 
 @st.composite
-def env_and_metrics(
-    draw: Callable[[SearchStrategy], Any]
-) -> Tuple[Env, Metrics]:
+def env_and_metrics(draw: Callable[[SearchStrategy], Any]) -> Tuple[Env, Metrics]:
     """ Strategy for ``Env`` instances and ``Metric`` objects. """
     metrics = Metrics()
     env = draw(envs())
@@ -146,9 +144,7 @@ def recursive_extension_dicts(
 
 
 @st.composite
-def settings_dicts(
-    draw: Callable[[SearchStrategy], Any]
-) -> Dict[str, Any]:
+def settings_dicts(draw: Callable[[SearchStrategy], Any]) -> Dict[str, Any]:
     """ Strategy for settings dicts. """
     settings: Dict[str, Any] = draw(
         st.dictionaries(
@@ -184,9 +180,7 @@ def empty_positions(
 
 
 @st.composite
-def positions(
-    draw: Callable[[SearchStrategy], Any], env: Env
-) -> Tuple[int, int]:
+def positions(draw: Callable[[SearchStrategy], Any], env: Env) -> Tuple[int, int]:
     pos: Tuple[int, int] = draw(
         st.tuples(
             st.integers(min_value=0, max_value=env.width - 1),
@@ -197,9 +191,7 @@ def positions(
 
 
 @st.composite
-def obj_type_ids(
-    draw: Callable[[SearchStrategy], Any], env: Env
-) -> int:
+def obj_type_ids(draw: Callable[[SearchStrategy], Any], env: Env) -> int:
     obj_type_id: int = draw(st.sampled_from(list(env.obj_type_ids.values())))
     return obj_type_id
 
@@ -218,9 +210,7 @@ def moves(draw: Callable[[SearchStrategy], Any], env: Env) -> int:
 
 
 @st.composite
-def action_dicts(
-    draw: Callable[[SearchStrategy], Any], env: Env
-) -> Dict[int, int]:
+def action_dicts(draw: Callable[[SearchStrategy], Any], env: Env) -> Dict[int, int]:
     """ Strategy for flat action dictionaries. """
     action_dict: Dict[int, int] = {}
     max_action: int = env.action_space.n - 1
