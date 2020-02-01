@@ -38,6 +38,7 @@ NORMALIZER = 1000
 # pylint: disable=bad-continuation
 
 
+# TODO: Move action index literals to settings file.
 class Env(Config):
     """
     Environment with bees in it. Note that all of the parameters are contained in the
@@ -594,16 +595,8 @@ class Env(Config):
             mom = self.agents[mom_id]
             pos = mom.pos
 
-            # If the agent is dead, don't do anything.
-            if mom.health <= 0.0:
-                continue
-
-            # Grab action, do nothing if the agent chose not to mate.
-            if not wants_child[mom_id]:
-                continue
-
-            # If the agent is not mature, do nothing.
-            if not mom.is_mature:
+            # If the agent is dead, mature, or didn't choose to mate, do nothing.
+            if mom.health <= 0.0 or not wants_child[mom_id] or not mom.is_mature:
                 continue
 
             # Search adjacent positions for possible mates and find mate.
