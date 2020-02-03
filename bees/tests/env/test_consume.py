@@ -1,7 +1,12 @@
+from typing import List, Dict, Tuple, Set
+
 import hypothesis.strategies as st
 from hypothesis import given
 
 from bees.tests import strategies as bst
+
+# pylint: disable=no-value-for-parameter
+
 
 @given(st.data())
 def test_consume_removes_food_when_appropriate(data: st.DataObject) -> None:
@@ -21,7 +26,7 @@ def test_consume_removes_food_when_appropriate(data: st.DataObject) -> None:
             eating_positions.append(pos)
 
     env._consume(tuple_action_dict)
-    
+
     for pos in eating_positions:
         assert env.grid[pos + (food_obj_type_id,)] == 0
 
@@ -42,7 +47,7 @@ def test_consume_removes_nothing_else(data: st.DataObject) -> None:
     for agent_id, pos in agent_food_positions.items():
         if tuple_action_dict[agent_id][1] == env.EAT:
             eating_positions.append(pos)
-    
+
     food_positions: Set[Tuple[int, int]] = set()
     for x in range(env.width):
         for y in range(env.height):
@@ -51,7 +56,7 @@ def test_consume_removes_nothing_else(data: st.DataObject) -> None:
     persistent_food_positions = food_positions - set(eating_positions)
 
     env._consume(tuple_action_dict)
-    
+
     for pos in persistent_food_positions:
         assert env.grid[pos + (food_obj_type_id,)] == 1
 
