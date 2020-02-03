@@ -210,6 +210,16 @@ def moves(draw: Callable[[SearchStrategy], Any], env: Env) -> int:
 
 
 @st.composite
+def consumptions(draw: Callable[[SearchStrategy], Any], env: Env) -> int:
+    valid_consumptions = [
+        env.config.EAT,
+        env.config.NO_EAT,
+    ]
+    consumption: int = draw(st.sampled_from(valid_consumptions))
+    return consumption
+
+
+@st.composite
 def action_dicts(draw: Callable[[SearchStrategy], Any], env: Env) -> Dict[int, int]:
     """ Strategy for flat action dictionaries. """
     action_dict: Dict[int, int] = {}
