@@ -14,7 +14,7 @@ from bees.rl.algo.algo import Algo
 
 class PPO(Algo):
     """
-    Proximal Policy Optimization implementation.
+    Proximal Policy Optimization (clipped) implementation.
 
     Parameters
     ----------

@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.distributions.distribution import Distribution
 
 from bees.rl.utils import AddBias, init
+from bees.utils import DEBUG
 
 # pylint: disable=bad-continuation, abstract-method, no-member
 
@@ -326,7 +327,6 @@ class Categorical(nn.Module):
     num_outputs : ``int``.
         Action space size (``action_space.n``).
     """
-
     def __init__(self, num_inputs: int, num_outputs: int):
         super(Categorical, self).__init__()
 
@@ -343,6 +343,19 @@ class Categorical(nn.Module):
 
 
 class DiagGaussian(nn.Module):
+    """
+    A diagonal Gaussian distribution generator module. The forward function takes
+    tensors of dimension ``num_inputs`` and returns fixed ``num_outputs``-variate
+    diagonal Gaussian distributions with mean vector given by the output of
+    ``self.fc_mean`` and std deviations of ``1``.
+
+    Parameters
+    ----------
+    num_inputs : ``int``.
+        The dimension of the input tensors.
+    num_outputs : ``int``.
+        The dimensionality of the continuous action space.
+    """
     def __init__(self, num_inputs: int, num_outputs: int):
         super(DiagGaussian, self).__init__()
 
