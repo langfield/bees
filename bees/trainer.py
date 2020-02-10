@@ -1,18 +1,20 @@
 """ PyTorch environment trainer. """
 import os
+import time
 import json
 import copy
 import random
 import logging
+import pickle
 import argparse
 import collections
 from collections import deque, OrderedDict
 from typing import Dict, Tuple, Set, List, Any, TextIO
-import pickle
 from pprint import pformat
 
 import gym
 import torch
+import torch.multiprocessing as mp
 import numpy as np
 
 from bees.rl import algo, utils
@@ -22,17 +24,23 @@ from bees.rl.algo.algo import Algo
 
 from bees.env import Env
 from bees.timer import Timer
+from bees.pipe import Pipe
 from bees.config import Config
+from bees.creation import get_agent, get_policy
 from bees.analysis import (
-    update_policy_score,
+    update_policy_score_multiprocessed,
     update_losses,
     update_food_scores,
     Metrics,
 )
+from bees.worker import get_policy_score
 from bees.initialization import Setup
 
 # pylint: disable=bad-continuation, too-many-branches, duplicate-code
 # pylint: disable=too-many-statements, too-many-locals
+
+ALPHA = 0.99
+DEBUG = False
 
 
 def train(args: argparse.Namespace) -> float:
@@ -89,6 +97,9 @@ def train(args: argparse.Namespace) -> float:
     env_state_path: str = setup.env_state_path
     trainer_state: Dict[str, Any] = setup.trainer_state
 
+    # This is for compatibility with the parallel trainer.
+    assert config.increment
+
     # Create environment.
     if config.print_repr:
         print("Arguments:", str(config))
@@ -120,7 +131,6 @@ def train(args: argparse.Namespace) -> float:
     device = torch.device("cuda:0" if config.cuda else "cpu")
 
     # Create multiagent maps.
-    actor_critics: Dict[int, Policy] = {}
     agents: Dict[int, Algo] = {}
     rollout_map: Dict[int, RolloutStorage] = {}
     episode_rewards: Dict[int, collections.deque] = {}
@@ -128,7 +138,6 @@ def train(args: argparse.Namespace) -> float:
     agent_action_dists: Dict[int, torch.Tensor] = {}
 
     # Save dead objects to make creation faster.
-    dead_critics: Set[Policy] = set()
     dead_agents: Set[Algo] = set()
     state_dicts: List[OrderedDict] = []
     optim_state_dicts: List[OrderedDict] = []
@@ -147,15 +156,9 @@ def train(args: argparse.Namespace) -> float:
         agent_action_dists = trainer_state["agent_action_dists"]
 
         # Load in dead objects.
-        dead_critics = trainer_state["dead_critics"]
         dead_agents = trainer_state["dead_agents"]
         state_dicts = trainer_state["state_dicts"]
         optim_state_dicts = trainer_state["optim_state_dicts"]
-
-        # Create actor_critics object from state in ``agents``.
-        actor_critics = {
-            agent_id: agent.actor_critic for agent_id, agent in agents.items()
-        }
 
         # Don't reset environment if we are resuming a previous run.
         obs = {agent_id: agent.observation for agent_id, agent in env.agents.items()}
@@ -168,17 +171,16 @@ def train(args: argparse.Namespace) -> float:
     env_done = False
     for agent_id, agent_obs in obs.items():
         if agent_id not in agents:
-            agent, actor_critic, rollouts = get_agent(
+            agent, rollouts = get_policy(
                 config, env.observation_space, env.action_space, device
             )
             agents[agent_id] = agent
-            actor_critics[agent_id] = actor_critic
             rollout_map[agent_id] = rollouts
             episode_rewards[agent_id] = deque(maxlen=10)
 
             if config.reuse_state_dicts:
                 # Save a copy of the state dict.
-                state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
+                state_dicts.append(copy.deepcopy(agent.actor_critic.state_dict()))
                 optim_state_dicts.append(copy.deepcopy(agent.optimizer.state_dict()))
 
         # Copy first observations to rollouts, and send to device.
@@ -225,12 +227,13 @@ def train(args: argparse.Namespace) -> float:
             action_tensor_dict: Dict[int, torch.Tensor] = {}
             action_log_prob_dict: Dict[int, torch.Tensor] = {}
             recurrent_hidden_states_dict: Dict[int, torch.Tensor] = {}
+            timestep_scores: Dict[int, float] = {}
 
             # Sample actions.
             with torch.no_grad():
-                for agent_id, actor_critic in actor_critics.items():
+                for agent_id, agent in agents.items():
                     rollouts = rollout_map[agent_id]
-                    ac_tuple = actor_critic.act(
+                    ac_tuple = agent.actor_critic.act(
                         rollouts.obs[step],
                         rollouts.recurrent_hidden_states[step],
                         rollouts.masks[step],
@@ -257,11 +260,25 @@ def train(args: argparse.Namespace) -> float:
             # Update the policy score.
             timer.start_interval("metrics")
             if env.iteration % config.policy_score_frequency == 0:
+                """
                 metrics = update_policy_score(
                     env=env,
                     config=config,
                     infos=infos,
                     agent_action_dists=agent_action_dists,
+                    metrics=metrics,
+                )
+                """
+                for agent_id, action_dist in agent_action_dists.items():
+                    timestep_scores[agent_id] = get_policy_score(
+                        action_dist, infos[agent_id]
+                    )
+
+                metrics = update_policy_score_multiprocessed(
+                    env=env,
+                    config=config,
+                    infos=infos,
+                    timestep_scores=timestep_scores,
                     metrics=metrics,
                 )
 
@@ -310,9 +327,8 @@ def train(args: argparse.Namespace) -> float:
 
                     # Test whether we can reuse previously instantiated policy
                     # objects, or if we need to create new ones.
-                    if len(dead_critics) > 0:
+                    if len(dead_agents) > 0:
 
-                        actor_critic = dead_critics.pop()
                         agent = dead_agents.pop()
 
                         if config.reuse_state_dicts:
@@ -322,28 +338,28 @@ def train(args: argparse.Namespace) -> float:
                             )
 
                             # Load initialized state dicts.
-                            actor_critic.load_state_dict(state_dict)
+                            agent.actor_critic.load_state_dict(state_dict)
                             agent.optimizer.load_state_dict(optim_state_dict)
                         else:
 
-                            # Reinitialize the policy of ``actor_critic``.
-                            if isinstance(actor_critic.base, CNNBase):
+                            # Reinitialize the policy of ``agent.actor_critic``.
+                            if isinstance(agent.actor_critic.base, CNNBase):
                                 (
-                                    actor_critic.base.main,
-                                    actor_critic.base.critic_linear,
+                                    agent.actor_critic.base.main,
+                                    agent.actor_critic.base.critic_linear,
                                 ) = CNNBase.init_weights(
-                                    actor_critic.base.main,
-                                    actor_critic.base.critic_linear,
+                                    agent.actor_critic.base.main,
+                                    agent.actor_critic.base.critic_linear,
                                 )
-                            elif isinstance(actor_critic.base, MLPBase):
+                            elif isinstance(agent.actor_critic.base, MLPBase):
                                 (
-                                    actor_critic.base.actor,
-                                    actor_critic.base.critic,
-                                    actor_critic.base.critic_linear,
+                                    agent.actor_critic.base.actor,
+                                    agent.actor_critic.base.critic,
+                                    agent.actor_critic.base.critic_linear,
                                 ) = MLPBase.init_weights(
-                                    actor_critic.base.actor,
-                                    actor_critic.base.critic,
-                                    actor_critic.base.critic_linear,
+                                    agent.actor_critic.base.actor,
+                                    agent.actor_critic.base.critic,
+                                    agent.actor_critic.base.critic_linear,
                                 )
                             else:
                                 raise NotImplementedError
@@ -354,24 +370,25 @@ def train(args: argparse.Namespace) -> float:
                             config.num_processes,
                             env.observation_space.shape,
                             env.action_space,
-                            actor_critic.recurrent_hidden_state_size,
+                            agent.actor_critic.recurrent_hidden_state_size,
                         )
 
                     else:
-                        agent, actor_critic, rollouts = get_agent(
+                        agent, rollouts = get_policy(
                             config, env.observation_space, env.action_space, device
                         )
 
                         # Save a copy of the state dict.
                         if config.reuse_state_dicts:
-                            state_dicts.append(copy.deepcopy(actor_critic.state_dict()))
+                            state_dicts.append(
+                                copy.deepcopy(agent.actor_critic.state_dict())
+                            )
                             optim_state_dicts.append(
                                 copy.deepcopy(agent.optimizer.state_dict())
                             )
 
                     # Update dicts.
                     agents[agent_id] = agent
-                    actor_critics[agent_id] = actor_critic
                     rollout_map[agent_id] = rollouts
                     episode_rewards[agent_id] = deque(maxlen=10)
 
@@ -397,8 +414,6 @@ def train(args: argparse.Namespace) -> float:
 
                     # If done then remove from environment.
                     if agent_done:
-                        actor_critic = actor_critics.pop(agent_id)
-                        dead_critics.add(actor_critic)
                         # TODO: should we remove from ``rollout_map``?
                         agent = agents.pop(agent_id)
                         dead_agents.add(agent)
@@ -439,11 +454,10 @@ def train(args: argparse.Namespace) -> float:
         for agent_id, agent in agents.items():
             if agent_id not in minted_agents:
 
-                actor_critic = actor_critics[agent_id]
                 rollouts = rollout_map[agent_id]
 
                 with torch.no_grad():
-                    next_value = actor_critic.get_value(
+                    next_value = agent.actor_critic.get_value(
                         rollouts.obs[-1],
                         rollouts.recurrent_hidden_states[-1],
                         rollouts.masks[-1],
@@ -488,7 +502,6 @@ def train(args: argparse.Namespace) -> float:
                 "episode_rewards": episode_rewards,
                 "minted_agents": minted_agents,
                 "metrics": metrics,
-                "dead_critics": dead_critics,
                 "dead_agents": dead_agents,
                 "state_dicts": state_dicts,
                 "optim_state_dicts": optim_state_dicts,
@@ -521,73 +534,3 @@ def train(args: argparse.Namespace) -> float:
     )
 
     return metrics.policy_score
-
-
-def get_agent(
-    config: Config, obs_space: gym.Space, act_space: gym.Space, device: torch.device,
-) -> Tuple[Algo, Policy, RolloutStorage]:
-    """
-    Spins up a new agent/policy.
-
-    Parameters
-    ----------
-    config : ``Config``.
-        Config object parsed from settings file.
-    obs_space : ``gym.Space``.
-        Observation space from the environment.
-    act_space : ``gym.Space``.
-        Action space from the environment.
-    device : ``torch.device``.
-        The GPU/TPU/CPU.
-
-    Returns
-    -------
-    agent : ``Algo``.
-        Agent object from a2c-ppo-acktr.
-    actor_critic : ``Policy``.
-        The policy object.
-    rollouts : ``RolloutStorage``.
-        The rollout object.
-    """
-
-    actor_critic = Policy(
-        obs_space.shape, act_space, base_kwargs={"recurrent": config.recurrent_policy}
-    )
-    actor_critic.to(device)
-    agent: Algo
-
-    if config.algo == "a2c":
-        agent = algo.A2C_ACKTR(
-            actor_critic,
-            config.value_loss_coef,
-            config.entropy_coef,
-            lr=config.lr,
-            eps=config.eps,
-            alpha=config.alpha,
-            max_grad_norm=config.max_grad_norm,
-        )
-    elif config.algo == "ppo":
-        agent = algo.PPO(
-            actor_critic,
-            config.clip_param,
-            config.ppo_epoch,
-            config.num_mini_batch,
-            config.value_loss_coef,
-            config.entropy_coef,
-            lr=config.lr,
-            eps=config.eps,
-            max_grad_norm=config.max_grad_norm,
-        )
-    elif config.algo == "acktr":
-        agent = algo.A2C_ACKTR(
-            actor_critic, config.value_loss_coef, config.entropy_coef, acktr=True
-        )
-
-    rollouts = RolloutStorage(
-        config.num_steps,
-        config.num_processes,
-        obs_space.shape,
-        act_space,
-        actor_critic.recurrent_hidden_state_size,
-    )
-    return agent, actor_critic, rollouts

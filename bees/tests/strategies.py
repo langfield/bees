@@ -64,7 +64,6 @@ def envs(draw: Callable[[SearchStrategy], Any]) -> Env:
     sample["clip_param"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["log_interval"] = draw(st.integers(min_value=1, max_value=100))
     sample["save_interval"] = draw(st.integers(min_value=1, max_value=100))
-    sample["eval_interval"] = draw(st.integers(min_value=1, max_value=100))
     sample["cuda"] = draw(st.booleans())
     sample["use_proper_time_limits"] = draw(st.booleans())
     sample["recurrent_policy"] = draw(st.booleans())

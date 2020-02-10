@@ -2,7 +2,7 @@
 import copy
 import random
 import collections
-from typing import Set, List, Dict, Tuple
+from typing import Set, List, Dict, Tuple, Optional
 
 import gym
 import numpy as np
@@ -21,6 +21,7 @@ from bees.worker import worker_loop
 def get_agent(
     agent_id: int,
     iteration: int,
+    age: int,
     ob: np.ndarray,
     config: Config,
     obs_space: gym.Space,
@@ -31,18 +32,26 @@ def get_agent(
     dead_pipes: Dict[int, Pipe],
     state_dicts: List[collections.OrderedDict],
     optim_state_dicts: List[collections.OrderedDict],
-) -> Tuple[Algo, RolloutStorage, mp.Process, Pipe, torch.Device]:
+) -> Tuple[Algo, RolloutStorage, Optional[mp.Process], Optional[Pipe], torch.device]:
 
     # REMOVE
     device = torch.device("cuda:0" if config.cuda else "cpu")
+    pipe: Optional[Pipe]
+
+    if config.mp:
+        pipe = Pipe()
+    else:
+        worker = None
+        pipe = None
 
     # Test whether we can reuse previously instantiated policy
     # objects, or if we need to create new ones.
     if len(dead_agents) > 0:
 
+        # TODO: Pass in dead workers.
         agent = dead_agents.pop()
 
-        # TODO: Grab pipe from dead pipes.
+        # TODO: Consider reusing dead pipes.
 
         # TODO: Is this expensive?
         if config.reuse_state_dicts:
@@ -95,10 +104,9 @@ def get_agent(
             agent = agents[agent_id]
             rollouts = rollout_map[agent_id]
 
-        pipe = Pipe()
-
-        # Create worker processes.
-        # TODO: Consider calling ``get_policy`` in ``worker_loop()``.
+    # Create worker processes (need to implement worker reuse).
+    # TODO: Consider calling ``get_policy`` in ``worker_loop()``.
+    if config.mp and pipe:
         worker = mp.Process(
             target=worker_loop,
             kwargs={
@@ -106,12 +114,14 @@ def get_agent(
                 "agent": agent,
                 "rollouts": rollouts,
                 "config": config,
-                "initial_step": iteration,
+                "initial_age": age,
+                "initial_iteration": iteration,
                 "initial_ob": ob,
                 "env_spout": pipe.env_spout,
                 "action_funnel": pipe.action_funnel,
                 "action_dist_funnel": pipe.action_dist_funnel,
                 "loss_funnel": pipe.loss_funnel,
+                "save_funnel": pipe.save_funnel,
             },
         )
         worker.start()

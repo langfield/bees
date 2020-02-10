@@ -9,3 +9,4 @@ class Pipe:
         self.action_spout, self.action_funnel = mp.Pipe()
         self.action_dist_spout, self.action_dist_funnel = mp.Pipe()
         self.loss_spout, self.loss_funnel = mp.Pipe()
+        self.save_spout, self.save_funnel = mp.Pipe()

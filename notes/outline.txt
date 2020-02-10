@@ -353,6 +353,11 @@ Things to come back to:
     fixed percentage of the mean policy score, where the mean policy score is computed
     over the space of randomly initialized policy networks and reward networks.
 
+    Ideas for more general metrics:
+    - Eating frequency
+    - Mating frequency
+    - Timesteps for policy to learn reward function
+
 #===========================================================================================
 
     October sprint:
@@ -423,6 +428,10 @@ Things to come back to:
    - Write tests
    - Add multiprocessing
      - Merge trainer versions
+       - Add loading to leader.py
+       - Add timer to leader.py
+       - Clean up (ALPHA, DEBUG?)
+       - Make sure it runs okay
      - Add profiling
      - Multiprocess more functionality
    - Profile
@@ -446,3 +455,5 @@ Things to come back to:
    - Some mechanic to make reproduction happen at later ages (minimum mating age?)
    - Run experiment with one agent, analyze learning curve to maximize intrinsic reward
    - Rewrite PPO implementation
+   - Garbage collection for agents in multi processed case
+   - Record RAM usage

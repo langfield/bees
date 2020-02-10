@@ -7,23 +7,24 @@ import random
 import pickle
 import argparse
 import collections
-from typing import Dict, Set, List, Any, TextIO
-
-import numpy as np
+from typing import Dict, Tuple, Set, List, Any, TextIO
 
 import torch
 import torch.multiprocessing as mp
+import numpy as np
 
 from bees.rl import utils
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
 
 from bees.env import Env
+from bees.timer import Timer
 from bees.pipe import Pipe
 from bees.config import Config
+from bees.worker import act, get_policy_score, get_masks
 from bees.creation import get_agent
 from bees.analysis import (
-    update_policy_score,
+    update_policy_score_multiprocessed,
     update_losses,
     update_food_scores,
     Metrics,
@@ -74,6 +75,13 @@ def train(args: argparse.Namespace) -> float:
         Contains arguments as described above.
     """
 
+    # Create metrics and timer.
+    metrics = Metrics()
+    timer = Timer()
+
+    # TIMER
+    timer.start_interval("initialization")
+
     setup = Setup(args)
     config: Config = setup.config
     save_dir: str = setup.save_dir
@@ -83,9 +91,6 @@ def train(args: argparse.Namespace) -> float:
     metrics_log: TextIO = setup.metrics_log
     env_state_path: str = setup.env_state_path
     trainer_state: Dict[str, Any] = setup.trainer_state
-
-    # Make sure environment allows us to handle incrementing ``env.iteration`` here.
-    assert not config.increment
 
     # Create environment.
     if config.print_repr:
@@ -121,8 +126,6 @@ def train(args: argparse.Namespace) -> float:
     agents: Dict[int, Algo] = {}
     rollout_map: Dict[int, RolloutStorage] = {}
     minted_agents: Set[int] = set()
-    metrics = Metrics()
-    agent_action_dists: Dict[int, torch.Tensor] = {}
 
     # Save dead objects to make creation faster.
     dead_agents: Set[Algo] = set()
@@ -138,8 +141,26 @@ def train(args: argparse.Namespace) -> float:
     # Set spawn start method for compatibility with torch.
     mp.set_start_method("spawn")
 
+    # TODO: Implement this.
     if args.load_from:
-        raise NotImplementedError
+
+        # Load the environment state from file.
+        env.load(env_state_path)
+
+        # Load in multiagent maps.
+        agents = trainer_state["agents"]
+        rollout_map = trainer_state["rollout_map"]
+        minted_agents = trainer_state["minted_agents"]
+        metrics = trainer_state["metrics"]
+
+        # Load in dead objects.
+        dead_agents = trainer_state["dead_agents"]
+        state_dicts = trainer_state["state_dicts"]
+        optim_state_dicts = trainer_state["optim_state_dicts"]
+
+        # Don't reset environment if we are resuming a previous run.
+        obs = {agent_id: agent.observation for agent_id, agent in env.agents.items()}
+
     else:
         obs = env.reset()
 
@@ -151,6 +172,7 @@ def train(args: argparse.Namespace) -> float:
         agent, rollouts, worker, device, pipe = get_agent(
             agent_id,
             env.iteration,
+            env.agents[agent_id].age,
             ob,
             config,
             env.observation_space,
@@ -170,6 +192,12 @@ def train(args: argparse.Namespace) -> float:
             state_dicts.append(copy.deepcopy(state_dict))
             optim_state_dicts.append(copy.deepcopy(optim_state_dict))
 
+        # Copy first observations to rollouts, and send to device.
+        if not config.mp:
+            initial_observation: torch.Tensor = torch.FloatTensor([ob])
+            rollouts.obs[0].copy_(initial_observation)
+            rollouts.to(device)
+
         agents[agent_id] = agent
         workers[agent_id] = worker
         devices[agent_id] = device
@@ -178,49 +206,75 @@ def train(args: argparse.Namespace) -> float:
 
     # Whether or not we make a weight update on this iteration.
     backward_pass: bool = False
-    iterations = int(config.time_steps - env.iteration) // config.num_processes
-    num_updates = iterations // config.num_steps
-    while env.iteration < iterations:
+    num_updates = config.time_steps // config.num_steps
+    while env.iteration < config.time_steps:
 
         # Should these all be defined up above with other maps?
         minted_agents = set()
         action_dict: Dict[int, int] = {}
+        act_map: Dict[
+            int,
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        ] = {}
         timestep_scores: Dict[int, float] = {}
 
         # Get actions.
-        for agent_id in pipes:
-            action_dict[agent_id] = pipes[agent_id].action_spout.recv()
+        if config.mp:
+            for agent_id in pipes:
+                action_dict[agent_id] = pipes[agent_id].action_spout.recv()
+        else:
+            decay = config.use_linear_lr_decay and backward_pass
+            for agent_id in agents:
+                act_map[agent_id] = act(
+                    env.iteration,
+                    decay,
+                    agents[agent_id],
+                    rollout_map[agent_id],
+                    config,
+                    env.agents[agent_id].age,
+                    None,
+                )
+                action_dict[agent_id] = int(act_map[agent_id][1][0])
 
         # Execute environment step.
         obs, rewards, dones, infos = env.step(action_dict)
         backward_pass = env.iteration % config.num_steps == 0 and env.iteration > 0
-        for agent_id in obs:
-            pipes[agent_id].env_funnel.send(
-                (
-                    env.iteration,
-                    obs[agent_id],
-                    rewards[agent_id],
-                    dones[agent_id],
-                    infos[agent_id],
-                    backward_pass,
+
+        # TODO: Check for keyerror: for agent_id in obs:
+        if config.mp:
+            for agent_id in pipes:
+                pipes[agent_id].env_funnel.send(
+                    (
+                        env.iteration,
+                        obs[agent_id],
+                        rewards[agent_id],
+                        dones[agent_id],
+                        infos[agent_id],
+                        backward_pass,
+                    )
                 )
-            )
 
         # Write env state and metrics to log.
         env.log_state(env_log, visual_log)
         metrics_log.write(str(metrics.get_summary()) + "\n")
 
         # Update the policy score.
-        if env.iteration % config.policy_score_frequency == 0:
-            for agent_id in infos:
-                timestep_scores[agent_id] = pipes[agent_id].action_dist_spout.recv()
+        if (env.iteration + 1) % config.policy_score_frequency == 0:
+            # TODO: Check for keyerror: for agent_id in infos:
+            if config.mp:
+                for agent_id in pipes:
+                    timestep_scores[agent_id] = pipes[agent_id].action_dist_spout.recv()
+            else:
+                for agent_id in act_map:
+                    action_dist = act_map[agent_id][4]
+                    timestep_score = get_policy_score(action_dist, infos[agent_id])
+                    timestep_scores[agent_id] = timestep_score
 
-            # TODO: Make an analogue of this function.
-            metrics = update_policy_score(
+            metrics = update_policy_score_multiprocessed(
                 env=env,
                 config=config,
                 infos=infos,
-                agent_action_dists=agent_action_dists,
+                timestep_scores=timestep_scores,
                 metrics=metrics,
             )
 
@@ -238,14 +292,11 @@ def train(args: argparse.Namespace) -> float:
         if env.iteration == 1 or set(obs.keys()) != set(agents.keys()):
             metrics = update_food_scores(env, metrics)
 
-        step_ema = (ALPHA * step_ema) + ((1 - ALPHA) * (time.time() - last_time))
+        step_ema = (config.ema_alpha * step_ema) + ((1 - config.ema_alpha) * (time.time() - last_time))
         last_time = time.time()
 
         # Print debug output.
         end = "\n" if config.print_repr else "\r"
-
-        # DEBUG
-        end = "\n"
 
         if not DEBUG:
             print("Iteration: %d| " % env.iteration, end="")
@@ -259,13 +310,16 @@ def train(args: argparse.Namespace) -> float:
         # Agent creation and termination, rollout stacking.
         for agent_id in obs:
             ob = obs[agent_id]
+            reward = rewards[agent_id]
             done = dones[agent_id]
+            info = infos[agent_id]
 
             # Initialize new policies.
             if agent_id not in agents:
                 agent, rollouts, worker, device, pipe = get_agent(
                     agent_id,
                     env.iteration,
+                    env.agents[agent_id].age,
                     ob,
                     config,
                     env.observation_space,
@@ -277,6 +331,13 @@ def train(args: argparse.Namespace) -> float:
                     state_dicts,
                     optim_state_dicts,
                 )
+
+                # Copy first observations to rollouts, and send to device.
+                if not config.mp:
+                    initial_observation: torch.Tensor = torch.FloatTensor([ob])
+                    rollouts.obs[0].copy_(initial_observation)
+                    rollouts.to(device)
+
                 agents[agent_id] = agent
                 workers[agent_id] = worker
                 devices[agent_id] = device
@@ -297,8 +358,15 @@ def train(args: argparse.Namespace) -> float:
                 if done:
                     agent = agents.pop(agent_id)
                     # TODO: Should we save a reference to dead ``rollouts``?
+                    # TODO: Does garbage collection get these? Use ``del``?
                     rollout_map.pop(agent_id)
+                    pipes.pop(agent_id)
                     dead_agents.add(agent)
+
+                elif not config.mp:
+                    rollouts = rollout_map[agent_id]
+                    fwds = act_map[agent_id]
+                    stack_rollouts(rollouts, ob, reward, done, info, fwds)
 
         # Print out environment state.
         if all(dones.values()):
@@ -314,9 +382,13 @@ def train(args: argparse.Namespace) -> float:
             dist_entropies: Dict[int, float] = {}
 
             # Should we iterate over a different object?
-            for agent_id in agents:
+            for agent_id, agent in agents.items():
                 if agent_id not in minted_agents:
-                    losses = pipes[agent_id].loss_spout.recv()
+                    if config.mp:
+                        losses = pipes[agent_id].loss_spout.recv()
+                    else:
+                        rollouts = rollout_map[agent_id]
+                        losses = update(agent, rollouts, config)
                     value_losses[agent_id] = losses[0]
                     action_losses[agent_id] = losses[1]
                     dist_entropies[agent_id] = losses[2]
@@ -326,39 +398,105 @@ def train(args: argparse.Namespace) -> float:
                 config=config,
                 losses=(value_losses, action_losses, dist_entropies),
                 metrics=metrics,
+                minted_agents=minted_agents,
             )
 
-            # Save for every ``config.save_interval``-th step or on the last update.
-            save_state: bool = env.iteration % config.save_interval == 0
-            update_index: int = env.iteration // config.num_steps
-            if (save_state or update_index == num_updates - 1) and args.save_root:
+        # Save for every ``config.save_interval``-th step or on the last update.
+        # TODO: Ensure that we aren't saving out an empty state on the last interation.
+        save_state: bool = env.iteration % config.save_interval == 0
+        if (save_state or env.iteration == config.time_steps - 1):
 
-                # Save trainer state objects
-                trainer_state = {
-                    "agents": agents,
-                    "rollout_map": rollout_map,
-                    "minted_agents": minted_agents,
-                    "metrics": metrics,
-                    "dead_agents": dead_agents,
-                    "state_dicts": state_dicts,
-                    "optim_state_dicts": optim_state_dicts,
-                }
-                trainer_state_path = os.path.join(save_dir, "%s_trainer.pkl" % codename)
-                with open(trainer_state_path, "wb") as trainer_file:
-                    pickle.dump(trainer_state, trainer_file)
+            # Update ``agents`` and ``rollouts`` from worker processes.
+            if config.mp:
+                for agent_id, agent in agents.items():
+                    agent, rollouts = pipes[agent_id].save_spout.recv()
+                    agents[agent_id] = agent
+                    rollout_map[agent_id] = rollouts
 
-                # Save out environment state.
-                state_path = os.path.join(save_dir, "%s_env.pkl" % codename)
-                env.save(state_path)
+            # Save trainer state objects
+            trainer_state = {
+                "agents": agents,
+                "rollout_map": rollout_map,
+                "minted_agents": minted_agents,
+                "metrics": metrics,
+                "dead_agents": dead_agents,
+                "state_dicts": state_dicts,
+                "optim_state_dicts": optim_state_dicts,
+            }
+            trainer_state_path = os.path.join(save_dir, "%s_trainer.pkl" % codename)
+            with open(trainer_state_path, "wb") as trainer_file:
+                pickle.dump(trainer_state, trainer_file)
 
-                # Save out settings, removing log files (not paths) from object.
-                settings_path = os.path.join(save_dir, "%s_settings.json" % codename)
-                with open(settings_path, "w") as settings_file:
-                    json.dump(config.settings, settings_file)
+            # Save out environment state.
+            state_path = os.path.join(save_dir, "%s_env.pkl" % codename)
+            env.save(state_path)
+
+            # Save out settings, removing log files (not paths) from object.
+            settings_path = os.path.join(save_dir, "%s_settings.json" % codename)
+            with open(settings_path, "w") as settings_file:
+                json.dump(config.settings, settings_file)
 
             if env_done:
                 break
 
         env.iteration += 1
 
+    # Prints a single line to reset carriage.
+    print("")
+
     return metrics.policy_score
+
+
+# TODO: Consider calling these functions in ``worker.py`` as well.
+def stack_rollouts(
+    rollouts: RolloutStorage,
+    ob: torch.Tensor,
+    reward: float,
+    done: bool,
+    info: Dict[str, Any],
+    fwds: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,],
+) -> None:
+    # Shape correction and casting.
+    # TODO: Change names so everything is statically-typed.
+    observation = torch.FloatTensor([ob])
+    reward = torch.FloatTensor([reward])
+    masks, bad_masks = get_masks(done, info)
+
+    # These are all CUDA tensors (on device).
+    value: torch.Tensor = fwds[0]
+    action: torch.Tensor = fwds[1]
+    action_log_prob: torch.Tensor = fwds[2]
+    recurrent_hidden_states: torch.Tensor = fwds[3]
+
+    # Add to rollouts.
+    rollouts.insert(
+        observation,
+        recurrent_hidden_states,
+        action,
+        action_log_prob,
+        value,
+        reward,
+        masks,
+        bad_masks,
+    )
+
+
+def update(
+    agent: Algo, rollouts: RolloutStorage, config: Config
+) -> Tuple[float, float, float]:
+    with torch.no_grad():
+        next_value = agent.actor_critic.get_value(
+            rollouts.obs[-1], rollouts.recurrent_hidden_states[-1], rollouts.masks[-1],
+        ).detach()
+    rollouts.compute_returns(
+        next_value,
+        config.use_gae,
+        config.gamma,
+        config.gae_lambda,
+        config.use_proper_time_limits,
+    )
+
+    # Compute weight updates.
+    value_loss, action_loss, dist_entropy = agent.update(rollouts)
+
+    return value_loss, action_loss, dist_entropy

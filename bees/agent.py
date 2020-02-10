@@ -249,7 +249,7 @@ class Agent(Config):
         """
 
         state = {}
-        state_attributes = ["pos", "health", "last_reward", "age", "num_children"]
+        state_attributes = ["pos", "initial_health", "health", "last_reward", "age", "num_children"]
         for state_attribute in state_attributes:
             state[state_attribute] = getattr(self, state_attribute)
 
