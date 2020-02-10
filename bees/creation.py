@@ -104,27 +104,27 @@ def get_agent(
             agent = agents[agent_id]
             rollouts = rollout_map[agent_id]
 
-        # Create worker processes.
-        # TODO: Consider calling ``get_policy`` in ``worker_loop()``.
-        if config.mp and pipe:
-            worker = mp.Process(
-                target=worker_loop,
-                kwargs={
-                    "device": device,
-                    "agent": agent,
-                    "rollouts": rollouts,
-                    "config": config,
-                    "initial_age": age,
-                    "initial_iteration": iteration,
-                    "initial_ob": ob,
-                    "env_spout": pipe.env_spout,
-                    "action_funnel": pipe.action_funnel,
-                    "action_dist_funnel": pipe.action_dist_funnel,
-                    "loss_funnel": pipe.loss_funnel,
-                    "save_funnel": pipe.save_funnel,
-                },
-            )
-            worker.start()
+    # Create worker processes (need to implement worker reuse).
+    # TODO: Consider calling ``get_policy`` in ``worker_loop()``.
+    if config.mp and pipe:
+        worker = mp.Process(
+            target=worker_loop,
+            kwargs={
+                "device": device,
+                "agent": agent,
+                "rollouts": rollouts,
+                "config": config,
+                "initial_age": age,
+                "initial_iteration": iteration,
+                "initial_ob": ob,
+                "env_spout": pipe.env_spout,
+                "action_funnel": pipe.action_funnel,
+                "action_dist_funnel": pipe.action_dist_funnel,
+                "loss_funnel": pipe.loss_funnel,
+                "save_funnel": pipe.save_funnel,
+            },
+        )
+        worker.start()
 
     return agent, rollouts, worker, device, pipe
 

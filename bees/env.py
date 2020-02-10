@@ -1109,4 +1109,4 @@ class Env(Config):
         for agent_id, agent in self.agents.items():
             agent.observation = self._get_obs(agent.pos)
 
-        print("loaded!")
+        print("Loaded!")

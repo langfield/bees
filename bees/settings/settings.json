@@ -3,9 +3,9 @@
 
     "width": 10,
     "height": 10,
-    "sight_len": 2,
+    "sight_len": 0,
     "num_obj_types": 2,
-    "num_agents": 5,
+    "num_agents": 3,
     "initial_food_density": 1.0,
     "initial_food_regen_prob": 1.0,
     "adaptive_food": false,
@@ -31,7 +31,7 @@
     "3": "====================REWARD====================",
 
     "n_layers": 1,
-    "hidden_dim": 32,
+    "hidden_dim": 1,
     "reward_weight_mean": 0.0,
     "reward_weight_stddev": 0.4,
     "reward_inputs": ["actions"],
