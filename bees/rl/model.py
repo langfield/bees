@@ -137,10 +137,31 @@ class Policy(nn.Module):
     def get_value(
         self, inputs: torch.Tensor, rnn_hxs: torch.Tensor, masks: torch.Tensor
     ) -> torch.Tensor:
-        """ Returns the value as a ``torch.Tensor``. """
+        """
+        Returns the output of the critic network, which is an estimator of the on-policy
+        state-value function. Thus this function should return a scalar tensor.
+
+        Parameters
+        ----------
+        inputs : ``torch.Tensor``.
+            Shape : ``(num_processes,) + obs.shape``.
+        rnn_hxs : ``torch.Tensor``.
+            Shape : ``(num_processes, hidden_dim)``.
+        masks : ``torch.Tensor``.
+            Masks for GRU forward pass.
+            Shape : ``(num_processes, hidden_dim)``.
+
+        Returns
+        -------
+        value : ``torch.Tensor``.
+            Shape : ``(,)``.
+        """
         value, _, _ = self.base(inputs, rnn_hxs, masks)
         return value
 
+    # TODO: Why in the good lord Jesus's name do we have three functions which all call
+    # ``self.base(...)``? Calls to the forward function of ``self.base`` run the given
+    # inputs through BOTH the actor and the critic. Surely we can consolidate?
     def evaluate_actions(
         self,
         inputs: torch.Tensor,
