@@ -1,7 +1,7 @@
 """ Print live training debug output and do reward analysis. """
 import copy
 from pprint import pformat
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Set
 
 import numpy as np
 import torch
@@ -180,11 +180,77 @@ def update_policy_score(
     return new_metrics
 
 
+def update_policy_score_multiprocessed(
+    env: Env,
+    config: Config,
+    infos: Dict[int, Any],
+    timestep_scores: Dict[int, float],
+    metrics: Metrics,
+) -> Metrics:
+    """
+    Computes updated policy score metrics from agent actions.
+
+    Parameters
+    ----------
+    env : ``Env``.
+        Training environment.
+    config : ``config``.
+        Training configuration.
+    infos : ``Dict[int, Any]``.
+        Returned per-agent information from the ``env.step()`` function.
+    agent_action_dists : ``Dict[int, torch.Tensor]``.
+        The policy distributions over actions for all agents.
+    metrics : ``Metrics``.
+        The state of the training analysis metrics. Not mutated.
+
+    Returns
+    -------
+    new_metrics : ``Metrics``.
+        Updated version of ``metrics``. This is not the same object.
+    """
+
+    new_metrics = copy.deepcopy(metrics)
+
+    # Update policy score estimates.
+    valid_ids = set(env.agents.keys()).intersection(set(timestep_scores.keys()))
+    for agent_id in valid_ids:
+        timestep_score = timestep_scores[agent_id]
+
+        # Update policy score with exponential moving average.
+        if agent_id in metrics.policy_scores:
+            new_metrics.policy_scores[agent_id] = (
+                config.ema_alpha * metrics.policy_scores[agent_id]
+                + (1.0 - config.ema_alpha) * timestep_score
+            )
+        else:
+            new_metrics.policy_scores[agent_id] = timestep_score
+
+        # Add policy score EMA to agent objects.
+        env.agents[agent_id].policy_score_ema = new_metrics.policy_scores[agent_id]
+
+        # Set agent maturities.
+        env.agents[agent_id].is_mature = (
+            new_metrics.policy_scores[agent_id] < config.policy_score_mating_threshold
+        )
+
+    # Compute aggregate policy score across all agents (weighted average by age).
+    new_metrics.policy_score = aggregate_loss(env, new_metrics.policy_scores)
+
+    # Set initial policy score, if necessary.
+    if new_metrics.policy_score != float("inf") and metrics.policy_score == float(
+        "inf"
+    ):
+        new_metrics.initial_policy_score = new_metrics.policy_score
+
+    return new_metrics
+
+
 def update_losses(
     env: Env,
     config: Config,
     losses: Tuple[Dict[int, float], Dict[int, float], Dict[int, float]],
     metrics: Metrics,
+    minted_agents: Set[int],
 ) -> Metrics:
     """
     Computes updated loss metrics from training losses.
@@ -215,7 +281,7 @@ def update_losses(
 
     # Compute total loss as a function of training losses.
     new_metrics.total_losses = {}
-    for agent_id in env.agents:
+    for agent_id in (set(env.agents.keys()) - minted_agents):
         new_metrics.total_losses[agent_id] = (
             new_metrics.value_losses[agent_id] * config.value_loss_coef
             + new_metrics.action_losses[agent_id]
