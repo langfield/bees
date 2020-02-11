@@ -281,7 +281,7 @@ def update_losses(
 
     # Compute total loss as a function of training losses.
     new_metrics.total_losses = {}
-    for agent_id in (set(env.agents.keys()) - minted_agents):
+    for agent_id in set(env.agents.keys()) - minted_agents:
         new_metrics.total_losses[agent_id] = (
             new_metrics.value_losses[agent_id] * config.value_loss_coef
             + new_metrics.action_losses[agent_id]

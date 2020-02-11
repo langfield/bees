@@ -1,3 +1,4 @@
+""" Object to send data between processes. """
 import torch.multiprocessing as mp
 
 
