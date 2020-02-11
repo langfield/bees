@@ -27,14 +27,14 @@ def test_get_obs_has_correct_objects(data: st.DataObject) -> None:
     for i in range(ob.shape[1]):
         for j in range(ob.shape[2]):
             ob_pos = (pos[0] + i - env.sight_len, pos[1] + j - env.sight_len)
+            print("=========================================")
             if 0 <= ob_pos[0] < env.width and 0 <= ob_pos[1] < env.height:
-                print("START")
-                print(ob[:, i, j])
-                print(env.grid[ob_pos, :])
-                print(env.grid.shape)
-                print(ob_pos)
-                assert np.all(ob[:, i, j] == env.grid[ob_pos, :])
+                print(f"Shape of 'ob': {ob.shape}")
+                print(f"Shape of 'grid': {env.grid.shape}")
+                ob_square = ob[:, i, j]
+                env_square = env.grid[ob_pos]
+                print(f"Shape of 'ob_square': {ob_square.shape}")
+                print(f"Shape of 'env_square': {env_square.shape}")
+                assert np.all(ob_square == env_square)
             else:
-                print("flaG")
-                print(ob[:, i, j])
                 assert np.all(ob[:, i, j] == np.zeros((env.num_obj_types,)))

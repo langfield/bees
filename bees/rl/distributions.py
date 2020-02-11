@@ -327,6 +327,7 @@ class Categorical(nn.Module):
     num_outputs : ``int``.
         Action space size (``action_space.n``).
     """
+
     def __init__(self, num_inputs: int, num_outputs: int):
         super(Categorical, self).__init__()
 
@@ -356,6 +357,7 @@ class DiagGaussian(nn.Module):
     num_outputs : ``int``.
         The dimensionality of the continuous action space.
     """
+
     def __init__(self, num_inputs: int, num_outputs: int):
         super(DiagGaussian, self).__init__()
 

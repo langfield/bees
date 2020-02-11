@@ -194,7 +194,7 @@ def train(args: argparse.Namespace) -> float:
 
         # Copy first observations to rollouts, and send to device.
         if not config.mp:
-            initial_observation: torch.Tensor = torch.FloatTensor([ob])
+            initial_observation = torch.FloatTensor([ob])
             rollouts.obs[0].copy_(initial_observation)
             rollouts.to(device)
 
@@ -292,7 +292,9 @@ def train(args: argparse.Namespace) -> float:
         if env.iteration == 1 or set(obs.keys()) != set(agents.keys()):
             metrics = update_food_scores(env, metrics)
 
-        step_ema = (config.ema_alpha * step_ema) + ((1 - config.ema_alpha) * (time.time() - last_time))
+        step_ema = (config.ema_alpha * step_ema) + (
+            (1 - config.ema_alpha) * (time.time() - last_time)
+        )
         last_time = time.time()
 
         # Print debug output.
@@ -334,7 +336,7 @@ def train(args: argparse.Namespace) -> float:
 
                 # Copy first observations to rollouts, and send to device.
                 if not config.mp:
-                    initial_observation: torch.Tensor = torch.FloatTensor([ob])
+                    initial_observation = torch.FloatTensor([ob])
                     rollouts.obs[0].copy_(initial_observation)
                     rollouts.to(device)
 
@@ -404,7 +406,7 @@ def train(args: argparse.Namespace) -> float:
         # Save for every ``config.save_interval``-th step or on the last update.
         # TODO: Ensure that we aren't saving out an empty state on the last interation.
         save_state: bool = env.iteration % config.save_interval == 0
-        if (save_state or env.iteration == config.time_steps - 1):
+        if save_state or env.iteration == config.time_steps - 1:
 
             # Update ``agents`` and ``rollouts`` from worker processes.
             if config.mp:

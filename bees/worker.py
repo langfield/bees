@@ -188,7 +188,7 @@ def worker_loop(
 
         # Send state back to the leader.
         save_state: bool = iteration % config.save_interval == 0
-        if (save_state or iteration == config.time_steps - 1):
+        if save_state or iteration == config.time_steps - 1:
 
             # This is becuase torch.multiprocessing will not allow you to send a tensor
             # created in another process to a different process.
