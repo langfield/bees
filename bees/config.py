@@ -28,8 +28,8 @@ class Config(dict):
                 value = Config(value)
             setattr(self, key, value)
 
-        # After initialisation, setting attributes is the same as setting an item.
-        self.__initialised = True
+        # After initialization, setting attributes is the same as setting an item.
+        self.__initialized = True
 
     def __getattr__(self, item: str) -> Any:
         """Maps values to attrs. Only called if there's NO attr with this name. """
@@ -41,17 +41,19 @@ class Config(dict):
     def __setattr__(self, item: str, value: Any) -> None:
         """ Maps attributes to values. Only if we are initialised. """
         # This test allows attributes to be set in the ``__init__()`` method.
-        # TODO: Settings validation should disallow leading underscores.
         if "_Config__initialized" not in self.__dict__:
             dict.__setattr__(self, item, value)
         # Any normal attributes are handled normally.
-        # TODO: Consider raising an error here so it's immutable (not for Env).
         elif not self.mutable:
             raise AttributeError("Can't assign attribute. Config object is immutable.")
+        elif isinstance(value, Config):
+            raise AttributeError("Can't assign a Config object as an attribute.")
         elif item in self.__dict__:
             dict.__setattr__(self, item, value)
+            self.settings[item] = value
         else:
             self.__setitem__(item, value)
+            self.settings[item] = value
 
     def __repr__(self) -> str:
         """ Return string representation of object. """
