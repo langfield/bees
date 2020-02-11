@@ -397,8 +397,6 @@ Things to come back to:
      - Tweak hyperparameters (especially reward network parameters) (DONE?)
      - Reward network analysis to determine rewarded behavior (DONE?)
 
-#===========================================================================================
-
    January sprint:
    - Reward engineering
      - Compute policy score (DONE)
@@ -425,9 +423,12 @@ Things to come back to:
      - Add options for which metrics to compute/print?
    - Merge
 
+#===========================================================================================
+
+   February sprint:
    - Write tests
    - Add multiprocessing
-     - Merge trainer versions
+     - Merge trainer versions (DONE)
        - Add loading to leader.py
        - Add timer to leader.py
        - Clean up (ALPHA, DEBUG?)
@@ -443,6 +444,7 @@ Things to come back to:
      - Other reward network parameterizations
      - Better evaluation than policy score loss (normalized rewards?)
    - Refactor
+     - Convert PPO implementation to collect rollouts in numpy arrays
      - Make arguments not positional
      - Remove food score and other functionality specific to non-observation reward functions
      - Reorganize repo

@@ -1,5 +1,6 @@
+from typing import Tuple
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import given, assume
 
 from bees.tests import strategies as bst
 from bees.agent import Agent
@@ -44,14 +45,15 @@ def test_mate_children_are_new(data: st.DataObject) -> None:
 
 @given(st.data())
 def test_mate_executes_action(data: st.DataObject) -> None:
-    """ Makes sure children are new. """
+    """ Tests children are created when they're suppsed to. """
     env = data.draw(bst.envs())
+
+    assume(env.height * env.width >= 3)
 
     # Generate two adjacent positions.
     mom_pos = data.draw(bst.positions(env=env))
     open_positions = env._get_adj_positions(mom_pos)
     dad_pos = data.draw(st.sampled_from(open_positions))
-    assert dad_pos is not None
 
     # Create a mom and dad.
     mom = Agent(
@@ -82,3 +84,11 @@ def test_mate_executes_action(data: st.DataObject) -> None:
     action_dict = {mom_id: mom_action, dad_id: dad_action}
     child_ids = env._mate(action_dict)
     assert len(child_ids) == 1
+    child = env.agents[child_ids.pop()]
+
+    def adjacent(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> bool:
+        """ Decide whether or not two positions are orthogonally adjacent. """
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1
+
+    assert len(env.agents) == 3
+    assert adjacent(child.pos, mom.pos) or adjacent(child.pos, dad.pos)
