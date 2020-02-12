@@ -3,13 +3,11 @@ import copy
 from pprint import pformat
 from typing import Dict, Any, Tuple, Set
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 
 from bees.env import Env
 from bees.config import Config
-from bees.utils import flat_action_to_tuple
 
 # pylint: disable=too-few-public-methods
 
@@ -181,11 +179,7 @@ def update_policy_score(
 
 
 def update_policy_score_multiprocessed(
-    env: Env,
-    config: Config,
-    infos: Dict[int, Any],
-    timestep_scores: Dict[int, float],
-    metrics: Metrics,
+    env: Env, config: Config, timestep_scores: Dict[int, float], metrics: Metrics,
 ) -> Metrics:
     """
     Computes updated policy score metrics from agent actions.
@@ -196,10 +190,8 @@ def update_policy_score_multiprocessed(
         Training environment.
     config : ``config``.
         Training configuration.
-    infos : ``Dict[int, Any]``.
-        Returned per-agent information from the ``env.step()`` function.
-    agent_action_dists : ``Dict[int, torch.Tensor]``.
-        The policy distributions over actions for all agents.
+    timestep_scores : ``Dict[int, float]``.
+        Policy scores for a single timestep for each agent.
     metrics : ``Metrics``.
         The state of the training analysis metrics. Not mutated.
 
@@ -295,102 +287,3 @@ def update_losses(
     new_metrics.total_loss = aggregate_loss(env, new_metrics.total_losses)
 
     return new_metrics
-
-
-def update_food_scores(env: Env, metrics: Metrics) -> Metrics:
-    """
-    Computes update food scores from agent reward networks.
-
-    Parameters
-    ----------
-    env : ``Env``.
-        Training environment.
-    metrics : ``Metrics``.
-        The state of the training analysis metrics. Not mutated.
-
-    Returns
-    -------
-    new_metrics : ``Metrics``.
-        Updated version of ``metrics``. This is not the same object.
-    """
-
-    new_metrics = copy.deepcopy(metrics)
-    previous_agent_ids = set(new_metrics.food_scores.keys())
-
-    # Gather eat actions.
-    eat_actions = []
-    EAT_INDEX = 1
-    for action in range(env.num_actions):
-        action_tuple = flat_action_to_tuple(action, env.subaction_sizes)
-        if action_tuple[EAT_INDEX] == env.config.EAT:
-            eat_actions.append(action)
-
-    # Compute individual food scores for any new agents.
-    # HARDCODE
-    FOOD_TEMPERATURE = 1e-4
-    # TODO: Fix this inefficiency.
-    # Calling ``env.get_optimal_action_dists()`` is pretty inefficient, because this
-    # function will compute the optimal action distribution for each agent, even though
-    # we only need it for newly born agents.
-    optimal_action_dists = env.get_optimal_action_dists(
-        greedy_temperature=FOOD_TEMPERATURE
-    )
-    for agent_id in env.agents:
-        if agent_id not in new_metrics.food_scores:
-            new_metrics.food_scores[agent_id] = sum(
-                [optimal_action_dists[agent_id][action] for action in eat_actions]
-            )
-            env.agents[agent_id].food_score = new_metrics.food_scores[agent_id]
-
-    # Remove food scores for any agents that have died.
-    intermediate_agent_ids = list(new_metrics.food_scores.keys())
-    for agent_id in intermediate_agent_ids:
-        if agent_id not in env.agents:
-            del new_metrics.food_scores[agent_id]
-
-    # Recompute average food scores, if relevant agents have changed.
-    current_agent_ids = set(new_metrics.food_scores.keys())
-    if current_agent_ids != previous_agent_ids:
-        new_metrics.food_score = np.mean(list(new_metrics.food_scores.values()))
-
-    return new_metrics
-
-
-def get_food_target_dist(env: Env) -> torch.Tensor:
-    """
-    Computes target action distribution for the zero-to-food task. This distribution is
-    uniform over all actions which involve the 'eat' subaction, and zero everywhere
-    else.
-
-    Parameters
-    ----------
-    env : ``Env``.
-        Training environment.
-
-    Returns
-    -------
-    target_dist : ``torch.Tensor``.
-        Optimal action distribution for the zero-to-food task.
-    """
-
-    # HARDCODE
-    EAT_INDEX = 1
-    MATE_INDEX = 2
-    target_dist = torch.zeros((env.num_actions,))
-    num_correct_actions = 0
-
-    # Count actions that involve eating, and set values in ``target_dist``.
-    for flat_action in range(env.num_actions):
-        action_tuple = flat_action_to_tuple(flat_action, env.subaction_sizes)
-
-        if (
-            action_tuple[EAT_INDEX] == env.config.EAT
-            and action_tuple[MATE_INDEX] == env.config.MATE
-        ):
-            target_dist[flat_action] = 1.0
-            num_correct_actions += 1
-
-    # Normalize values in ``target_dist``.
-    target_dist /= num_correct_actions
-
-    return target_dist

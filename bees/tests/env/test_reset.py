@@ -5,7 +5,6 @@ from hypothesis import given
 
 from bees.env import Env
 from bees.tests import strategies
-from bees.utils import DEBUG
 
 # pylint: disable=no-value-for-parameter
 

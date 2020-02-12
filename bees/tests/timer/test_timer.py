@@ -3,8 +3,6 @@ import time
 import random
 from typing import Dict, List
 
-import numpy as np
-
 from bees.timer import Timer
 
 # pylint: disable=no-value-for-parameter, protected-access

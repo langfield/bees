@@ -25,7 +25,7 @@ import gym
 from bees.agent import Agent
 from bees.genetics import get_child_reward_network
 from bees.config import Config
-from bees.utils import DEBUG, flat_action_to_tuple
+from bees.utils import flat_action_to_tuple
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True

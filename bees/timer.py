@@ -1,5 +1,5 @@
 """ Print live training debug output and do reward analysis. """
-from typing import Dict, Any, Tuple, List
+from typing import Dict, List
 import time
 
 import numpy as np
