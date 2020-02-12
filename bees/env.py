@@ -769,6 +769,7 @@ class Env(Config):
 
         # Policy network expects number of channels in first dimension.
         agent_obs = np.swapaxes(agent_obs, 0, 2)
+        agent_obs = np.swapaxes(agent_obs, 1, 2)
 
         return agent_obs
 

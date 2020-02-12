@@ -39,9 +39,6 @@ from bees.initialization import Setup
 # pylint: disable=bad-continuation, too-many-branches, duplicate-code
 # pylint: disable=too-many-statements, too-many-locals
 
-ALPHA = 0.99
-DEBUG = False
-
 
 def train(args: argparse.Namespace) -> float:
     """
