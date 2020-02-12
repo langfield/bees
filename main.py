@@ -1,4 +1,6 @@
-""" Run the environment. """
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Runs the environment. """
 import argparse
 from bees.trainer import train
 

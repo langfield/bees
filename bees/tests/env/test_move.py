@@ -1,10 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from typing import Dict, Tuple
 
 import hypothesis.strategies as st
 from hypothesis import given
 from bees.tests import strategies as bst
 
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, protected-access
 
 
 # TODO: Do we need to test the grid as well?

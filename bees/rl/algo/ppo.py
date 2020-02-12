@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Proximal Policy Optimization implementation. """
 from typing import Tuple, Optional
 
@@ -23,7 +25,6 @@ class PPO(Algo):
     clip_param : ``float``.
     """
 
-    # TODO: Figure out what hyperparameters mean.
     def __init__(
         self,
         actor_critic: Policy,

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Environment with Bees."""
 from __future__ import absolute_import
 from __future__ import division
@@ -341,7 +343,7 @@ class Env(Config):
         x = pos[0]
         y = pos[1]
 
-        if obj_type_id in self.heterogeneous_obj_type_ids and obj_id == None:
+        if obj_type_id in self.heterogeneous_obj_type_ids and obj_id is None:
             obj_type_name = self.obj_type_names[obj_type_id]
             raise TypeError(
                 "Argument 'obj_id' requird to place object "
@@ -895,7 +897,7 @@ class Env(Config):
             self.agents.pop(killed_agent_id)
 
         if self.iteration == self.iterations - 1:
-            for agent_id in dones.keys():
+            for agent_id in dones:
                 dones[agent_id] = True
         self.dones = dict(dones)
 

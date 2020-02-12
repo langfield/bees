@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from itertools import product
 
 import hypothesis.strategies as st
@@ -8,7 +10,7 @@ from bees.env import Env
 from bees.utils import timing
 from bees.tests import strategies as bst
 
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, protected-access
 
 
 class EnvironmentMachine(RuleBasedStateMachine):

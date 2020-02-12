@@ -1,8 +1,13 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Trajectory storage class and helper functions. """
 from typing import Tuple, Optional, Generator
 
 import gym
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+
+# pylint: disable=invalid-name
 
 
 def _flatten_first_two_dims(T: int, N: int, _tensor: torch.Tensor) -> torch.Tensor:
@@ -23,12 +28,29 @@ def get_action_shape(action_space: gym.spaces.space.Space) -> int:
 
 
 class RolloutStorage:
+    """
+    A class for storing rollouts/trajectories for actor-critic policies.
+
+    Parameters
+    ----------
+    num_steps : ``int``.
+        The length of each rollout, i.e. the number of env steps between updates.
+    num_processes : ``int``.
+        A deprecated parameter for parallel/asynchronous training. Always ``1``.
+    obs_shape : ``Tuple[int]``.
+        Shape of the observation space.
+    action_space : ``gym.Space``.
+        The action space.
+    recurrent_hidden_state_size : ``int``.
+        The dimension of the hidden state for the GRU if the policy is recurrent.
+    """
+
     def __init__(
         self,
         num_steps: int,
         num_processes: int,
-        obs_shape: Tuple[int],
-        action_space: gym.spaces.space.Space,
+        obs_shape: Tuple[int, ...],
+        action_space: gym.Space,
         recurrent_hidden_state_size: int,
     ):
         self.obs = torch.zeros(num_steps + 1, num_processes, *obs_shape)

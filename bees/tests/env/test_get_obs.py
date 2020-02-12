@@ -1,10 +1,13 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Tests for the ``env._get_obs()`` function. """
 import numpy as np
 import hypothesis.strategies as st
 from hypothesis import given
 
 from bees.tests import strategies as bst
 
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, protected-access
 
 
 @given(st.data())
@@ -25,7 +28,7 @@ def test_get_obs_has_no_out_of_range_elements(data: st.DataObject) -> None:
     pos = data.draw(bst.positions(env=env))
     ob = env._get_obs(pos)
     for elem in np.nditer(ob):
-        assert elem == 0.0 or elem == 1.0
+        assert elem in (0.0, 1.0)
 
 
 @given(st.data())

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Test that ``Metrics.start_interval()`` works correctly. """
 import time
 import random
@@ -46,5 +48,5 @@ def test_timer_computes_times_correctly() -> None:
             current_actual_times = timer.timed_intervals[interval]
             assert len(current_expected_times) == len(current_actual_times)
 
-            for i in range(len(current_expected_times)):
-                assert abs(current_expected_times[i] - current_actual_times[i]) < 0.01
+            for expected, actual in zip(current_expected_times, current_actual_times):
+                assert abs(expected - actual) < 0.01

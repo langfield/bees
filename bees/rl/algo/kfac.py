@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import math
 from typing import List, Dict, Any, Tuple, Optional
 

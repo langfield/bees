@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Utilities for evolution of reward functions. """
 from typing import List, Tuple
 import numpy as np

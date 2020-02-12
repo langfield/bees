@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Test that ``Env.fill()`` works correctly. """
 import itertools
 
