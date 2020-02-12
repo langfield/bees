@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Converts settings dictionary into config object. """
 # NOTE: StackOverflow reference:
 # /questions/42272335/how-to-make-a-class-which-has-getattr-properly-pickable

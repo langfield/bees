@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Tests for the ``env._mate()`` function. """
 from typing import Tuple
 import hypothesis.strategies as st
 from hypothesis import given, assume
@@ -5,7 +8,7 @@ from hypothesis import given, assume
 from bees.tests import strategies as bst
 from bees.agent import Agent
 
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, protected-access
 
 
 @given(st.data())
@@ -24,7 +27,6 @@ def test_mate_adds_children_to_agents(data: st.DataObject) -> None:
     """ Makes sure child ids get added to ``env.agents``. """
     env = data.draw(bst.envs())
     env.reset()
-    old_agent_memory_addresses = [id(agent) for agent in env.agents.values()]
     tuple_action_dict = data.draw(bst.tuple_action_dicts(env=env))
     child_ids = env._mate(tuple_action_dict)
     for child_id in child_ids:

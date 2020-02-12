@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Distributed training function for a single agent worker. """
 import copy
 from typing import Dict, Tuple, Any, Optional

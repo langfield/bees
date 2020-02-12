@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Abstract base class for RL algorithm implementations. """
 from abc import ABC, abstractmethod
 from typing import Tuple

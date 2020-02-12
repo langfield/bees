@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Test that the ``Config`` class loads dictionaries correctly. """
 from typing import Dict, Any
 from hypothesis import given

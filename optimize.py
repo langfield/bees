@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Script for optimizing GPST model hyperparameters via Optuna. """
 import os
 import json
@@ -52,8 +54,8 @@ def objective(trial: optuna.Trial) -> float:
 
     # Get settings and create environment.
     # HARDCODE
-    settings_file = "bees/settings/settings.json"
-    with open(settings_file, "r") as json_file:
+    settings_path = "bees/settings/settings.json"
+    with open(settings_path, "r") as json_file:
         settings = json.load(json_file)
 
     # Suggestions for policy hyperparameters.
@@ -85,9 +87,9 @@ def objective(trial: optuna.Trial) -> float:
 
     # Print out settings to temp file.
     temp_dir = tempfile.mkdtemp()
-    settings_path = os.path.join(temp_dir, "settings.json")
-    with open(settings_path, "w") as settings_file:
-        json.dump(settings, settings_file)
+    temp_settings_path = os.path.join(temp_dir, "settings.json")
+    with open(temp_settings_path, "w") as temp_settings_file:
+        json.dump(settings, temp_settings_file)
 
     # Get ``args`` object to pass to train().
     parser = argparse.ArgumentParser()

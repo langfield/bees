@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Agent object for instantiating agents in the environment. """
 import copy
 from typing import Tuple, List, Dict, Any, Optional

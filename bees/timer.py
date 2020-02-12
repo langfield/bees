@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Print live training debug output and do reward analysis. """
 from typing import Dict, List
 import time

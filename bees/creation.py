@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Functions for agent instantiation. """
 import copy
 import random
@@ -33,6 +35,7 @@ def get_agent(
     state_dicts: List[collections.OrderedDict],
     optim_state_dicts: List[collections.OrderedDict],
 ) -> Tuple[Algo, RolloutStorage, Optional[mp.Process], Optional[Pipe], torch.device]:
+    """ Create an ``Algo`` object, and return pipes and workers if multiprocessed. """
 
     # REMOVE
     device = torch.device("cuda:0" if config.cuda else "cpu")

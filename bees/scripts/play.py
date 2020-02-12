@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Run to animate an environment log. """
 from typing import List
 import argparse

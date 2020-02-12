@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Modifies standard torch distributions so they are compatible with this library. """
 from typing import List
 from itertools import product

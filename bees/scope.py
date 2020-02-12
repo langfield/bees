@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Analyzes the reward network of an agent. """
 import os
 import json

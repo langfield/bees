@@ -1,10 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import hypothesis.strategies as st
 from hypothesis import given
 
 from bees.env import Env
 from bees.tests import strategies as bst
 
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, protected-access
 
 
 # TODO: Can we even test anything else here (density calculation)?

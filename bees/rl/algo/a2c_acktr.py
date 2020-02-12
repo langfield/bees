@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ An implementation of A2C and ACTKR in one class. """
 from typing import Tuple, Optional
 

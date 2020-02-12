@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Custom hypothesis strategies for bees. """
 import json
 from typing import Dict, Tuple, Callable, Any, Optional
@@ -10,10 +12,9 @@ from bees.utils import flat_action_to_tuple
 from bees.config import Config
 from bees.analysis import Metrics
 
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, protected-access
 
 
-# TODO: Are any of these return type annotations correct? Don't they return strategies?
 @st.composite
 def envs(draw: Callable[[SearchStrategy], Any]) -> Env:
     """ A hypothesis strategy for generating ``Env`` objects. """

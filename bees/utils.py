@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Various functions for use in ``env.py``. """
 import os
 import time

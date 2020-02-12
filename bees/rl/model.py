@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ RL policy class. """
 from typing import Dict, Tuple, Any, Type, Optional
 
@@ -159,8 +161,8 @@ class Policy(nn.Module):
         value, _, _ = self.base(inputs, rnn_hxs, masks)
         return value
 
-    # TODO: Why in the good lord Jesus's name do we have three functions which all call
-    # ``self.base(...)``? Calls to the forward function of ``self.base`` run the given
+    # TODO: Why do we have three functions which all call ``self.base(...)``?
+    # Calls to the forward function of ``self.base`` run the given
     # inputs through BOTH the actor and the critic. Surely we can consolidate?
     def evaluate_actions(
         self,

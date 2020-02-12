@@ -1,10 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from typing import Tuple
 import hypothesis.strategies as st
 from hypothesis import given
 
 import bees.tests.strategies as bst
 
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, protected-access
 
 
 @given(data=st.data())
@@ -84,7 +86,7 @@ def test_obj_exists_detects_bad_id_map(data: st.DataObject) -> None:
     raised_value_error = False
     try:
         _ = env._obj_exists(obj_type_id, pos)
-    except ValueError as err:
+    except ValueError:
         raised_value_error = True
     if env.grid[grid_idx] == 0:
         assert raised_value_error
