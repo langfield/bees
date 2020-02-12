@@ -1,5 +1,5 @@
 """ Test that ``Env.reset()`` works correctly. """
-from typing import Tuple, Set
+from typing import Tuple
 
 import pytest
 import hypothesis.strategies as st
@@ -44,7 +44,6 @@ def test_env_place_with_id_requires_id(place_args: Tuple[Env, Tuple[int, int]]) 
     env.reset()
     obj_type_id = env.obj_type_ids["agent"]
     if not env._obj_exists(obj_type_id, pos):
-        agent_id = env._new_agent_id()
         with pytest.raises(TypeError):
             env._place(obj_type_id, pos)
 

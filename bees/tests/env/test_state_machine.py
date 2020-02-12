@@ -2,7 +2,7 @@ from itertools import product
 
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from hypothesis.stateful import rule, initialize, Bundle, RuleBasedStateMachine
+from hypothesis.stateful import rule, initialize, RuleBasedStateMachine
 
 from bees.env import Env
 from bees.utils import timing

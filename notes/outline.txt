@@ -449,6 +449,11 @@ Things to come back to:
      - Remove food score and other functionality specific to non-observation reward functions
      - Reorganize repo
 
+   Before merging to master:
+   - Get rid of gym logger warning about bound box precision
+   - Replace analysis.update_policy_score with update_policy_score_multiprocessed
+   - Redo run black, pylint, mypy, run main, test
+
    Other things:
    - Parallelize env.step function
    - Build agent sandbox

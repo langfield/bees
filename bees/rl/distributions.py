@@ -7,7 +7,6 @@ import torch.nn as nn
 from torch.distributions.distribution import Distribution
 
 from bees.rl.utils import AddBias, init
-from bees.utils import DEBUG
 
 # pylint: disable=bad-continuation, abstract-method, no-member
 

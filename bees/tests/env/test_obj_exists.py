@@ -83,10 +83,9 @@ def test_obj_exists_detects_bad_id_map(data: st.DataObject) -> None:
     env.id_map[x][y][obj_type_id] = singleton_id_set
     raised_value_error = False
     try:
-        existence = env._obj_exists(obj_type_id, pos)
+        _ = env._obj_exists(obj_type_id, pos)
     except ValueError as err:
         raised_value_error = True
-        value_error = err
     if env.grid[grid_idx] == 0:
         assert raised_value_error
     else:
