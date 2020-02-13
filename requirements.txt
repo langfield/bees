@@ -1,7 +1,14 @@
 ray
 gym
-tensorflow-gpu
+tensorflow
 lz4
 psutil
 pandas
 opencv-python
+deap
+hypothesis
+optuna
+coverage
+pytest
+mypy
+black

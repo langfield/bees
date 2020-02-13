@@ -1,4 +1,105 @@
-Move reward function to agent
-Implement reward function with MLP
-Implement mating
-Test account switching.
+Figure out why we are trying to remove agents from incorrect positions. 
+    DONE = Environment was getting reset, but state was persisting.
+Fix negative number of foods
+    DONE = Agents are now killed if food <= 0, and ``self.num_foods`` is reset in reset/fill.
+Change self.agents to a dictionary. 
+    DONE.
+Remove dead agents from self.agents.
+
+
+Changed:    Made logging initialization read in a list of the 10000 most frequent words in the english
+            language, and then sort it alphabetically, then read in every filename in the ``logs/`` 
+            directory, then pick the first word from the list which isn't already used in a logname, 
+            then use that as the log filename for that run.
+
+            Added agent reconstruction to the reset function. 
+
+            Made ``self.agents`` a dictionary where the keys are unique (even across dead agents)
+            integer agent ids and the values are the ``Agent`` objects.
+
+            Added several more logging statements, which just use ``f.write()``, which I think is 
+            easier. I also added flush statements of the form ``f.flush()`` which ensure that the 
+            log output is added to the file in a chronologically sensible way.
+
+            Fixed bug where ``num_foods`` would sometimes become negative. We were sometimes
+            trying to remove agents from heaven.
+
+Bugs:   Reshape issue with size 81,921. This is equal to 62*256 + 256*257 + 257, sum of products of 
+        shapes of each layer matrix (made of weights and biases). Need to split into layers first.
+
+        Appears to be a massive bug: we are using the same policy for all agents. We need to look
+        at ``test_external_multi_agent_env.py``. I think we need a ``policies`` dict.
+
+Features:   Implementing mating cooldown.
+
+            Agents can no longer mate as soon as they are born.
+    
+            Changed environment printing to put upper bounds on number of agent stats printed.
+
+            Added num agents and num foods to print output.
+
+            Foods now regenerate according to gaussian at each timestep. 
+
+            Environment no longer sets all dones to true when food is gone.
+
+            Agents can only reproduce when both mom and dad have health > 0.5 (hardcoded for now).
+
+Todo:   Add running average agent lifetime statistic.
+
+        Make utility to save a specific agents weights, and run that agent in a sandbox.
+
+        Make a sandbox environment where we can manually place food and see how an agent behaves.
+
+        Add agent lifetime stddev stat.
+
+        Should agents be born with the max health of the mom and dad?
+
+        Total time elapsed in log.
+
+        Log of PPOTrainer output.
+
+        Should we give agents access to their PPOTFPolicy instance at agent creation?
+
+        
+
+Observations:   Environment is now very stable with current hyperparameters. Episodes last longer
+                than 1000 timesteps sometimes. Agents do not die very often.
+
+                Environment may have reached equilibrium. Seems to run indefinitely, where when
+                the number of agents grows too high, there isn't enough food to sustain reproduction,
+                and when the number of agents gets too low, the sudden increase in availability of
+                food brings it back to equilibrium.
+
+                We need to have an entry in the ``policies`` dict for each agent. Since we need to
+                create new agents at each time step (potentially) this means that we must pass
+                ``policies`` to the ``Env`` constructor so that it can modify it and add more 
+                policies for the new agents.
+
+Fixed:  Tuples returned from deap functions. Fully implemented ``id_map``. Changed ``agent`` to
+        ``mom`` in ``_mate()`` function.
+
+
+
+
+#====================================================================================================
+
+TORCH VERSION
+
+Todo:   Remove agents and actor_critics when they are ``done``. Delete all references so that GPU
+        memory is freed.
+
+        Use mean agent lifetime measured in multiples of ``1 / aging_rate`` as an objective, as
+        well as agent density.
+
+        Compute distributions of each trial variable with loss below some threshold in optimize.
+
+        Add relevant ``Updates`` docstrings sections.
+
+        Maximize the number of functions which can be made ``staticmethod``.
+
+        Determine whether or not to spin out static environment functions into ``utils.py`` or 
+        another file.
+
+        Fix issues with ``agent.py`` bugs outlined in ``TODO`` annotations.
+
+        Delete rllib versions of files, tag git commits. 
