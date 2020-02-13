@@ -130,8 +130,8 @@ class Env(Config):
         self.action_space = gym.spaces.Discrete(self.num_actions)
 
         obs_len = 2 * self.sight_len + 1
-        low_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
-        high_obs = np.zeros((self.num_obj_types, obs_len, obs_len))
+        low_obs = np.zeros((self.num_obj_types, obs_len, obs_len), dtype=np.float32)
+        high_obs = np.ones((self.num_obj_types, obs_len, obs_len), dtype=np.float32)
         self.observation_space = gym.spaces.Box(low_obs, high_obs)
 
         self.agents: Dict[int, Agent] = {}

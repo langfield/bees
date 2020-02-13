@@ -26,7 +26,7 @@ from bees.config import Config
 from bees.worker import act, get_policy_score, get_masks
 from bees.creation import get_agent
 from bees.analysis import (
-    update_policy_score_multiprocessed,
+    update_policy_score,
     update_losses,
     Metrics,
 )
@@ -267,7 +267,7 @@ def train(args: argparse.Namespace) -> float:
                     timestep_score = get_policy_score(action_dist, infos[agent_id])
                     timestep_scores[agent_id] = timestep_score
 
-            metrics = update_policy_score_multiprocessed(
+            metrics = update_policy_score(
                 env=env,
                 config=config,
                 timestep_scores=timestep_scores,
