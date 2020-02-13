@@ -28,6 +28,7 @@ from bees.agent import Agent
 from bees.genetics import get_child_reward_network
 from bees.config import Config
 from bees.utils import flat_action_to_tuple
+from bees.analysis import get_optimal_action_dists
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
@@ -681,49 +682,6 @@ class Env(Config):
 
         return child_ids
 
-    # TODO: Remove from this class so that ``Env`` is framework-agnostic.
-    def get_optimal_action_dists(
-        self, greedy_temperature: float
-    ) -> Dict[int, torch.Tensor]:
-        """
-        Iterates over the action space and compute the optimal action distribution for
-        each agent.
-
-        Parameters
-        ----------
-        greedy_temperature : ``float``.
-            Greedy temperature for computation of optimal action distributions. As the
-            value of this variable goes to zero, the optimal distribution gets more
-            greedy. This value should be between 0 and 1.
-
-        Returns
-        -------
-        optimal_action_dists : ``Dict[int, torch.Tensor]``.
-            A mapping from ``agent_id`` to the optimal action distribution of that
-            agent.
-        """
-
-        optimal_action_dists: Dict[int, torch.Tensor] = {}
-
-        for agent_id, agent in self.agents.items():
-            action_rewards = torch.zeros((self.num_actions,))
-            for action in range(self.num_actions):
-                action_rewards[action] = agent.compute_reward(action)
-
-            # Flatten action_rewards, perform softmax, and return to original shape.
-            # This is because torch.nn.functional.softmax only computes softmax along
-            # a single dimension.
-            action_rewards = torch.reshape(action_rewards, (-1,))
-            optimal_action_dists[agent_id] = F.softmax(
-                action_rewards / greedy_temperature, dim=0
-            )
-            action_rewards = torch.reshape(action_rewards, (self.num_actions,))
-            optimal_action_dists[agent_id] = torch.reshape(
-                optimal_action_dists[agent_id], (self.num_actions,)
-            )
-
-        return optimal_action_dists
-
     def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
         """
         Returns an observation given an agent ``pos``.
@@ -849,8 +807,10 @@ class Env(Config):
         # the end of this function, and the policy score is computed in trainer.py
         # after this increment happens.
         if (self.iteration + 1) % self.policy_score_frequency == 0:
-            optimal_action_dists = self.get_optimal_action_dists(
-                greedy_temperature=self.greedy_temperature
+            optimal_action_dists = get_optimal_action_dists(
+                agents=self.agents,
+                greedy_temperature=self.greedy_temperature,
+                num_actions=self.num_actions,
             )
             for agent_id in self.agents:
                 infos[agent_id]["optimal_action_dist"] = optimal_action_dists[agent_id]

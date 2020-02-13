@@ -47,3 +47,13 @@ def test_get_obs_has_correct_objects(data: st.DataObject) -> None:
                 assert np.all(ob_square == env_square)
             else:
                 assert np.all(ob[:, i, j] == np.zeros((env.num_obj_types,)))
+
+
+@given(st.data())
+def test_get_obs_returns_in_obs_space(data: st.DataObject) -> None:
+    """ Make sure that a returned observation is inside of observation space. """
+    env = data.draw(bst.envs())
+    env.reset()
+    pos = data.draw(bst.positions(env=env))
+    ob = env._get_obs(pos)
+    assert ob in env.observation_space
