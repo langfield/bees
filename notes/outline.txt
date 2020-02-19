@@ -438,9 +438,14 @@ Things to come back to:
      - Log profile statistics
      - Real time output
    - Run experiments
-     - Vary batch size
-     - Vary reward network complexity
-     - Other reward network parameterizations
+     - Experiment list (how many steps does it take to converge?):
+       - 1 layer, action + observation
+       - 2 layers, action
+       - 2 layers, action + observation
+     - Run until convergence. If we can't get it to converge:
+         - Vary batch size
+         - Vary reward network complexity
+         - Other reward network parameterizations
      - Better evaluation than policy score loss (normalized rewards?)
    - Refactor
      - Convert PPO implementation to collect rollouts in numpy arrays
@@ -451,8 +456,10 @@ Things to come back to:
    Other things:
    - Parallelize env.step function
    - Build agent sandbox
-   - Tests
-   - Run experiment with one agent, analyze learning curve to maximize intrinsic reward
    - Rewrite PPO implementation
    - Garbage collection for agents in multi processed case
    - Record RAM usage
+   - Speed up evolutionary process
+     - Different mutation type
+     - ?
+   - Various reward network parameterizations
