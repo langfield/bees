@@ -439,9 +439,10 @@ Things to come back to:
      - Real time output
    - Run experiments
      - Experiment list (how many steps does it take to converge?):
+       - 1 layer, action + observation, single agent
        - 1 layer, action + observation
        - 2 layers, action
-       - 2 layers, action + observation
+       - 2 layers, action + observation, single agent
      - Run until convergence. If we can't get it to converge:
          - Vary batch size
          - Vary reward network complexity
