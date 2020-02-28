@@ -464,3 +464,6 @@ Things to come back to:
      - Different mutation type
      - ?
    - Various reward network parameterizations
+   - Evolutionary ideas:
+     - Geographic speciation
+     - Phenotypic variation
