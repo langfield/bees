@@ -358,6 +358,13 @@ Things to come back to:
     - Mating frequency
     - Timesteps for policy to learn reward function
 
+    Consider using the last hidden state of the policy network as the input to
+    the reward network instead of the observation, and possibly instead of the
+    action as well. Consider using a sophisticated recurrent policy like a
+    transformer. Consider adding a memory-based model to try.
+
+    Try to make the reward function smoother without sacrificing expressivity.
+
 #===========================================================================================
 
     October sprint:
@@ -467,3 +474,4 @@ Things to come back to:
    - Evolutionary ideas:
      - Geographic speciation
      - Phenotypic variation
+   - Add health to policy network input
