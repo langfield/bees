@@ -139,7 +139,7 @@ class CNNBase(NNBase):
         # Add 1 fully connected layer to ``layers``.
         fc_input_size = input_width * input_height * channels
         layers.append(Flatten())
-        layers.append(nn.Linear(input_width, hidden_size))
+        layers.append(nn.Linear(fc_input_size, hidden_size))
         layers.append(nn.ReLU())
 
         # Define main network from ``layers``, and a critic network.
@@ -220,6 +220,9 @@ class MLPBase(NNBase):
 
             critic_layers.append(nn.Linear(input_size, output_size))
             critic_layers.append(nn.Tanh())
+
+        self.actor = nn.Sequential(*actor_layers)
+        self.critic = nn.Sequential(*critic_layers)
 
         # TODO: Why is there a separate ``self.critic_linear`` layer when we already
         # have ``self.critic``?

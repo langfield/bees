@@ -106,6 +106,7 @@ def get_agent(
                 config=config,
                 obs_space=obs_space,
                 act_space=act_space,
+                device=device,
                 base_kwargs=config.base_kwargs,
             )
         else:

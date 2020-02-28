@@ -8,7 +8,6 @@ from typing import Dict, Any, Tuple, Set
 import torch
 import torch.nn.functional as F
 
-from bees.env import Env
 from bees.agent import Agent
 from bees.config import Config
 
@@ -84,7 +83,7 @@ class Metrics:
         return formatted
 
 
-def aggregate_loss(env: Env, losses: Dict[int, float]) -> float:
+def aggregate_loss(env, losses: Dict[int, float]) -> float:
     """
     Aggregates loss data over all agents, by taking a weighted average of the values
     in ``losses``, weighted by the age of the corresponding agent in ``env``.
@@ -111,7 +110,7 @@ def aggregate_loss(env: Env, losses: Dict[int, float]) -> float:
 
 
 def update_policy_score(
-    env: Env, config: Config, timestep_scores: Dict[int, float], metrics: Metrics,
+    env, config: Config, timestep_scores: Dict[int, float], metrics: Metrics,
 ) -> Metrics:
     """
     Computes updated policy score metrics from agent actions.
@@ -170,7 +169,7 @@ def update_policy_score(
 
 
 def update_losses(
-    env: Env,
+    env,
     config: Config,
     losses: Tuple[Dict[int, float], Dict[int, float], Dict[int, float]],
     metrics: Metrics,
