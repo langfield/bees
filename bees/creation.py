@@ -4,7 +4,7 @@
 import copy
 import random
 import collections
-from typing import Set, List, Dict, Tuple, Optional
+from typing import Set, List, Dict, Tuple, Optional, Any
 
 import gym
 import numpy as np
@@ -102,7 +102,12 @@ def get_agent(
     else:
         # TODO: Do device assignment here.
         if agent_id not in agents:
-            agent, rollouts = get_policy(config, obs_space, act_space, device)
+            agent, rollouts = get_policy(
+                config=config,
+                obs_space=obs_space,
+                act_space=act_space,
+                base_kwargs=config.base_kwargs,
+            )
         else:
             agent = agents[agent_id]
             rollouts = rollout_map[agent_id]
@@ -133,7 +138,11 @@ def get_agent(
 
 
 def get_policy(
-    config: Config, obs_space: gym.Space, act_space: gym.Space, device: torch.device,
+    config: Config,
+    obs_space: gym.Space,
+    act_space: gym.Space,
+    device: torch.device,
+    base_kwargs: Dict[str, Any],
 ) -> Tuple[Algo, RolloutStorage]:
     """
     Spins up a new agent/policy.
@@ -148,6 +157,8 @@ def get_policy(
         Action space from the environment.
     device : ``torch.device``.
         The GPU/TPU/CPU.
+    base_kwargs : ``Dict[str, Any]
+        Arguments to ``self.base`` (either CNNBase or MLPBase).
 
     Returns
     -------
@@ -157,9 +168,7 @@ def get_policy(
         The rollout object.
     """
 
-    actor_critic = Policy(
-        obs_space.shape, act_space, base_kwargs={"recurrent": config.recurrent_policy}
-    )
+    actor_critic = Policy(obs_space.shape, act_space, base_kwargs=base_kwargs)
     actor_critic.to(device)
     agent: Algo
 

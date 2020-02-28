@@ -105,30 +105,51 @@ class CNNBase(NNBase):
         input_shape: Tuple[int, ...],
         recurrent: bool = False,
         hidden_size: int = 512,
+        num_layers: int = 4,
+        initial_num_channels: int = 32,
     ):
-        super(CNNBase, self).__init__(recurrent, hidden_size, hidden_size)
-
         # ``input_shape`` is the shape of the input in CWH format.
         # ``inputs``, one of the params of forward call.
-        kernel_size = 3
-        channels = 32
-        input_channels, input_width, input_height = input_shape
-        self.main = nn.Sequential(
-            nn.Conv2d(input_channels, channels, kernel_size, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(channels, 2 * channels, kernel_size, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(2 * channels, 4 * channels, kernel_size, stride=1, padding=1),
-            nn.ReLU(),
-            Flatten(),
-            nn.Linear(input_width * input_height * 4 * channels, hidden_size),
-            nn.ReLU(),
-        )
 
-        # Output dimension is ``1`` because it's computing discounted future reward
-        # (i.e. value function).
+        super(CNNBase, self).__init__(recurrent, hidden_size, hidden_size)
+
+        # Construct sequence of layers.
+        layers = []
+        kernel_size = 3
+        input_channels, input_width, input_height = input_shape
+
+        # Add first convolutional layer. We require at least one convolutional layer in the network.
+        assert num_layers >= 1
+        layers.append(
+            nn.Conv2d(
+                input_channels, initial_num_channels, kernel_size, stride=1, padding=1
+            )
+        )
+        layers.append(nn.ReLU())
+
+        # Add ``num_layers - 1`` convolutional layers.
+        channels = initial_num_channels
+        for layer_index in range(1, num_layers):
+            layers.append(
+                nn.Conv2d(channels, 2 * channels, kernel_size, stride=1, padding=1)
+            )
+            layers.append(nn.ReLU())
+            channels *= 2
+
+        # Add 1 fully connected layer to ``layers``.
+        fc_input_size = input_width * input_height * channels
+        layers.append(Flatten())
+        layers.append(nn.Linear(input_width, hidden_size))
+        layers.append(nn.ReLU())
+
+        # Define main network from ``layers``, and a critic network.
+        # Output dimension of critic network is ``1`` because it's computing discounted
+        # future reward (i.e. value function).
+        # TODO: Why is critic network always linear?
+        self.main = nn.Sequential(*layers)
         self.critic_linear = nn.Linear(hidden_size, 1)
 
+        # Initialize network weights.
         self.main, self.critic_linear = CNNBase.init_weights(
             self.main, self.critic_linear
         )
@@ -180,6 +201,7 @@ class MLPBase(NNBase):
         input_shape: Tuple[int, ...],
         recurrent: bool = False,
         hidden_size: int = 64,
+        num_layers: int = 3,
     ):
         num_inputs = input_shape[0]
         super(MLPBase, self).__init__(recurrent, num_inputs, hidden_size)
@@ -187,20 +209,20 @@ class MLPBase(NNBase):
         if recurrent:
             num_inputs = hidden_size
 
-        self.actor = nn.Sequential(
-            nn.Linear(num_inputs, hidden_size),
-            nn.Tanh(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.Tanh(),
-        )
+        actor_layers = []
+        critic_layers = []
+        for layer_index in range(num_layers):
+            input_size = num_inputs if layer_index == 0 else hidden_size
+            output_size = hidden_size
 
-        self.critic = nn.Sequential(
-            nn.Linear(num_inputs, hidden_size),
-            nn.Tanh(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.Tanh(),
-        )
+            actor_layers.append(nn.Linear(input_size, output_size))
+            actor_layers.append(nn.Tanh())
 
+            critic_layers.append(nn.Linear(input_size, output_size))
+            critic_layers.append(nn.Tanh())
+
+        # TODO: Why is there a separate ``self.critic_linear`` layer when we already
+        # have ``self.critic``?
         self.critic_linear = nn.Linear(hidden_size, 1)
 
         self.actor, self.critic, self.critic_linear = MLPBase.init_weights(
