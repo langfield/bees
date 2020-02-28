@@ -17,6 +17,7 @@ from bees.trainer import train
 
 LOG_DIR = "logs"
 
+
 def main() -> None:
     """ Run an Optuna study. """
     datestring = str(datetime.datetime.now())
@@ -25,10 +26,7 @@ def main() -> None:
     if not os.path.isdir(LOG_DIR):
         os.makedirs(LOG_DIR)
     log_path = os.path.join(LOG_DIR, "optuna_%s.log" % datestring)
-    logging.getLogger().addHandler(
-        logging.FileHandler(log_path)
-
-    )
+    logging.getLogger().addHandler(logging.FileHandler(log_path))
     optuna.logging.enable_propagation()  # Propagate logs to the root logger.
     # optuna.logging.disable_default_handler()  # Stop showing logs in stderr.
 
