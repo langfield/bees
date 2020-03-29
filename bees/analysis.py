@@ -8,10 +8,14 @@ from typing import Dict, Any, Tuple, Set
 import torch
 import torch.nn.functional as F
 
+from asta import Tensor, dims, typechecked
+
 from bees.agent import Agent
 from bees.config import Config
 
 # pylint: disable=too-few-public-methods
+
+N_ACTS = dims.N_ACTS
 
 
 class Metrics:
@@ -220,10 +224,10 @@ def update_losses(
     return new_metrics
 
 
-# TODO: Remove from this class so that ``Env`` is framework-agnostic.
+@typechecked
 def get_optimal_action_dists(
     agents: Dict[int, Agent], greedy_temperature: float, num_actions: int,
-) -> Dict[int, torch.Tensor]:
+) -> Dict[int, Tensor[float, N_ACTS]]:
     """
     Iterates over the action space and compute the optimal action distribution for
     each agent.

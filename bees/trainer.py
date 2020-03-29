@@ -15,6 +15,8 @@ import torch
 import torch.multiprocessing as mp
 import numpy as np
 
+from asta import dims, shapes
+
 from bees.rl import utils
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
@@ -101,6 +103,10 @@ def train(args: argparse.Namespace) -> float:
             "alternative bounds the number of unique policy initializations, i.e. "
             "policy initializations will be reused for multiple agents."
         )
+
+    # Set asta dimensions and shapes.
+    dims.N_ACTS = env.action_space.n
+    shapes.OB = env.observation_space.shape
 
     # Set random seed for all packages.
     random.seed(config.seed)

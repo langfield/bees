@@ -23,6 +23,8 @@ import numpy as np
 # Package imports.
 import gym
 
+from asta import Array, dims, shapes, typechecked
+
 # Bees imports.
 from bees.agent import Agent
 from bees.genetics import get_child_reward_network
@@ -189,7 +191,8 @@ class Env(Config):
             self._place(self.obj_type_ids["food"], food_pos)
         self.num_foods = self.initial_num_foods
 
-    def reset(self) -> Dict[int, np.ndarray]:
+    @typechecked
+    def reset(self) -> Dict[int, Array[float, shapes.OB]]:
         """
         Reset the entire environment.
 
@@ -682,7 +685,8 @@ class Env(Config):
 
         return child_ids
 
-    def _get_obs(self, pos: Tuple[int, int]) -> np.ndarray:
+    @typechecked
+    def _get_obs(self, pos: Tuple[int, int]) -> Array[float, shapes.OB]:
         """
         Returns an observation given an agent ``pos``.
 
@@ -733,10 +737,14 @@ class Env(Config):
 
         return agent_obs
 
+    @typechecked
     def step(
         self, action_dict: Dict[int, int]
     ) -> Tuple[
-        Dict[int, np.ndarray], Dict[int, float], Dict[Any, bool], Dict[int, Any]
+        Dict[int, Array[float, shapes.OB]],
+        Dict[int, float],
+        Dict[Any, bool],
+        Dict[int, Any],
     ]:
         """
         ``action_dict`` has agent indices as keys and a dict of the form

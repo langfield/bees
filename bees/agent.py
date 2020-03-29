@@ -6,10 +6,14 @@ from typing import Tuple, List, Dict, Any, Optional
 
 import numpy as np
 
+from asta import Array, dims, shapes, typechecked
+
 from bees.config import Config
 from bees.utils import one_hot
 
 # pylint: disable=bad-continuation, too-many-arguments, too-many-instance-attributes
+
+N_ACTS = dims.N_ACTS
 
 
 class Agent(Config):
@@ -188,7 +192,8 @@ class Agent(Config):
         self.last_reward = scalar_reward
         return scalar_reward
 
-    def get_flat_action(self, action: Tuple[int, int, int]) -> np.ndarray:
+    @typechecked
+    def get_flat_action(self, action: Tuple[int, int, int]) -> Array[float, N_ACTS + 1]:
         """
         Computes a binary vector (three concatentated one-hot vectors) which
         represents the action.
@@ -215,7 +220,8 @@ class Agent(Config):
         action_array = np.array(action_vec)
         return action_array
 
-    def reset(self) -> np.ndarray:
+    @typechecked
+    def reset(self) -> Array[float, shapes.OB]:
         """
         Reset the agent.
 

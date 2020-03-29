@@ -11,6 +11,8 @@ import numpy as np
 import torch
 import torch.multiprocessing as mp
 
+from asta import Array, shapes, typechecked
+
 from bees.rl.algo import Algo, PPO, A2C_ACKTR
 from bees.rl.model import Policy, CNNBase, MLPBase
 from bees.rl.storage import RolloutStorage
@@ -20,11 +22,12 @@ from bees.config import Config
 from bees.worker import worker_loop
 
 
+@typechecked
 def get_agent(
     agent_id: int,
     iteration: int,
     age: int,
-    ob: np.ndarray,
+    ob: Array[float, shapes.OB],
     config: Config,
     obs_space: gym.Space,
     act_space: gym.Space,

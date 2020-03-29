@@ -10,8 +10,11 @@ import functools
 
 import numpy as np
 
+from asta import Array, typechecked
 
-def one_hot(k: int, dim: int) -> np.ndarray:
+
+@typechecked
+def one_hot(k: int, dim: int) -> Array[float]:
     """
     Returns a one-hot vector of length dim with a set bit of k.
 

@@ -10,6 +10,8 @@ import torch.nn.functional as F
 
 import numpy as np
 
+from asta import Array, Tensor, dims, shapes, typechecked
+
 from bees.rl import utils
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
@@ -20,10 +22,14 @@ from bees.config import Config
 
 STOP_FLAG = 999
 
+N_ACTS = dims.N_ACTS
+FloatTensor = Tensor[float]
+
 # TODO: Consider using Ray for multiprocessing, which is supposedly around 10x faster.
 
 
-def get_policy_score(action_dist: torch.Tensor, info: Dict[str, Any]) -> float:
+@typechecked
+def get_policy_score(action_dist: Tensor[1, N_ACTS], info: Dict[str, Any]) -> float:
     """ Compute the policy score given current and optimal distributions. """
     optimal_action_dist = info["optimal_action_dist"]
     action_dist = action_dist.cpu()
@@ -34,7 +40,10 @@ def get_policy_score(action_dist: torch.Tensor, info: Dict[str, Any]) -> float:
     return timestep_score
 
 
-def get_masks(done: bool, info: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Tensor]:
+@typechecked
+def get_masks(
+    done: bool, info: Dict[str, Any]
+) -> Tuple[FloatTensor[1, 1], FloatTensor[1, 1]]:
     """ Compute masks to insert into ``rollouts``. """
     # If done then clean the history of observations.
     if done:
@@ -50,6 +59,7 @@ def get_masks(done: bool, info: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Ten
 
 
 # TODO: Consider adding ``age`` as an attribute of ``agent: Algo``.
+@typechecked
 def act(
     iteration: int,
     decay: bool,
@@ -58,7 +68,13 @@ def act(
     config: Config,
     age: int,
     action_funnel: Optional[Connection],
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> Tuple[
+    FloatTensor[1, 1],
+    Tensor[torch.int64, 1, 1],
+    FloatTensor[1, 1],
+    FloatTensor,
+    FloatTensor[1, N_ACTS],
+]:
     """ Make a forward pass and send the env action to the leader process. """
     # Should execute only when trainer would make an update/backward pass.
     if decay:
