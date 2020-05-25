@@ -1,0 +1,11 @@
+- Lookup table for features like Jaderberg paper
+- Asynchronous stepping of environment
+- Shared perception module between policy network and reward network
+- Scale up complexity of reward networks over time
+- Bayesian optimization on policy network to try to get faster performance?
+- AutoML Zero?
+
+For now:
+Convergence tests for a single policy to fit a reward function of varying complexity
+Add in hand-designed features
+Run convergence tests with hand-designed features
