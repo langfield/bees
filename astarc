@@ -1,6 +1,6 @@
 [MASTER]
 
-on=yes
+on=no
 raise-errors=yes
 print-passes=yes
 check-non-asta-types=no

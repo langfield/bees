@@ -9,3 +9,11 @@ For now:
 Convergence tests for a single policy to fit a reward function of varying complexity
 Add in hand-designed features
 Run convergence tests with hand-designed features
+
+Convergence test variables:
+- Depth of reward network (1 layer, 2 layer)
+- Width of reward network (1, 4, 16)
+- Input to reward network (action, action + obs)
+- Number of agents (1, 3, 5)
+
+For now, keep 1 agent

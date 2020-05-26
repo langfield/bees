@@ -365,6 +365,12 @@ Things to come back to:
 
     Try to make the reward function smoother without sacrificing expressivity.
 
+    Coming back to the repo for the first time in awhile, things to consider/remember:
+    - Is it true that num_processes has to be 1 for anything to work? What
+      would it mean for us to implement asynchronous training in a meaningful
+      way here?
+    - Our adaptive food regeneration is probably bad
+
 #===========================================================================================
 
     October sprint:

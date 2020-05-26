@@ -7,11 +7,11 @@
     "num_obj_types": 2,
     "num_agents": 1,
     "initial_food_density": 0.2,
-    "initial_food_regen_prob": 0.001,
+    "initial_food_regen_prob": 0.005,
     "adaptive_food": false,
     "food_size_mean": 1.0,
     "food_size_stddev": 0.00,
-    "aging_rate": 1e-12,
+    "aging_rate": 1e-8,
     "aging_type": "linear",
     "mating_cooldown_len": 1e12,
 	"policy_score_mating_threshold": 0.2,
@@ -21,7 +21,7 @@
 
     "2": "====================TRAINER====================",
 
-    "time_steps": 1e12,
+    "time_steps": 500000,
     "reuse_state_dicts": true,
     "policy_score_frequency": 8,
     "ema_alpha": 0.9,
@@ -34,7 +34,7 @@
     "hidden_dim": 1,
     "reward_weight_mean": 0.0,
     "reward_weight_stddev": 0.4,
-    "reward_inputs": ["actions", "obs"],
+    "reward_inputs": ["actions"],
 
     "4": "====================GENETICS====================",
 
@@ -62,7 +62,7 @@
     "eps": 1e-5,
     "alpha": 1e-5,
     "gamma": 0.99,
-    "use_gae": false,
+    "use_gae": true,
     "gae_lambda": 0.95,
     "entropy_coef": 0.01,
     "value_loss_coef": 1.0,
@@ -70,9 +70,9 @@
     "seed": 2,
     "cuda_deterministic": false,
     "num_processes": 1,
-    "num_steps": 2048,
+    "num_steps": 256,
     "ppo_epoch": 4,
-    "num_mini_batch": 1,
+    "num_mini_batch": 4,
     "clip_param": 0.3,
     "log_interval": 10,
     "save_interval": 2048,
@@ -83,7 +83,7 @@
     "base_kwargs": {
         "recurrent": false,
         "hidden_size": 512,
-        "num_layers": 2,
+        "num_layers": 4,
         "initial_num_channels": 32
     },
     "use_linear_lr_decay": false
