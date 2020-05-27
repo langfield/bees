@@ -5,6 +5,7 @@ import itertools
 
 DEFAULT_CONFIG_PATH = os.path.join("bees", "settings", "convergence_test.json")
 CURRENT_CONFIG_PATH = os.path.join("bees", "settings", "convergence_config.json")
+NUM_TRIALS = 3
 
 
 def main():
@@ -16,7 +17,6 @@ def main():
     # Define variable config values.
     config_variables = {
         "n_layers": [1, 2],
-        "hidden_dim": [1, 4, 16],
         "reward_inputs": [["actions"], ["actions", "obs"]],
     }
 
@@ -28,10 +28,15 @@ def main():
         for i, key in enumerate(config_variables.keys()):
             current_config[key] = current_config_values[i]
 
-        # Save out config and run training.
-        with open(CURRENT_CONFIG_PATH, "w") as f:
-            json.dump(current_config, f)
-        os.system("python3 main.py --settings %s" % CURRENT_CONFIG_PATH)
+        for i in range(NUM_TRIALS):
+
+            current_config["seed"] = i
+
+            # Save out config and run training.
+            with open(CURRENT_CONFIG_PATH, "w") as f:
+                json.dump(current_config, f)
+
+            os.system("python3 main.py --settings %s" % CURRENT_CONFIG_PATH)
 
     # Clean up.
     os.remove(CURRENT_CONFIG_PATH)
