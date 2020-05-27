@@ -2,6 +2,8 @@
 - Asynchronous stepping of environment
 - Shared perception module between policy network and reward network
 - Scale up complexity of reward networks over time
+- Brainstorm more inheritance than just reward network
+- Asynchronous environments for faster agent lifetimes
 - Bayesian optimization on policy network to try to get faster performance?
 - AutoML Zero?
 
