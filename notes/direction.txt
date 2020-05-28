@@ -4,11 +4,15 @@
 - Scale up complexity of reward networks over time
 - Brainstorm more inheritance than just reward network
 - Asynchronous environments for faster agent lifetimes
+- Implement a way to evaluate population learning dynamics
+- Better experiment management
 - Bayesian optimization on policy network to try to get faster performance?
 - AutoML Zero?
 
 For now:
 Convergence tests for a single policy to fit a reward function of varying complexity
+Add in action distribution to reward plots, and amount of food
+Consider whether food is having an effect on the reward magnitude
 Add in hand-designed features
 Run convergence tests with hand-designed features
 
