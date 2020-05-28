@@ -126,14 +126,15 @@ def main(args: argparse.Namespace) -> None:
     # Get individual metrics from parsed data.
     reward_df = get_rewards(agent_data)
     # child_count_map = get_child_count_map(agent_data)
+    food_df = pd.DataFrame({"food": [step["num_foods"] for step in steps]})
 
     # Plot or write out individual metrics.
     save_dir = os.path.dirname(args.log_path)
-    plot_path = os.path.join(save_dir, "reward_log.svg")
+    plot_path = os.path.join(save_dir, "metric_log.svg")
     graph(
-        dfs=[reward_df],
-        y_labels=["rewards"],
-        column_counts=[len(reward_df.columns)],
+        dfs=[reward_df, food_df],
+        y_labels=["reward", "food"],
+        column_counts=[len(reward_df.columns), 1],
         save_path=plot_path,
         settings_path=args.settings_path,
     )
