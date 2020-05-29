@@ -14,6 +14,13 @@ from plotplotplot.draw import graph
 EMA_ALPHA = 0.999
 
 
+ACTION_NAMES = [
+    ["stay", "left", "right", "up", "down"],
+    ["eat", "no_eat"],
+    ["mate", "no_mate"],
+]
+
+
 def parse_agent_data(steps: List[Dict[str, Any]]) -> Dict[int, Dict[str, List[Any]]]:
     """ Parse log data to be indexed by agent instead of by step. """
 
@@ -105,6 +112,58 @@ def get_child_count_map(agent_data: Dict[int, Dict[str, List[Any]]]) -> Dict[int
     return num_children
 
 
+def get_action_dists(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFrame:
+    """ Compute a moving distribution of actions. """
+
+    """
+    ACTION_NAMES = [
+        ["stay", "left", "right", "up", "down"],
+        ["eat", "no_eat"],
+        ["mate", "no_mate"],
+    ]
+    """
+
+    # Aggregate subaction names.
+    aggregated_subactions = []
+    for sublist in ACTION_NAMES:
+        aggregated_subactions += sublist
+
+    # Initialize moving distributions of actions.
+    action_dists: Dict[int, Dict[str, List[float]]] = {
+        agent_id: {subaction: [] for subaction in aggregated_subactions} for agent_id in agent_data
+    }
+
+    # Compute action distributions for each agent.
+    num_subspaces = len(agent_data[0]["last_action"][0])
+    for agent_id in agent_data:
+
+        # This is an EMA estimate of the probability of each subaction over time.
+        action_probs: List[Dict[str, float]] = [{action_name: -1.0 for action_name in action_sublist} for action_sublist in ACTION_NAMES]
+
+        for chosen_action in agent_data[agent_id]["last_action"]:
+            for subaction_index, action_sublist in enumerate(ACTION_NAMES):
+                for subaction in action_sublist:
+
+                    # Update action distribution for a single agent, single subaction.
+                    next_prob = float(chosen_action[subaction_index] == subaction)
+
+                    # Perform EMA update on action_probs.
+                    if action_probs[subaction_index][subaction] == -1:
+                        action_probs[subaction_index][subaction] = next_prob
+                    else:
+                        action_probs[subaction_index][subaction] = action_probs[subaction_index][subaction] * EMA_ALPHA + next_prob * (1 - EMA_ALPHA)
+
+                    # Store intermediate EMA.
+                    action_dists[agent_id][subaction].append(action_probs[subaction_index][subaction])
+
+    # Convert action_dists to DataFrame format.
+    aggregated_action_dists: Dict[str, List[float]] = {}
+    for agent_id in action_dists:
+        for subaction in action_dists[agent_id]:
+            aggregated_action_dists["%d_%s" % (agent_id, subaction)] = action_dists[agent_id][subaction]
+    return pd.DataFrame.from_dict(aggregated_action_dists)
+
+
 # pylint: disable=too-many-locals
 def main(args: argparse.Namespace) -> None:
     """ Plot rewards from a log. """
@@ -125,6 +184,7 @@ def main(args: argparse.Namespace) -> None:
 
     # Get individual metrics from parsed data.
     reward_df = get_rewards(agent_data)
+    action_df = get_action_dists(agent_data)
     # child_count_map = get_child_count_map(agent_data)
     food_df = pd.DataFrame({"food": [step["num_foods"] for step in steps]})
 
@@ -132,9 +192,9 @@ def main(args: argparse.Namespace) -> None:
     save_dir = os.path.dirname(args.log_path)
     plot_path = os.path.join(save_dir, "metric_log.svg")
     graph(
-        dfs=[reward_df, food_df],
-        y_labels=["reward", "food"],
-        column_counts=[len(reward_df.columns), 1],
+        dfs=[reward_df, food_df, action_df],
+        y_labels=["reward", "food", "action"],
+        column_counts=[len(reward_df.columns), 1, len(action_df.columns)],
         save_path=plot_path,
         settings_path=args.settings_path,
     )

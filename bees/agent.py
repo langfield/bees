@@ -108,6 +108,7 @@ class Agent(Config):
         self.age = 0
         self.num_children = 0
         self.is_mature = False
+        self.last_action = None
 
     def initialize_reward_weights(self) -> None:
         """ Initializes the weights of the reward function. """
@@ -264,6 +265,7 @@ class Agent(Config):
             "last_reward",
             "age",
             "num_children",
+            "last_action",
         ]
         for state_attribute in state_attributes:
             state[state_attribute] = getattr(self, state_attribute)

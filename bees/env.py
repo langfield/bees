@@ -786,6 +786,10 @@ class Env(Config):
         for agent_id, agent in self.agents.items():
             agent.prev_health = agent.health
 
+        # Store agent actions.
+        for agent_id in self.agents:
+            self.agents[agent_id].last_action = tuple_action_dict[agent_id]
+
         # Execute actions (move, consume, and mate).
         tuple_action_dict = self._move(tuple_action_dict)
         self._consume(tuple_action_dict)

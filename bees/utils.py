@@ -48,7 +48,7 @@ def get_token(save_root: str) -> str:
 
     # HARDCODE
     with open(
-        "bees/settings/google-10000-english.txt", "r", encoding="utf-8"
+        "settings/google-10000-english.txt", "r", encoding="utf-8"
     ) as english:
         tokens = [word.rstrip() for word in english.readlines()]
     tokens.sort()

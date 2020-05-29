@@ -13,3 +13,4 @@ pytest
 mypy
 black
 asta
+pytorch-gpu
