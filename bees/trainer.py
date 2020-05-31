@@ -171,6 +171,7 @@ def train(args: argparse.Namespace) -> float:
     # Initialize first policies.
     env_done = False
     step_ema = 1.0
+    rew_ema = 0.0
     last_time = time.time()
     for agent_id, ob in obs.items():
         agent, rollouts, worker, device, pipe = get_agent(
@@ -292,6 +293,9 @@ def train(args: argparse.Namespace) -> float:
         step_ema = (config.ema_alpha * step_ema) + (
             (1 - config.ema_alpha) * (time.time() - last_time)
         )
+        rew_ema = config.ema_alpha * rew_ema + (1 - config.ema_alpha) * sum(
+            rewards.values()
+        )
         last_time = time.time()
 
         # Print debug output.
@@ -299,8 +303,7 @@ def train(args: argparse.Namespace) -> float:
 
         print("Iteration: %d| " % env.iteration, end="")
         print("Num agents: %d| " % len(agents), end="")
-        print("Policy score loss: %.6f" % metrics.policy_score, end="")
-        print("/%.6f| " % metrics.initial_policy_score, end="")
+        print("Total reward: %f| " % rew_ema, end="")
         print("Step EMA: %.6f" % step_ema, end="")
         print("||||||", end=end)
 

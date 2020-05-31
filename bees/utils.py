@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """ Various functions for use in ``env.py``. """
 import os
+import math
 import time
 import inspect
 import argparse
@@ -47,9 +48,7 @@ def get_token(save_root: str) -> str:
     """
 
     # HARDCODE
-    with open(
-        "settings/google-10000-english.txt", "r", encoding="utf-8"
-    ) as english:
+    with open("settings/google-10000-english.txt", "r", encoding="utf-8") as english:
         tokens = [word.rstrip() for word in english.readlines()]
     tokens.sort()
     tokens = [word for word in tokens if len(word) > 5]
@@ -205,3 +204,35 @@ def flat_action_to_tuple(
 
     action_tuple = tuple(action_list)
     return action_tuple
+
+
+def get_observation_features(ob: Array[int]) -> Array[int, -1]:
+    """ Returns a vector of interpreted observation features (e.g. food proximity). """
+    # Get radii from spatial dimensions of ob (first dim is object types).
+    maxradii = [dimsize // 2 for dimsize in ob.shape[1:]]
+
+    # Compute distance-density for agents.
+    agent_distance_density = 0
+    max_density = 0
+    for i, row in enumerate(ob[0]):
+        for j, cell in enumerate(row):
+            dx = i - maxradii[0]
+            dy = j - maxradii[1]
+            norm = math.sqrt(dx ** 2 + dy ** 2)
+            max_density += norm
+            if cell == 1:
+                agent_distance_density += norm
+
+    # Compute distance-density for food.
+    food_distance_density = 0
+    for i, row in enumerate(ob[1]):
+        for j, cell in enumerate(row):
+            if cell == 1:
+                dx = i - maxradii[0]
+                dy = j - maxradii[1]
+                norm = math.sqrt(dx ** 2 + dy ** 2)
+                food_distance_density += norm
+
+    unnormed_densities = np.array([agent_distance_density, food_distance_density])
+    densities = unnormed_densities / max_density
+    return densities

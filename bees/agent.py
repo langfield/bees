@@ -9,7 +9,7 @@ import numpy as np
 from asta import Array, dims, shapes, typechecked
 
 from bees.config import Config
-from bees.utils import one_hot
+from bees.utils import one_hot, get_observation_features
 
 # pylint: disable=bad-continuation, too-many-arguments, too-many-instance-attributes
 
@@ -80,15 +80,7 @@ class Agent(Config):
         self.obs_shape = (self.num_obj_types, self.obs_width, self.obs_width)
         self.observation: np.ndarray = np.zeros(self.obs_shape)
 
-        # Calculate input dimension of reward network.
-        # The ``+ 2`` is for the dimensions for current health and previous health.
-        self.input_dim = 0
-        if "obs" in self.reward_inputs:
-            self.input_dim += (self.obs_width ** 2) * self.num_obj_types
-        if "actions" in self.reward_inputs:
-            self.input_dim += self.num_actions
-        if "health" in self.reward_inputs:
-            self.input_dim += 2
+        self.input_dim = self.set_reward_network_tabular_input_dim()
 
         # Initialize/set reward weights and biases.
         if reward_weights is None:
@@ -109,6 +101,28 @@ class Agent(Config):
         self.num_children = 0
         self.is_mature = False
         self.last_action = None
+
+    def set_reward_network_input_dim(self) -> int:
+        """ This computes input dim for raw observation input. """
+        # Calculate input dimension of reward network.
+        # The ``+ 2`` is for the dimensions for current health and previous health.
+        input_dim = 0
+        if "obs" in self.reward_inputs:
+            input_dim += (self.obs_width ** 2) * self.num_obj_types
+        if "actions" in self.reward_inputs:
+            input_dim += self.num_actions
+        if "health" in self.reward_inputs:
+            input_dim += 2
+        return input_dim
+
+    def set_reward_network_tabular_input_dim(self) -> int:
+        """ This computes input dim for tabular feature input. """
+        input_dim = 0
+        if "obs" in self.reward_inputs:
+            input_dim += 2
+        if "health" in self.reward_inputs:
+            input_dim += 1
+        return input_dim
 
     def initialize_reward_weights(self) -> None:
         """ Initializes the weights of the reward function. """
@@ -170,8 +184,55 @@ class Agent(Config):
             flat_action = one_hot(action, self.num_actions)
             input_arrays.append(flat_action)
             remaining_inputs.remove("actions")
+        # TODO: Does it even make sense to include previous health??
         if "health" in remaining_inputs:
             flat_healths = np.array([self.prev_health, self.health])
+            input_arrays.append(flat_healths)
+            remaining_inputs.remove("health")
+        if len(remaining_inputs) > 0:
+            raise ValueError(
+                "Unrecognized inputs to reward network: %s" % str(remaining_inputs)
+            )
+
+        inputs = np.concatenate(input_arrays)
+        reward = np.copy(inputs)
+
+        for i in range(self.n_layers):
+            reward = np.matmul(reward, self.reward_weights[i]) + self.reward_biases[i]
+            # ReLU.
+            if i < self.n_layers - 1:
+                reward = np.maximum(reward, 0)
+
+        scalar_reward: float = float(reward)
+        self.total_reward += scalar_reward
+        self.last_reward = scalar_reward
+        return scalar_reward
+
+    def compute_tabular_reward(self) -> float:
+        """
+        Computes agent reward given health value before consumption.
+
+        Updates
+        -------
+        self.total_reward : ``float``.
+            The total reward summed over the agent's lifetime.
+
+        Returns
+        -------
+        scalar_reward : ``float``.
+            The reward computed via the reward network from the previous
+            health, action, and observation of the agent.
+        """
+
+        input_arrays: List[np.ndarray] = []
+
+        remaining_inputs = list(self.reward_inputs)
+        if "obs" in remaining_inputs:
+            ob_features = get_observation_features(self.observation)
+            input_arrays.append(ob_features)
+            remaining_inputs.remove("obs")
+        if "health" in remaining_inputs:
+            flat_healths = np.array([self.health])
             input_arrays.append(flat_healths)
             remaining_inputs.remove("health")
         if len(remaining_inputs) > 0:

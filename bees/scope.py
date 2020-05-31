@@ -120,6 +120,7 @@ def scope(args: argparse.Namespace) -> None:
             agent.observation = observation
 
             # Compute reward.
+            # TODO: Consider implementing option for tabular version.
             rewards.append(agent.compute_reward(action))
 
         mean = np.mean(rewards)

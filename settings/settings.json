@@ -3,12 +3,12 @@
 
     "width": 10,
     "height": 10,
-    "sight_len": 0,
+    "sight_len": 3,
     "num_obj_types": 2,
     "num_agents": 5,
     "initial_food_density": 1.0,
     "initial_food_regen_prob": 1.0,
-    "adaptive_food": false,
+    "adaptive_food": true,
     "food_size_mean": 1.0,
     "food_size_stddev": 0.00,
     "aging_rate": 1e-6,
@@ -24,7 +24,7 @@
     "time_steps": 10240,
     "reuse_state_dicts": true,
     "policy_score_frequency": 8,
-    "ema_alpha": 0.9,
+    "ema_alpha": 0.999,
     "greedy_temperature": 1e-4,
     "mp": false,
 
@@ -34,7 +34,7 @@
     "hidden_dim": 1,
     "reward_weight_mean": 0.0,
     "reward_weight_stddev": 0.4,
-    "reward_inputs": ["actions"],
+    "reward_inputs": ["obs", "health"],
 
     "4": "====================GENETICS====================",
 
@@ -70,7 +70,7 @@
     "seed": 2,
     "cuda_deterministic": false,
     "num_processes": 1,
-    "num_steps": 2048,
+    "num_steps": 256,
     "ppo_epoch": 4,
     "num_mini_batch": 1,
     "clip_param": 0.3,
@@ -82,7 +82,7 @@
     "use_proper_time_limits": false,
     "base_kwargs": {
         "recurrent": false,
-        "hidden_size": 512,
+        "hidden_size": 32,
         "num_layers": 4,
         "initial_num_channels": 32
     },
