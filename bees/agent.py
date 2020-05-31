@@ -80,7 +80,10 @@ class Agent(Config):
         self.obs_shape = (self.num_obj_types, self.obs_width, self.obs_width)
         self.observation: np.ndarray = np.zeros(self.obs_shape)
 
-        self.input_dim = self.set_reward_network_tabular_input_dim()
+        if config.tabular:
+            self.input_dim = self.set_reward_network_tabular_input_dim()
+        else:
+            self.input_dim = self.set_reward_network_input_dim()
 
         # Initialize/set reward weights and biases.
         if reward_weights is None:

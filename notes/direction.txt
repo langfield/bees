@@ -1,11 +1,12 @@
 - Lookup table for features like Jaderberg paper
 - Asynchronous stepping of environment
-- Shared perception module between policy network and reward network
+- Shared perception module between policy network and reward network (autoencoder)
 - Scale up complexity of reward networks over time
 - Brainstorm more inheritance than just reward network
 - Asynchronous environments for faster agent lifetimes
 - Implement a way to evaluate population learning dynamics
 - Better experiment management
+- Profiling + analyzing effect of optimization parameters (batch size)
 - Bayesian optimization on policy network to try to get faster performance?
 - AutoML Zero?
 

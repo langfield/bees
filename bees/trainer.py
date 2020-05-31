@@ -262,37 +262,12 @@ def train(args: argparse.Namespace) -> float:
         env.log_state(env_log, visual_log)
         metrics_log.write(str(metrics.get_summary()) + "\n")
 
-        # Update the policy score.
-        if (env.iteration + 1) % config.policy_score_frequency == 0:
-            # TODO: Check for keyerror: for agent_id in infos:
-            if config.mp:
-                for agent_id in pipes:
-                    timestep_scores[agent_id] = pipes[agent_id].action_dist_spout.recv()
-            else:
-                for agent_id in act_map:
-                    action_dist = act_map[agent_id][4]
-                    timestep_score = get_policy_score(action_dist, infos[agent_id])
-                    timestep_scores[agent_id] = timestep_score
-
-            metrics = update_policy_score(
-                env=env,
-                config=config,
-                timestep_scores=timestep_scores,
-                metrics=metrics,
-            )
-
-            # This block will run if train() was called with optuna for parameter
-            # optimization. If policy score loss explodes, end the training run
-            # early.
-            if hasattr(args, "trial"):
-                args.trial.report(metrics.policy_score, env.iteration)
-                if args.trial.should_prune() or metrics.policy_score == float("inf"):
-                    print("\nEnding training because ``policy_score_loss`` diverged.")
-                    return metrics.policy_score
-
+        # Update EMA of time to execute a single step.
         step_ema = (config.ema_alpha * step_ema) + (
             (1 - config.ema_alpha) * (time.time() - last_time)
         )
+        if env.iteration == 0:
+            rew_ema = sum(rewards.values())
         rew_ema = config.ema_alpha * rew_ema + (1 - config.ema_alpha) * sum(
             rewards.values()
         )

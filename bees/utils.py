@@ -218,7 +218,7 @@ def get_observation_features(ob: Array[int]) -> Array[int, -1]:
         for j, cell in enumerate(row):
             dx = i - maxradii[0]
             dy = j - maxradii[1]
-            norm = math.sqrt(dx ** 2 + dy ** 2)
+            norm = 1 / (math.sqrt(dx ** 2 + dy ** 2) + 1)
             max_density += norm
             if cell == 1:
                 agent_distance_density += norm
@@ -230,7 +230,7 @@ def get_observation_features(ob: Array[int]) -> Array[int, -1]:
             if cell == 1:
                 dx = i - maxradii[0]
                 dy = j - maxradii[1]
-                norm = math.sqrt(dx ** 2 + dy ** 2)
+                norm = 1 / (math.sqrt(dx ** 2 + dy ** 2) + 1)
                 food_distance_density += norm
 
     unnormed_densities = np.array([agent_distance_density, food_distance_density])

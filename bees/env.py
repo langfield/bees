@@ -30,7 +30,6 @@ from bees.agent import Agent
 from bees.genetics import get_child_reward_network
 from bees.config import Config
 from bees.utils import flat_action_to_tuple
-from bees.analysis import get_optimal_action_dists
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True
@@ -806,26 +805,18 @@ class Env(Config):
 
         # Compute reward.
         for agent_id, agent in self.agents.items():
+
             if agent_id not in child_ids:
                 # Note that ``compute_reward`` takes the action in integer form, so we
                 # use ``action_dict`` here instead of ``tuple_action_dict``.
-                rewards[agent_id] = agent.compute_tabular_reward()
+                if self.config.tabular:
+                    rewards[agent_id] = agent.compute_tabular_reward()
+                else:
+                    rewards[agent_id] = agent.compute_reward()
+
             # First reward for children is zero.
             elif agent_id in child_ids:
                 rewards[agent_id] = 0
-
-        # Compute optimal action distribution for each agent for this timestep.
-        # This "+1" is here because we don't increment ``self.iteration`` until
-        # the end of this function, and the policy score is computed in trainer.py
-        # after this increment happens.
-        if (self.iteration + 1) % self.policy_score_frequency == 0:
-            optimal_action_dists = get_optimal_action_dists(
-                agents=self.agents,
-                greedy_temperature=self.greedy_temperature,
-                num_actions=self.num_actions,
-            )
-            for agent_id in self.agents:
-                infos[agent_id]["optimal_action_dist"] = optimal_action_dists[agent_id]
 
         # Decrease agent health, compute observations and dones.
         killed_agent_ids = []

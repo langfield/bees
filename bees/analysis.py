@@ -251,7 +251,9 @@ def get_optimal_action_dists(
     for agent_id, agent in agents.items():
         action_rewards = torch.zeros((num_actions,))
         for action in range(num_actions):
-            action_rewards[action] = agent.compute_tabular_reward()
+
+            # Note that this isn't currently compatible with tabular rewards.
+            action_rewards[action] = agent.compute_reward()
 
         # Flatten action_rewards, perform softmax, and return to original shape.
         # This is because torch.nn.functional.softmax only computes softmax along

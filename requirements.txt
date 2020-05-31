@@ -1,4 +1,3 @@
-ray
 gym
 tensorflow
 lz4
@@ -13,4 +12,3 @@ pytest
 mypy
 black
 asta
-pytorch-gpu

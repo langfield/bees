@@ -154,11 +154,6 @@ def worker_loop(
 
         decay = config.use_linear_lr_decay and backward_pass
 
-        # Update the policy score.
-        if (iteration + 1) % config.policy_score_frequency == 0:
-            timestep_score = get_policy_score(action_dist, info)
-            action_dist_funnel.send(timestep_score)
-
         # If done then remove from environment.
         if done:
             break
