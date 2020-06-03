@@ -126,6 +126,8 @@ class Agent(Config):
             input_dim += 2
         if "health" in self.reward_inputs:
             input_dim += 1
+        if "actions" in self.reward_inputs:
+            input_dim += self.num_actions
         return input_dim
 
     def initialize_reward_weights(self) -> None:
