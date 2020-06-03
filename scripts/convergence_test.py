@@ -3,9 +3,15 @@ import json
 import itertools
 
 
-DEFAULT_CONFIG_PATH = os.path.join("bees", "settings", "convergence_test.json")
-CURRENT_CONFIG_PATH = os.path.join("bees", "settings", "convergence_config.json")
-NUM_TRIALS = 3
+"""
+With the current settings (one agent, 1 layer reward network) , each 100000
+timesteps should take about 11 min.
+"""
+
+
+DEFAULT_CONFIG_PATH = os.path.join("settings", "convergence_test.json")
+CURRENT_CONFIG_PATH = os.path.join("settings", "convergence_config.json")
+NUM_TRIALS = 8
 
 
 def main():
@@ -16,8 +22,8 @@ def main():
 
     # Define variable config values.
     config_variables = {
-        "n_layers": [1, 2],
-        "reward_inputs": [["actions"], ["actions", "obs"]],
+        "reward_inputs": [["obs"], ["actions", "obs"]],
+        "tabular": ["true", "false"],
     }
 
     # Loop over variable config combinations.

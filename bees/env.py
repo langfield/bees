@@ -809,10 +809,7 @@ class Env(Config):
             if agent_id not in child_ids:
                 # Note that ``compute_reward`` takes the action in integer form, so we
                 # use ``action_dict`` here instead of ``tuple_action_dict``.
-                if self.config.tabular:
-                    rewards[agent_id] = agent.compute_tabular_reward()
-                else:
-                    rewards[agent_id] = agent.compute_reward()
+                rewards[agent_id] = agent.compute_reward(action_dict[agent_id])
 
             # First reward for children is zero.
             elif agent_id in child_ids:

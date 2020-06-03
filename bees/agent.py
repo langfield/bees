@@ -74,6 +74,7 @@ class Agent(Config):
         self.mating_cooldown = self.mating_cooldown_len
         self.health = self.initial_health
         self.prev_health = self.initial_health
+        self.tabular = config.tabular
 
         # Set initial agent observation.
         self.obs_width = 2 * config.sight_len + 1
@@ -157,7 +158,7 @@ class Agent(Config):
 
     def compute_reward(self, action: int) -> float:
         """
-        Computes agent reward given health value before consumption.
+        Computes agent reward given members of ``self.reward_inputs``.
 
         Parameters
         ----------
@@ -180,8 +181,11 @@ class Agent(Config):
 
         remaining_inputs = list(self.reward_inputs)
         if "obs" in remaining_inputs:
-            flat_obs = np.array(self.observation).flatten()
-            input_arrays.append(flat_obs)
+            if self.tabular:
+                ob_features = get_observation_features(self.observation)
+            else:
+                ob_features = np.array(self.observation).flatten()
+            input_arrays.append(ob_features)
             remaining_inputs.remove("obs")
         if "actions" in remaining_inputs:
             flat_action = one_hot(action, self.num_actions)
@@ -190,52 +194,6 @@ class Agent(Config):
         # TODO: Does it even make sense to include previous health??
         if "health" in remaining_inputs:
             flat_healths = np.array([self.prev_health, self.health])
-            input_arrays.append(flat_healths)
-            remaining_inputs.remove("health")
-        if len(remaining_inputs) > 0:
-            raise ValueError(
-                "Unrecognized inputs to reward network: %s" % str(remaining_inputs)
-            )
-
-        inputs = np.concatenate(input_arrays)
-        reward = np.copy(inputs)
-
-        for i in range(self.n_layers):
-            reward = np.matmul(reward, self.reward_weights[i]) + self.reward_biases[i]
-            # ReLU.
-            if i < self.n_layers - 1:
-                reward = np.maximum(reward, 0)
-
-        scalar_reward: float = float(reward)
-        self.total_reward += scalar_reward
-        self.last_reward = scalar_reward
-        return scalar_reward
-
-    def compute_tabular_reward(self) -> float:
-        """
-        Computes agent reward given health value before consumption.
-
-        Updates
-        -------
-        self.total_reward : ``float``.
-            The total reward summed over the agent's lifetime.
-
-        Returns
-        -------
-        scalar_reward : ``float``.
-            The reward computed via the reward network from the previous
-            health, action, and observation of the agent.
-        """
-
-        input_arrays: List[np.ndarray] = []
-
-        remaining_inputs = list(self.reward_inputs)
-        if "obs" in remaining_inputs:
-            ob_features = get_observation_features(self.observation)
-            input_arrays.append(ob_features)
-            remaining_inputs.remove("obs")
-        if "health" in remaining_inputs:
-            flat_healths = np.array([self.health])
             input_arrays.append(flat_healths)
             remaining_inputs.remove("health")
         if len(remaining_inputs) > 0:
