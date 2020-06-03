@@ -142,10 +142,10 @@ def get_action_dists(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFram
 
         for chosen_action in agent_data[agent_id]["last_action"]:
             for subaction_index, action_sublist in enumerate(ACTION_NAMES):
-                for subaction in action_sublist:
+                for i, subaction in enumerate(action_sublist):
 
                     # Update action distribution for a single agent, single subaction.
-                    next_prob = float(chosen_action[subaction_index] == subaction)
+                    next_prob = float(chosen_action[subaction_index] == i)
 
                     # Perform EMA update on action_probs.
                     if action_probs[subaction_index][subaction] == -1:
