@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """ Plot data from environment log. """
 import os
-import time
 import argparse
+import glob
 from typing import List, Dict, Any, TextIO
 
 import pandas as pd
@@ -130,7 +130,8 @@ def get_action_dists(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFram
 
     # Initialize moving distributions of actions.
     action_dists: Dict[int, Dict[str, List[float]]] = {
-        agent_id: {subaction: [] for subaction in aggregated_subactions} for agent_id in agent_data
+        agent_id: {subaction: [] for subaction in aggregated_subactions}
+        for agent_id in agent_data
     }
 
     # Compute action distributions for each agent.
@@ -138,7 +139,10 @@ def get_action_dists(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFram
     for agent_id in agent_data:
 
         # This is an EMA estimate of the probability of each subaction over time.
-        action_probs: List[Dict[str, float]] = [{action_name: -1.0 for action_name in action_sublist} for action_sublist in ACTION_NAMES]
+        action_probs: List[Dict[str, float]] = [
+            {action_name: -1.0 for action_name in action_sublist}
+            for action_sublist in ACTION_NAMES
+        ]
 
         for chosen_action in agent_data[agent_id]["last_action"]:
             for subaction_index, action_sublist in enumerate(ACTION_NAMES):
@@ -151,64 +155,78 @@ def get_action_dists(agent_data: Dict[int, Dict[str, List[Any]]]) -> pd.DataFram
                     if action_probs[subaction_index][subaction] == -1:
                         action_probs[subaction_index][subaction] = next_prob
                     else:
-                        action_probs[subaction_index][subaction] = action_probs[subaction_index][subaction] * EMA_ALPHA + next_prob * (1 - EMA_ALPHA)
+                        action_probs[subaction_index][subaction] = action_probs[
+                            subaction_index
+                        ][subaction] * EMA_ALPHA + next_prob * (1 - EMA_ALPHA)
 
                     # Store intermediate EMA.
-                    action_dists[agent_id][subaction].append(action_probs[subaction_index][subaction])
+                    action_dists[agent_id][subaction].append(
+                        action_probs[subaction_index][subaction]
+                    )
 
     # Convert action_dists to DataFrame format.
     aggregated_action_dists: Dict[str, List[float]] = {}
     for agent_id in action_dists:
         for subaction in action_dists[agent_id]:
-            aggregated_action_dists["%d_%s" % (agent_id, subaction)] = action_dists[agent_id][subaction]
+            aggregated_action_dists["%d_%s" % (agent_id, subaction)] = action_dists[
+                agent_id
+            ][subaction]
     return pd.DataFrame.from_dict(aggregated_action_dists)
+
+
+def readlines(log_file: TextIO) -> List[Dict[str, Any]]:
+    """ Construct steps. """
+    steps: List[Dict[str, Any]] = []
+    for line in log_file:
+        stripped: Dict[str, Any] = eval(line.strip())
+        steps.append(stripped)
+    return steps
 
 
 # pylint: disable=too-many-locals
 def main(args: argparse.Namespace) -> None:
     """ Plot rewards from a log. """
 
-    def readlines(log_file: TextIO) -> List[Dict[str, Any]]:
-        """ Construct steps. """
-        steps: List[Dict[str, Any]] = []
-        for line in log_file:
-            stripped: Dict[str, Any] = eval(line.strip())
-            steps.append(stripped)
-        return steps
+    dfs: List[pd.DataFrame] = []
+    y_labels: List[str] = []
+    column_counts = []
 
-    with open(args.log_path, "r") as log_file:
-        steps = readlines(log_file)
+    log_paths = glob.glob(args.log_path)
+    for log_path in log_paths:
 
-    # Read and parse log.
-    agent_data = parse_agent_data(steps)
+        with open(log_path, "r") as log_file:
+            steps = readlines(log_file)
 
-    # Get individual metrics from parsed data.
-    reward_df = get_rewards(agent_data)
-    action_df = get_action_dists(agent_data)
-    # child_count_map = get_child_count_map(agent_data)
-    food_df = pd.DataFrame({"food": [step["num_foods"] for step in steps]})
+        # Read and parse log.
+        agent_data = parse_agent_data(steps)
+
+        # Get individual metrics from parsed data.
+        reward_df = get_rewards(agent_data)
+        action_df = get_action_dists(agent_data)
+        # child_count_map = get_child_count_map(agent_data)
+        food_df = pd.DataFrame({"food": [step["num_foods"] for step in steps]})
+
+        dfs += [reward_df, food_df, action_df]
+        y_labels += [f"{log_path}_reward", f"{log_path}_food", f"{log_path}_action"]
+        column_counts += [len(reward_df.columns), 1, len(action_df.columns)]
 
     # Plot or write out individual metrics.
-    save_dir = os.path.dirname(args.log_path)
+    save_dir = os.path.dirname(__file__)
+    # save_dir = os.path.dirname(args.log_path)
     plot_path = os.path.join(save_dir, "metric_log.svg")
+
     graph(
-        dfs=[reward_df, food_df, action_df],
-        y_labels=["reward", "food", "action"],
-        column_counts=[len(reward_df.columns), 1, len(action_df.columns)],
+        dfs=dfs,
+        y_labels=y_labels,
+        column_counts=column_counts,
         save_path=plot_path,
         settings_path=args.settings_path,
     )
 
-    """
-    children_path = os.path.join(save_dir, "num_children.txt")
-    with open(children_path, "w") as children_file:
-        children_file.write(str(child_count_map))
-    """
-
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("--log-path", required=True, type=str, help="Path to log.")
+    PARSER.add_argument("--log-path", required=True, type=str, help="Path to log(s).")
     PARSER.add_argument("--settings-path", required=True, type=str)
     ARGS = PARSER.parse_args()
     main(ARGS)
