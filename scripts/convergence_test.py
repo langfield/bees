@@ -11,7 +11,7 @@ timesteps should take about 11 min.
 
 DEFAULT_CONFIG_PATH = os.path.join("settings", "convergence_test.json")
 CURRENT_CONFIG_PATH = os.path.join("settings", "convergence_config.json")
-NUM_TRIALS = 8
+NUM_TRIALS = 4
 
 
 def main():
