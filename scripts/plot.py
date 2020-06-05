@@ -188,6 +188,7 @@ def main(args: argparse.Namespace) -> None:
     """ Plot rewards from a log. """
 
     dfs: List[pd.DataFrame] = []
+    titles: List[str] = []
     y_labels: List[str] = []
     column_counts = []
 
@@ -207,7 +208,8 @@ def main(args: argparse.Namespace) -> None:
         food_df = pd.DataFrame({"food": [step["num_foods"] for step in steps]})
 
         dfs += [reward_df, food_df, action_df]
-        y_labels += [f"{log_path}_reward", f"{log_path}_food", f"{log_path}_action"]
+        titles += [f"{log_path}_reward", f"{log_path}_food", f"{log_path}_action"]
+        y_labels += ["reward", "food", "normalized frequency"]
         column_counts += [len(reward_df.columns), 1, len(action_df.columns)]
 
     # Plot or write out individual metrics.
@@ -217,8 +219,10 @@ def main(args: argparse.Namespace) -> None:
 
     graph(
         dfs=dfs,
+        titles=titles,
         y_labels=y_labels,
         column_counts=column_counts,
+        ncols=3,
         save_path=plot_path,
         settings_path=args.settings_path,
     )
