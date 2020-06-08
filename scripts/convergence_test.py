@@ -23,7 +23,7 @@ def main():
     # Define variable config values.
     config_variables = {
         "reward_inputs": [["obs"], ["actions", "obs"]],
-        "tabular": ["true", "false"],
+        "tabular": [True, False],
     }
 
     # Loop over variable config combinations.
