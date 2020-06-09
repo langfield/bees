@@ -196,7 +196,7 @@ def main(args: argparse.Namespace) -> None:
     for log_path in log_paths:
 
         # Allow ~'s in path, and read lines.
-        log_paths = os.path.expand_user(log_path)
+        log_paths = os.path.expanduser(log_path)
         with open(log_path, "r") as log_file:
             steps = readlines(log_file)
 
@@ -217,7 +217,7 @@ def main(args: argparse.Namespace) -> None:
     # Plot or write out individual metrics.
     save_dir = os.path.dirname(__file__)
     # save_dir = os.path.dirname(args.log_path)
-    plot_path = os.path.join(save_dir, "metric_log.svg")
+    plot_path = os.path.join(save_dir, "metric_log.png")
 
     graph(
         dfs=dfs,
