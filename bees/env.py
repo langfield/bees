@@ -73,8 +73,9 @@ class Env(Config):
         The standard deviation of the Gaussian from which food size is sampled.
     mating_cooldown_len : ``int``.
         How long agents must wait in between mate actions.
-    target_agent_density: ``float``.
-        The target agent density for adaptive food regeneration rate.
+    target_density: ``float``.
+        The target density (either for food or agents) for adaptive food
+        regeneration rate.
     print_repr: ``bool``.
         Whether or not to print environment repr at each iteration.
     n_layers : ``int``.
@@ -457,13 +458,24 @@ class Env(Config):
             Number of foods in the environment.
         """
 
-        # Compute new food density with adaptive population control.
-        if self.adaptive_food:
+        if self.adaptive_food_type == "agent":
+            # Compute new food density with agent population control.
             agent_density = len(self.agents) / (self.width * self.height)
-            delta_density = self.target_agent_density - agent_density
+            delta_density = self.target_density - agent_density
             self.food_regen_prob += delta_density / NORMALIZER
-            self.food_regen_prob = max(self.food_regen_prob, 0.0)
-            self.food_regen_prob = min(self.food_regen_prob, 1.0)
+        elif self.adaptive_food_type == "food":
+            # Compute new food density with food density control.
+            food_density = self.num_foods / (self.width * self.height)
+            if food_density >= self.target_density:
+                self.food_regen_prob = 0
+            else:
+                desired_added_foods = (self.width * self.height) * self.target_density - self.num_foods
+                num_empty_pos = self.width * self.height - self.num_foods
+                self.food_regen_prob = desired_added_foods / num_empty_pos
+
+        # Clip the (possibly unbounded) modified probability to be inside [0, 1].
+        self.food_regen_prob = max(self.food_regen_prob, 0.0)
+        self.food_regen_prob = min(self.food_regen_prob, 1.0)
 
         # Sample whether or not to regenerate food for each square.
         regen_samples = np.random.rand(self.width, self.height)

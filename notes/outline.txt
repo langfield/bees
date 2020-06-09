@@ -481,3 +481,38 @@ Things to come back to:
      - Geographic speciation
      - Phenotypic variation
    - Add health to policy network input
+
+#=========================================================================================
+
+Future directions (6/8/2020)
+
+Performance and cleanliness
+---------------------------
+- Clean up the RL code and use our own implementations
+- Profiling + analyzing effect of optimization parameters (batch size)
+- A3C-like training (multiple envs, where new agents appear in a designated position)
+- Asynchronous stepping of (a single) environment
+- Tie up loose ends in our code
+  - Adaptive food regeneration
+
+Enable longer runs
+------------------
+- Work on cc to get > 8 hour training runs
+
+Change optimization problem
+---------------------------
+- Lookup table for features like Jaderberg paper (DONE)
+- Scale up complexity of reward networks over time
+- Shared perception module between policy network and reward network (autoencoder)
+- Brainstorm more inheritance than just reward network
+
+Evaluation
+----------
+- Implement a way to evaluate population learning dynamics
+- Better experiment management
+
+New directions
+--------------
+- Bayesian optimization on policy network to try to get faster performance?
+- AutoML Zero?
+

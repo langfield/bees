@@ -11,7 +11,7 @@ timesteps should take about 11 min.
 
 DEFAULT_CONFIG_PATH = os.path.join("settings", "convergence_test.json")
 CURRENT_CONFIG_PATH = os.path.join("settings", "convergence_config.json")
-NUM_TRIALS = 8
+NUM_TRIALS = 4
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
     # Define variable config values.
     config_variables = {
         "reward_inputs": [["obs"], ["actions", "obs"]],
-        "tabular": ["true", "false"],
+        "tabular": [True, False],
     }
 
     # Loop over variable config combinations.
