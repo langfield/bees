@@ -4,14 +4,15 @@ import itertools
 
 
 """
-With the current settings (one agent, 1 layer reward network) , each 100000
-timesteps should take about 11 min.
+TIMING:
+1 agent, 1 layer reward network: 100000 timesteps / 11 min
+4 agents, 1 layer reward network: 100000 timesteps / 18 min
 """
 
 
 DEFAULT_CONFIG_PATH = os.path.join("settings", "convergence_test.json")
 CURRENT_CONFIG_PATH = os.path.join("settings", "convergence_config.json")
-NUM_TRIALS = 4
+NUM_TRIALS = 5
 
 
 def main():
@@ -22,8 +23,7 @@ def main():
 
     # Define variable config values.
     config_variables = {
-        "reward_inputs": [["obs"], ["actions", "obs"]],
-        "tabular": [True, False],
+        "reward_inputs": [["actions", "obs"], ["actions"], ["obs"]],
     }
 
     # Loop over variable config combinations.
