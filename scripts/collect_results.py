@@ -4,22 +4,21 @@ import argparse
 
 # Each element of KEYWORDS is a tuple of (source, destination) keywords.
 KEYWORDS = [
-    ("abandoned", "obs_tabular_0"),
-    ("aberdeen", "obs_tabular_1"),
-    ("abilities", "obs_tabular_2"),
-    ("ability", "obs_tabular_3"),
-    ("aboriginal", "obs_raw_0"),
-    ("abortion", "obs_raw_1"),
-    ("abraham", "obs_raw_2"),
-    ("abroad", "obs_raw_3"),
-    ("absence", "action+obs_tabular_0"),
-    ("absent", "action+obs_tabular_1"),
-    ("absolute", "action+obs_tabular_2"),
-    ("absolutely", "action+obs_tabular_3"),
-    ("absorption", "action+obs_raw_0"),
-    ("abstract", "action+obs_raw_1"),
-    ("abstracts", "action+obs_raw_2"),
-    ("academic", "action+obs_raw_3"),
+    ("abandoned", "actions+obs_0"),
+    ("aberdeen", "actions+obs_1"),
+    ("abilities", "actions+obs_2"),
+    ("ability", "actions+obs_3"),
+    ("aboriginal", "actions+obs_4"),
+    ("abortion", "actions_0"),
+    ("abraham", "actions_1"),
+    ("abroad", "actions_2"),
+    ("absence", "actions_3"),
+    ("absent", "actions_4"),
+    ("absolute", "obs_0"),
+    ("absolutely", "obs_1"),
+    ("absorption", "obs_2"),
+    ("abstract", "obs_3"),
+    ("abstracts", "obs_4"),
 ]
 FILE_SUFFIXES = [
     "env_log.txt",
@@ -27,7 +26,7 @@ FILE_SUFFIXES = [
 ]
 
 
-def main():
+def main(args):
 
     for source_name, dest_name in KEYWORDS:
         for suffix in FILE_SUFFIXES:
