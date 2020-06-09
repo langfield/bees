@@ -192,9 +192,11 @@ def main(args: argparse.Namespace) -> None:
     y_labels: List[str] = []
     column_counts = []
 
-    log_paths = glob.glob(args.log_path)
+    log_paths = sorted(glob.glob(args.log_path))
     for log_path in log_paths:
 
+        # Allow ~'s in path, and read lines.
+        log_paths = os.path.expand_user(log_path)
         with open(log_path, "r") as log_file:
             steps = readlines(log_file)
 
