@@ -244,7 +244,7 @@ def train(args: argparse.Namespace) -> float:
         obs, rewards, dones, infos = env.step(action_dict)
         backward_pass = env.iteration % config.num_steps == 0 and env.iteration > 0
 
-        # TODO: Check for keyerror: for agent_id in obs:
+        # TODO: Check for keyerror: (make sure agent_id is in environment returns/obs).
         if config.mp:
             for agent_id in pipes:
                 pipes[agent_id].env_funnel.send(
@@ -332,8 +332,6 @@ def train(args: argparse.Namespace) -> float:
                 # If done then remove from environment.
                 if done:
                     agent = agents.pop(agent_id)
-                    # TODO: Should we save a reference to dead ``rollouts``?
-                    # TODO: Does garbage collection get these? Use ``del``?
                     rollout_map.pop(agent_id)
                     pipes.pop(agent_id)
                     dead_agents.add(agent)
@@ -377,7 +375,7 @@ def train(args: argparse.Namespace) -> float:
             )
 
         # Save for every ``config.save_interval``-th step or on the last update.
-        # TODO: Ensure that we aren't saving out an empty state on the last interation.
+        # TODO: Ensure that we aren't saving out an empty state on the last interaction.
         save_state: bool = env.iteration % config.save_interval == 0
         if save_state or env.iteration == config.time_steps - 1:
 

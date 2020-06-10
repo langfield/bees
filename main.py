@@ -15,7 +15,12 @@ def main() -> None:
     parser.add_argument(
         "--save-root",
         default="./models/",
-        help="directory to save agent logs (default: ./models/)",
+        help="Top-level directory for agent logs (default: ``./models/``).",
+    )
+    parser.add_argument(
+        "--save-path",
+        default="",
+        help="Specific directory for this set of agent logs.",
     )
 
     args = parser.parse_args()

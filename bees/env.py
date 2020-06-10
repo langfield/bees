@@ -354,11 +354,21 @@ class Env(Config):
                 + f"of heterogeneous type '{obj_type_name}'."
             )
 
-        # Add to ``self.grid``.
+        # Even though heterogeneuous object types can overlap, we disallow for agents.
         grid_idx = pos + (obj_type_id,)
         if obj_type_id == self.obj_type_ids["agent"] and self.grid[grid_idx] == 1:
             raise ValueError(f"An agent already exists at grid position '({x}, {y})'.")
 
+        # Disallow double-placing of homogeneous object types.
+        if obj_id is None and self.grid[grid_idx] == 1:
+            obj_type_name = self.obj_type_names[obj_type_id]
+            raise ValueError(
+                f"Object of type '{obj_type_name}' with id cannot be "
+                + f"placed at grid position '({x}, {y})' since an object of the "
+                + "same type already exists there."
+            )
+
+        # Add to the grid.
         self.grid[grid_idx] = 1
 
         # Add to ``self.id_map``.
@@ -469,7 +479,9 @@ class Env(Config):
             if food_density >= self.target_density:
                 self.food_regen_prob = 0
             else:
-                desired_added_foods = (self.width * self.height) * self.target_density - self.num_foods
+                desired_added_foods = (
+                    self.width * self.height
+                ) * self.target_density - self.num_foods
                 num_empty_pos = self.width * self.height - self.num_foods
                 self.food_regen_prob = desired_added_foods / num_empty_pos
 

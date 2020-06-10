@@ -494,6 +494,7 @@ Performance and cleanliness
 - Asynchronous stepping of (a single) environment
 - Tie up loose ends in our code
   - Adaptive food regeneration
+  - Resolve TODOs
 
 Enable longer runs
 ------------------

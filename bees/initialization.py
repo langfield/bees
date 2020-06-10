@@ -69,16 +69,15 @@ class Setup:
             with open(trainer_state_path, "rb") as trainer_file:
                 trainer_state = pickle.load(trainer_file)
 
-        # New training run.
-        elif args.settings:
-            token = get_token(args.save_root)
-            date = str(datetime.datetime.now())
-            date = date.replace(" ", "_")
-            codename = "%s_%s" % (token, date)
-            settings_path = args.settings
-
-        else:
+        if not args.settings:
             raise ValueError("You must pass a value for ``--settings``.")
+
+        # New training run.
+        token = get_token(args.save_root)
+        date = str(datetime.datetime.now())
+        date = date.replace(" ", "_")
+        codename = "%s_%s" % (token, date)
+        settings_path = args.settings
 
         # Load settings dict into Config object.
         with open(settings_path, "r") as settings_file:
@@ -86,9 +85,15 @@ class Setup:
         config = Config(settings)
 
         # Construct a new ``save_dir`` in either case.
-        save_dir = os.path.join(args.save_root, codename)
-        if not os.path.isdir(save_dir):
-            os.makedirs(save_dir)
+        if args.save_path:
+            save_dir = args.save_path
+        else:
+            save_dir = os.path.join(args.save_root, codename)
+
+        # Only allow saving to an existing directory if we are continuing training.
+        if os.path.isdir(save_dir) and not args.load_from:
+            raise ValueError(f"Save directory already exists: {save_dir}")
+        os.makedirs(save_dir)
 
         # Construct log paths.
         env_log_filename = codename + "_env_log.txt"

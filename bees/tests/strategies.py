@@ -16,36 +16,50 @@ from bees.analysis import Metrics
 
 
 @st.composite
-def envs(draw: Callable[[SearchStrategy], Any]) -> Env:
-    """ A hypothesis strategy for generating ``Env`` objects. """
-
+def bees_settings(draw: Callable[[SearchStrategy], Any]) -> Dict[str, Any]:
+    """ A strategy for valid bees settings files. """
     sample: Dict[str, Any] = {}
 
+    # Environment.
     sample["width"] = draw(st.integers(min_value=1, max_value=9))
     sample["height"] = draw(st.integers(min_value=1, max_value=9))
+    sample["sight_len"] = draw(st.integers(min_value=1, max_value=4))
     num_squares = sample["width"] * sample["height"]
     sample["num_agents"] = draw(st.integers(min_value=1, max_value=num_squares))
-    sample["sight_len"] = draw(st.integers(min_value=1, max_value=4))
-    sample["food_density"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["initial_food_density"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["initial_food_regen_prob"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["adaptive_food_type"] = draw(st.sampled_from(["agent", "", "food"]))
+    sample["target_density"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["food_size_mean"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["food_size_stddev"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["food_plant_retries"] = draw(st.integers(min_value=0, max_value=5))
     sample["aging_rate"] = draw(st.floats(min_value=1e-6, max_value=1.0))
+    sample["aging_type"] = draw(st.sampled_from(["linear", "quadratic"]))
     sample["mating_cooldown_len"] = draw(st.integers(min_value=0, max_value=100))
     sample["target_agent_density"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["print_repr"] = draw(st.booleans())
+
+    # Trainer.
     sample["time_steps"] = draw(st.integers(min_value=0, max_value=1000))
     sample["reuse_state_dicts"] = draw(st.booleans())
     sample["policy_score_frequency"] = draw(st.integers(min_value=1, max_value=1000))
     sample["ema_alpha"] = draw(st.floats(min_value=0.0, max_value=1.0))
+    sample["mp"] = draw(st.booleans())
+
+    # Reward.
     sample["n_layers"] = draw(st.integers(min_value=1, max_value=3))
     sample["hidden_dim"] = draw(st.integers(min_value=1, max_value=64))
     sample["reward_weight_mean"] = draw(st.floats(min_value=-2.0, max_value=2.0))
     sample["reward_weight_stddev"] = draw(st.floats(min_value=0.0, max_value=1.0))
     reward_inputs = st.sampled_from(["actions", "obs", "health"])
     sample["reward_inputs"] = list(draw(st.frozensets(reward_inputs, min_size=1)))
+    sample["tabular"] = draw(st.booleans())
+
+    # Genetics.
     sample["mut_sigma"] = draw(st.floats(min_value=0.0, max_value=1.0))
     sample["mut_p"] = draw(st.floats(min_value=0.0, max_value=1.0))
+
+    # Policy.
     sample["algo"] = draw(st.sampled_from(["ppo", "a2c", "acktr"]))
     sample["lr"] = draw(st.floats(min_value=1e-6, max_value=0.2))
     sample["min_lr"] = draw(st.floats(min_value=1e-6, max_value=0.2))
@@ -71,14 +85,21 @@ def envs(draw: Callable[[SearchStrategy], Any]) -> Env:
     sample["use_linear_lr_decay"] = draw(st.booleans())
 
     # Read settings file for defaults.
-    settings_path = "bees/settings/settings.json"
+    settings_path = "settings/settings.json"
     with open(settings_path, "r") as settings_file:
-        settings = json.load(settings_file)
+        settings: Dict[str, Any] = json.load(settings_file)
 
     # Fill settings with values from arguments.
     for key, value in sample.items():
         settings[key] = value
 
+    return settings
+
+
+@st.composite
+def envs(draw: Callable[[SearchStrategy], Any]) -> Env:
+    """ A hypothesis strategy for generating ``Env`` objects. """
+    settings = draw(bees_settings())
     config = Config(settings)
     env = Env(config)
 
@@ -138,7 +159,7 @@ def recursive_extension_dicts(
 ) -> Dict[str, Any]:
     """ Returns a strategy for dictionaries to be used in ``st.recursive()``. """
     dictionary: Dict[str, Any] = draw(
-        st.dictionaries(keys=st.from_regex(r"[a-zA-Z_-]+"), values=values)
+        st.dictionaries(keys=st.from_regex(r"[a-zA-Z_-]+"), values=values, max_size=100)
     )
     return dictionary
 
@@ -155,13 +176,14 @@ def settings_dicts(draw: Callable[[SearchStrategy], Any]) -> Dict[str, Any]:
                     st.integers(),
                     st.text(st.characters()),
                     st.booleans(),
-                    st.lists(st.integers()),
-                    st.lists(st.floats()),
-                    st.lists(st.text(st.characters())),
+                    st.lists(st.integers(), max_size=10),
+                    st.lists(st.floats(), max_size=10),
+                    st.lists(st.text(st.characters()), max_size=10),
                 ),
                 extend=recursive_extension_dicts,
-                max_leaves=4,
+                max_leaves=3,
             ),
+            max_size=100,
         )
     )
     return settings

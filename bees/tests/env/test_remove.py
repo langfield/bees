@@ -17,7 +17,8 @@ def test_env_remove_without_id(remove_args: Tuple[Env, Tuple[int, int]]) -> None
     env, pos = remove_args
     env.reset()
     obj_type_id = env.obj_type_ids["food"]
-    env._place(obj_type_id, pos)
+    if not env.grid[pos][obj_type_id]:
+        env._place(obj_type_id, pos)
 
     # Remove from ``pos``.
     env._remove(obj_type_id, pos)
