@@ -27,11 +27,7 @@ from bees.pipe import Pipe
 from bees.config import Config
 from bees.worker import act, get_policy_score, get_masks
 from bees.creation import get_agent
-from bees.analysis import (
-    update_policy_score,
-    update_losses,
-    Metrics,
-)
+from bees.analysis import update_losses, Metrics
 from bees.initialization import Setup
 
 # pylint: disable=bad-continuation, too-many-branches, duplicate-code
@@ -143,7 +139,10 @@ def train(args: argparse.Namespace) -> float:
     pipes: Dict[int, Pipe] = {}
 
     # Set spawn start method for compatibility with torch.
-    mp.set_start_method("spawn")
+    try:
+        mp.set_start_method("spawn")
+    except RuntimeError as err:
+        print("Warning: multiprocessing:", err)
 
     # TODO: Implement this.
     if args.load_from:
@@ -368,6 +367,7 @@ def train(args: argparse.Namespace) -> float:
 
             metrics = update_losses(
                 env=env,
+                agents=agents,
                 config=config,
                 losses=(value_losses, action_losses, dist_entropies),
                 metrics=metrics,

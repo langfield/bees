@@ -10,6 +10,8 @@ import torch.nn.functional as F
 
 from asta import Tensor, dims, typechecked
 
+from bees.rl.algo.algo import Algo
+from bees.env import Env
 from bees.agent import Agent
 from bees.config import Config
 
@@ -87,7 +89,7 @@ class Metrics:
         return formatted
 
 
-def aggregate_loss(env, losses: Dict[int, float]) -> float:
+def aggregate_loss(env: Env, losses: Dict[int, float]) -> float:
     """
     Aggregates loss data over all agents, by taking a weighted average of the values
     in ``losses``, weighted by the age of the corresponding agent in ``env``.
@@ -113,67 +115,9 @@ def aggregate_loss(env, losses: Dict[int, float]) -> float:
     return loss
 
 
-def update_policy_score(
-    env, config: Config, timestep_scores: Dict[int, float], metrics: Metrics,
-) -> Metrics:
-    """
-    Computes updated policy score metrics from agent actions.
-
-    Parameters
-    ----------
-    env : ``Env``.
-        Training environment.
-    config : ``config``.
-        Training configuration.
-    timestep_scores : ``Dict[int, float]``.
-        Policy scores for a single timestep for each agent.
-    metrics : ``Metrics``.
-        The state of the training analysis metrics. Not mutated.
-
-    Returns
-    -------
-    new_metrics : ``Metrics``.
-        Updated version of ``metrics``. This is not the same object.
-    """
-
-    new_metrics = copy.deepcopy(metrics)
-
-    # Update policy score estimates.
-    valid_ids = set(env.agents.keys()).intersection(set(timestep_scores.keys()))
-    for agent_id in valid_ids:
-        timestep_score = timestep_scores[agent_id]
-
-        # Update policy score with exponential moving average.
-        if agent_id in metrics.policy_scores:
-            new_metrics.policy_scores[agent_id] = (
-                config.ema_alpha * metrics.policy_scores[agent_id]
-                + (1.0 - config.ema_alpha) * timestep_score
-            )
-        else:
-            new_metrics.policy_scores[agent_id] = timestep_score
-
-        # Add policy score EMA to agent objects.
-        env.agents[agent_id].policy_score_ema = new_metrics.policy_scores[agent_id]
-
-        # Set agent maturities.
-        env.agents[agent_id].is_mature = (
-            new_metrics.policy_scores[agent_id] < config.policy_score_mating_threshold
-        )
-
-    # Compute aggregate policy score across all agents (weighted average by age).
-    new_metrics.policy_score = aggregate_loss(env, new_metrics.policy_scores)
-
-    # Set initial policy score, if necessary.
-    if new_metrics.policy_score != float("inf") and metrics.policy_score == float(
-        "inf"
-    ):
-        new_metrics.initial_policy_score = new_metrics.policy_score
-
-    return new_metrics
-
-
 def update_losses(
-    env,
+    env: Env,
+    agents: Dict[int, Algo],
     config: Config,
     losses: Tuple[Dict[int, float], Dict[int, float], Dict[int, float]],
     metrics: Metrics,
@@ -208,7 +152,7 @@ def update_losses(
 
     # Compute total loss as a function of training losses.
     new_metrics.total_losses = {}
-    for agent_id in set(env.agents.keys()) - minted_agents:
+    for agent_id in set(agents.keys()) - minted_agents:
         new_metrics.total_losses[agent_id] = (
             new_metrics.value_losses[agent_id] * config.value_loss_coef
             + new_metrics.action_losses[agent_id]
@@ -222,49 +166,3 @@ def update_losses(
     new_metrics.total_loss = aggregate_loss(env, new_metrics.total_losses)
 
     return new_metrics
-
-
-@typechecked
-def get_optimal_action_dists(
-    agents: Dict[int, Agent], greedy_temperature: float, num_actions: int,
-) -> Dict[int, Tensor[float, N_ACTS]]:
-    """
-    Iterates over the action space and compute the optimal action distribution for
-    each agent.
-
-    Parameters
-    ----------
-    greedy_temperature : ``float``.
-        Greedy temperature for computation of optimal action distributions. As the
-        value of this variable goes to zero, the optimal distribution gets more
-        greedy. This value should be between 0 and 1.
-
-    Returns
-    -------
-    optimal_action_dists : ``Dict[int, torch.Tensor]``.
-        A mapping from ``agent_id`` to the optimal action distribution of that
-        agent.
-    """
-
-    optimal_action_dists: Dict[int, torch.Tensor] = {}
-
-    for agent_id, agent in agents.items():
-        action_rewards = torch.zeros((num_actions,))
-        for action in range(num_actions):
-
-            # Note that this isn't currently compatible with tabular rewards.
-            action_rewards[action] = agent.compute_reward()
-
-        # Flatten action_rewards, perform softmax, and return to original shape.
-        # This is because torch.nn.functional.softmax only computes softmax along
-        # a single dimension.
-        action_rewards = torch.reshape(action_rewards, (-1,))
-        optimal_action_dists[agent_id] = F.softmax(
-            action_rewards / greedy_temperature, dim=0
-        )
-        action_rewards = torch.reshape(action_rewards, (num_actions,))
-        optimal_action_dists[agent_id] = torch.reshape(
-            optimal_action_dists[agent_id], (num_actions,)
-        )
-
-    return optimal_action_dists

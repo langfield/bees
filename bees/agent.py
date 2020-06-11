@@ -116,7 +116,7 @@ class Agent(Config):
         if "actions" in self.reward_inputs:
             input_dim += self.num_actions
         if "health" in self.reward_inputs:
-            input_dim += 2
+            input_dim += 1
         return input_dim
 
     def set_reward_network_tabular_input_dim(self) -> int:
@@ -193,9 +193,8 @@ class Agent(Config):
             flat_action = one_hot(action, self.num_actions)
             input_arrays.append(flat_action)
             remaining_inputs.remove("actions")
-        # TODO: Does it even make sense to include previous health??
         if "health" in remaining_inputs:
-            flat_healths = np.array([self.prev_health, self.health])
+            flat_healths = np.array([self.health])
             input_arrays.append(flat_healths)
             remaining_inputs.remove("health")
         if len(remaining_inputs) > 0:

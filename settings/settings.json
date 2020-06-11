@@ -21,12 +21,12 @@
 
     "2": "====================TRAINER====================",
 
-    "time_steps": 100000,
+    "time_steps": 100,
     "reuse_state_dicts": true,
     "policy_score_frequency": 8,
     "ema_alpha": 0.999,
     "greedy_temperature": 1e-4,
-    "mp": false,
+    "mp": true,
 
     "3": "====================REWARD====================",
 
@@ -79,7 +79,7 @@
     "save_interval": 2048,
     "env_name": "bees",
     "log_dir": "/tmp/gym/",
-    "cuda": true,
+    "cuda": false,
     "use_proper_time_limits": false,
     "base_kwargs": {
         "recurrent": false,
