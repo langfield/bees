@@ -60,7 +60,7 @@ def bees_settings(draw: Callable[[SearchStrategy], Any]) -> Dict[str, Any]:
     sample["mut_p"] = draw(st.floats(min_value=0.0, max_value=1.0))
 
     # Policy.
-    sample["algo"] = draw(st.sampled_from(["ppo", "a2c", "acktr"]))
+    sample["algo"] = draw(st.sampled_from(["ppo", "a2c"]))
     sample["lr"] = draw(st.floats(min_value=1e-6, max_value=0.2))
     sample["min_lr"] = draw(st.floats(min_value=1e-6, max_value=0.2))
     sample["eps"] = draw(st.floats(min_value=0.0, max_value=1e-2))

@@ -7,6 +7,7 @@ import argparse
 import datetime
 from typing import Dict, Any
 
+import torch
 import hypothesis.strategies as st
 from hypothesis import given
 from hypothesis import settings as hsettings
@@ -18,7 +19,7 @@ from bees.tests.strategies import bees_settings
 
 
 @given(bees_settings(), st.integers(min_value=2, max_value=1000))
-@hsettings(max_examples=1, deadline=datetime.timedelta(milliseconds=200))
+@hsettings(max_examples=100, deadline=datetime.timedelta(milliseconds=200))
 def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
     """ Test saving and loading. """
     settings["time_steps"] = time_steps
@@ -26,6 +27,10 @@ def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
 
     # NOTE: If this is set too high with multiprocessing on, cc will CRASH!
     settings["num_agents"] = min(5, settings["num_agents"])
+
+    # CUDA check.
+    if not torch.cuda.is_available():
+        settings["cuda"] = False
 
     # Create settings file.
     tempdir = tempfile.mkdtemp()

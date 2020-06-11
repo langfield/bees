@@ -82,7 +82,6 @@ class Setup:
             settings_path = glob.glob(settings_path)[0]
 
             # Load trainer state.
-            print("DEBUG: trying to load:", trainer_state_path)
             with open(trainer_state_path, "rb") as trainer_file:
                 trainer_state = pickle.load(trainer_file)
 
