@@ -3,9 +3,9 @@
 from typing import List, Tuple
 
 import numpy as np
-
 import torch
 import torch.nn as nn
+
 from bees.rl.utils import init
 
 

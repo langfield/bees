@@ -5,7 +5,7 @@
 # /questions/42272335/how-to-make-a-class-which-has-getattr-properly-pickable
 import copy
 from pprint import pformat
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class Config(dict):

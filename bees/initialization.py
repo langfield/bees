@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 """ Trainer initialization class. """
 import os
-import json
 import glob
+import json
 import pickle
 import shutil
 import argparse
 import datetime
-from typing import TextIO, Any, Dict
+from typing import Any, Dict, TextIO
+
 from bees.utils import get_token, validate_args
 from bees.config import Config
 

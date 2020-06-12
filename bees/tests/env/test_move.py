@@ -4,6 +4,7 @@ from typing import Dict, Tuple
 
 import hypothesis.strategies as st
 from hypothesis import given
+
 from bees.tests import strategies as bst
 
 # pylint: disable=no-value-for-parameter, protected-access

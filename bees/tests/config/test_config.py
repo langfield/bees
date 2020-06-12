@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Test that the ``Config`` class loads dictionaries correctly. """
-from typing import Dict, Any
+from typing import Any, Dict
+
 from hypothesis import given
+
 from bees.tests import strategies
 from bees.config import Config
 

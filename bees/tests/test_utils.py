@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
-from typing import Dict, Any
+from typing import Any, Dict
 
 import hypothesis
-
 
 # Set hypothesis settings.
 hypothesis.settings.register_profile("test_settings", deadline=None)

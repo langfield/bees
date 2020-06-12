@@ -1,35 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Environment with Bees."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function, absolute_import
 
 # Standard imports.
 import os
 import math
+import pickle
 import random
 import functools
 import itertools
 from pprint import pformat
-from typing import Tuple, Dict, Any, List, Set, TextIO, Optional
-import pickle
+from typing import Any, Set, Dict, List, Tuple, TextIO, Optional
+
+# Package imports.
+import gym
+import numpy as np
 
 # Third-party imports.
 import torch
 import torch.nn.functional as F
-import numpy as np
-
-# Package imports.
-import gym
-
 from asta import Array, dims, shapes, typechecked
 
 # Bees imports.
 from bees.agent import Agent
-from bees.genetics import get_child_reward_network
-from bees.config import Config
 from bees.utils import flat_action_to_tuple
+from bees.config import Config
+from bees.genetics import get_child_reward_network
 
 # Settings for ``__repr__()``.
 PRINT_AGENT_STATS = True

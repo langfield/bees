@@ -4,8 +4,8 @@
 import functools
 from typing import List
 
-from hypothesis import given
 import hypothesis.strategies as st
+from hypothesis import given
 
 from bees.utils import flat_action_to_tuple
 

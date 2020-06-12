@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 """ Utilities for evolution of reward functions. """
 from typing import List, Tuple
+
 import numpy as np
 from deap.tools import cxOnePoint, mutGaussian
+
 from bees.agent import Agent
+
 
 # pylint: disable=invalid-name, bad-continuation
 def reward_to_DNA(

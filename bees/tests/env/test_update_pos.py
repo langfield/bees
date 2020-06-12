@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """ Test that ``Env.reset()`` works correctly. """
 from typing import Tuple
+
 from hypothesis import given
+
 from bees.env import Env
 from bees.tests import strategies
 

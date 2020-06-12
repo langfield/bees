@@ -2,32 +2,30 @@
 # -*- coding: utf-8 -*-
 """ PyTorch environment trainer. """
 import os
-import time
-import json
 import copy
-import random
+import json
+import time
 import pickle
+import random
 import argparse
 import collections
-from typing import Dict, Tuple, Set, List, Any, TextIO
+from typing import Any, Set, Dict, List, Tuple, TextIO
 
+import numpy as np
 import torch
 import torch.multiprocessing as mp
-import numpy as np
-
 from asta import dims, shapes
 
 from bees.rl import utils
+from bees.env import Env
+from bees.pipe import Pipe
+from bees.timer import Timer
+from bees.config import Config
+from bees.worker import act, get_masks, get_policy_score
+from bees.analysis import Metrics, update_losses
+from bees.creation import get_agent
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
-
-from bees.env import Env
-from bees.timer import Timer
-from bees.pipe import Pipe
-from bees.config import Config
-from bees.worker import act, get_policy_score, get_masks
-from bees.creation import get_agent
-from bees.analysis import update_losses, Metrics
 from bees.initialization import Setup
 
 # pylint: disable=bad-continuation, too-many-branches, duplicate-code

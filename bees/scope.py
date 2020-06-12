@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """ Analyzes the reward network of an agent. """
 import os
-import json
 import glob
-import random
+import json
 import pickle
+import random
 import argparse
 import functools
 from pprint import pprint

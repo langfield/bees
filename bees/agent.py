@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 """ Agent object for instantiating agents in the environment. """
 import copy
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Any, Dict, List, Tuple, Optional
 
 import numpy as np
-
 from asta import Array, dims, shapes, typechecked
 
-from bees.config import Config
 from bees.utils import one_hot, get_observation_features
+from bees.config import Config
 
 # pylint: disable=bad-continuation, too-many-arguments, too-many-instance-attributes
 

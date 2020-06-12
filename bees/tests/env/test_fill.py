@@ -3,8 +3,8 @@
 """ Test that ``Env.fill()`` works correctly. """
 import itertools
 
-from hypothesis import given, settings
 from hypothesis import HealthCheck as hc
+from hypothesis import given, settings
 
 from bees.env import Env
 from bees.tests import strategies

@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ RL policy class. """
-from typing import Dict, Tuple, Any, Type, Optional
+from typing import Any, Dict, Type, Tuple, Optional
 
 import gym
 import torch
 import torch.nn as nn
 
+from bees.rl.base import NNBase, CNNBase, MLPBase
 from bees.rl.distributions import (
     Bernoulli,
     Categorical,
     DiagGaussian,
     CategoricalProduct,
 )
-from bees.rl.base import NNBase, MLPBase, CNNBase
 
 
 class Policy(nn.Module):

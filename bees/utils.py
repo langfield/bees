@@ -6,11 +6,10 @@ import math
 import time
 import inspect
 import argparse
-from typing import List, Tuple, Any, Callable
 import functools
+from typing import Any, List, Tuple, Callable
 
 import numpy as np
-
 from asta import Array, typechecked
 
 

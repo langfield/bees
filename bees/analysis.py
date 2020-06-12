@@ -3,17 +3,16 @@
 """ Print live training debug output and do reward analysis. """
 import copy
 from pprint import pformat
-from typing import Dict, Any, Tuple, Set
+from typing import Any, Set, Dict, Tuple
 
 import torch
 import torch.nn.functional as F
-
 from asta import Tensor, dims, typechecked
 
-from bees.rl.algo.algo import Algo
 from bees.env import Env
 from bees.agent import Agent
 from bees.config import Config
+from bees.rl.algo.algo import Algo
 
 # pylint: disable=too-few-public-methods
 

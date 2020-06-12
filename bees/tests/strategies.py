@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """ Custom hypothesis strategies for bees. """
 import json
-from typing import Dict, Tuple, Callable, Any, Optional
+from typing import Any, Dict, Tuple, Callable, Optional
 
 import hypothesis.strategies as st
 from hypothesis.strategies import SearchStrategy

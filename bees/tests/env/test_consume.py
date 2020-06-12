@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from typing import List, Dict, Tuple, Set
+from typing import Set, Dict, List, Tuple
 
 import hypothesis.strategies as st
 from hypothesis import given

@@ -4,11 +4,11 @@ from itertools import product
 
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from hypothesis.stateful import rule, initialize, RuleBasedStateMachine
+from hypothesis.stateful import RuleBasedStateMachine, rule, initialize
 
 from bees.env import Env
-from bees.utils import timing
 from bees.tests import strategies as bst
+from bees.utils import timing
 
 # pylint: disable=no-value-for-parameter, protected-access
 

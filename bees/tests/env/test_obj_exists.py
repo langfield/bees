@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from typing import Tuple
+
 import hypothesis.strategies as st
 from hypothesis import given
 

@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 """ Tests for the ``env._mate()`` function. """
 from typing import Tuple
+
 import hypothesis.strategies as st
 from hypothesis import given, assume
 
-from bees.tests import strategies as bst
 from bees.agent import Agent
+from bees.tests import strategies as bst
 
 # pylint: disable=no-value-for-parameter, protected-access
 

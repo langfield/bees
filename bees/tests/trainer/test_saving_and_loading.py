@@ -2,10 +2,10 @@
 import os
 import json
 import shutil
-import tempfile
 import argparse
 import datetime
-from typing import Dict, Any
+import tempfile
+from typing import Any, Dict
 
 import torch
 import hypothesis.strategies as st

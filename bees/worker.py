@@ -2,21 +2,18 @@
 # -*- coding: utf-8 -*-
 """ Distributed training function for a single agent worker. """
 import copy
-from typing import Dict, Tuple, Any, Optional
+from typing import Any, Dict, Tuple, Optional
 from multiprocessing.connection import Connection
 
+import numpy as np
 import torch
 import torch.nn.functional as F
-
-import numpy as np
-
 from asta import Array, Tensor, dims, shapes, typechecked
 
 from bees.rl import utils
+from bees.config import Config
 from bees.rl.storage import RolloutStorage
 from bees.rl.algo.algo import Algo
-
-from bees.config import Config
 
 # pylint: disable=duplicate-code
 

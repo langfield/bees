@@ -4,22 +4,20 @@
 import copy
 import random
 import collections
-from typing import Set, List, Dict, Tuple, Optional, Any
+from typing import Any, Set, Dict, List, Tuple, Optional
 
 import gym
 import numpy as np
 import torch
 import torch.multiprocessing as mp
-
 from asta import Array, shapes, typechecked
-
-from bees.rl.algo import Algo, PPO, A2C_ACKTR
-from bees.rl.model import Policy, CNNBase, MLPBase
-from bees.rl.storage import RolloutStorage
 
 from bees.pipe import Pipe
 from bees.config import Config
 from bees.worker import worker_loop
+from bees.rl.algo import PPO, A2C_ACKTR, Algo
+from bees.rl.model import Policy, CNNBase, MLPBase
+from bees.rl.storage import RolloutStorage
 
 
 @typechecked
