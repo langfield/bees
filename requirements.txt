@@ -1,9 +1,5 @@
 gym
-tensorflow
-lz4
-psutil
 pandas
-opencv-python
 deap
 hypothesis
 optuna
@@ -12,3 +8,5 @@ pytest
 mypy
 black
 asta
+sphinx
+sphinxcontrib-katex
