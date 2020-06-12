@@ -28,6 +28,9 @@ def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
     # NOTE: If this is set too high with multiprocessing on, cc will CRASH!
     settings["num_agents"] = min(5, settings["num_agents"])
 
+    # DEBUG to figure out why hypothesis is throwing an OSError.
+    settings["mp"] = False
+
     # CUDA check.
     if not torch.cuda.is_available():
         settings["cuda"] = False
@@ -61,6 +64,10 @@ def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
         "save_root": save_root,
     }
     args = argparse.Namespace(**args_dict)
+
+    settings["time_steps"] *= 2
+    with open(settings_path, "w") as settings_file:
+        json.dump(settings, settings_file)
 
     # Call second training round.
     train(args)
