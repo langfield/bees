@@ -22,6 +22,9 @@ from bees.tests.strategies import bees_settings
 @hsettings(max_examples=100, deadline=datetime.timedelta(milliseconds=200))
 def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
     """ Test saving and loading. """
+
+
+
     settings["time_steps"] = time_steps
     settings["save_interval"] = time_steps // 2
 
@@ -34,6 +37,7 @@ def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
     # CUDA check.
     if not torch.cuda.is_available():
         settings["cuda"] = False
+    exit()
 
     # Create settings file.
     tempdir = tempfile.mkdtemp()
@@ -50,6 +54,8 @@ def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
         "save_root": "",
     }
     args = argparse.Namespace(**args_dict)
+    with open("test_settings.json", "a+") as settings_file:
+        json.dump(settings, settings_file, indent=4)
 
     # Call first training round.
     train(args)
@@ -70,9 +76,13 @@ def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
         json.dump(settings, settings_file)
 
     # Call second training round.
-    train(args)
+    # train(args)
 
     # TODO: We need to figure out some way to get references to objects inside
     # training loop and environment at the end or during training, so we can
     # assert they have the appropriate values.
     shutil.rmtree(tempdir)
+
+
+if __name__ == "__main__":
+    test_saving_and_loading()

@@ -517,3 +517,8 @@ New directions
 - Bayesian optimization on policy network to try to get faster performance?
 - AutoML Zero?
 
+
+What we are doing now: Get longer runs to happen. This means that we need
+saving and loading to work, then we need to augment this repo/cc with the
+ability to perform a run over multiple nodes. First thing is just to get saving
+and loading to work.

@@ -6,3 +6,5 @@ models/
 .hypothesis/
 .coverage
 output-docs/
+*.pyc
+.pytest_cache/

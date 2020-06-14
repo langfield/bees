@@ -1,0 +1,8 @@
+2020.6.14:
+Goal right now is to get persistent long runs across cc nodes, we are trying to
+get saving and loading in our repo to work to accommodate this. We have a test
+for this in bees/tests/trainer/test_saving_and_loading(), but this test keeps
+crashing due to memory over-use. The Perl timeout script is killing it, saying
+that it is requesting ~40GB of memory. What? Another thing to try tomorrow:
+Just turn off the timeout script entirely. Maybe it doesn't play nicely with
+the stuff we're running and maybe the machine just won't go down.
