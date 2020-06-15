@@ -371,6 +371,15 @@ Things to come back to:
       way here?
     - Our adaptive food regeneration is probably bad
 
+    Idea for later: Make trainer less monolithic. It's impossible to test
+    individual parts of the pipeline right now (like saving and loading)
+    because it all happens in one function, and we can't test the values of the
+    variables within this function. If we had a trainer class and keep track of
+    the trainer state that way, then make individual functions for each part of
+    the training pipeline, we could call each function and check the values of
+    those pieces of state before and after each function call. Making trainer
+    less monolithic will enable testing it.
+
 #===========================================================================================
 
     October sprint:
@@ -495,6 +504,7 @@ Performance and cleanliness
 - Tie up loose ends in our code
   - Adaptive food regeneration
   - Resolve TODOs
+  - Resolve settings loading behavior to match docstring of train()
 
 Enable longer runs
 ------------------
@@ -522,3 +532,5 @@ What we are doing now: Get longer runs to happen. This means that we need
 saving and loading to work, then we need to augment this repo/cc with the
 ability to perform a run over multiple nodes. First thing is just to get saving
 and loading to work.
+
+Fix bug where total rewards gets reset during continuation of saved run.

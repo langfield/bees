@@ -8,7 +8,7 @@
     "num_agents": 5,
     "initial_food_density": 1.0,
     "initial_food_regen_prob": 1.0,
-    "adaptive_food_type": "agent",
+    "adaptive_food_type": "food",
     "target_density": 0.07,
     "food_size_mean": 1.0,
     "food_size_stddev": 0.00,
@@ -21,12 +21,12 @@
 
     "2": "====================TRAINER====================",
 
-    "time_steps": 100,
+    "time_steps": 2000,
     "reuse_state_dicts": true,
     "policy_score_frequency": 8,
     "ema_alpha": 0.999,
     "greedy_temperature": 1e-4,
-    "mp": true,
+    "mp": false,
 
     "3": "====================REWARD====================",
 
@@ -79,7 +79,7 @@
     "save_interval": 2048,
     "env_name": "bees",
     "log_dir": "/tmp/gym/",
-    "cuda": false,
+    "cuda": true,
     "use_proper_time_limits": false,
     "base_kwargs": {
         "recurrent": false,
