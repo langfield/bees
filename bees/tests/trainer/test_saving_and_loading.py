@@ -20,10 +20,15 @@ from bees.tests.strategies import bees_settings
 
 @given(bees_settings(), st.integers(min_value=2, max_value=1000))
 @hsettings(max_examples=100, deadline=datetime.timedelta(milliseconds=200))
-def test_saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
-    """ Test saving and loading. """
+def saving_and_loading(settings: Dict[str, Any], time_steps: int) -> None:
+    """
+    Test saving and loading.
 
-
+    Note: This test case doesn't run (it doesn't start with "test", so pytest doesn't
+    call it) on purpose because we decided to ditch it for now. Testing saving and
+    loading is annoying because our trainer is monolithic, and we don't want to take the
+    time to do it right now. We should come back and do this later.
+    """
 
     settings["time_steps"] = time_steps
     settings["save_interval"] = time_steps // 2

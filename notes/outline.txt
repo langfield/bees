@@ -505,6 +505,7 @@ Performance and cleanliness
   - Adaptive food regeneration
   - Resolve TODOs
   - Resolve settings loading behavior to match docstring of train()
+  - Test saving and loading
 
 Enable longer runs
 ------------------
