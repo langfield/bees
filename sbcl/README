@@ -1,0 +1,4 @@
+sudo apt-get install sbcl buildapp
+
+# Google how to install quicklisp
+bash ql-install.sh
