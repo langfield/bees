@@ -70,6 +70,10 @@ functionality for propulsion to develop.
 
 It might not even make sense to have it be a gridworld.
 
+Vector masks, so it can see all possible observations in a tensor, but most of
+it tends to be masked out, just statistically, but if it evolves to want to
+unmask stuff, then we know it's getting some use of the inputs.
+
 things to look at
 -----------------
 chemotaxis
