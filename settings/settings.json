@@ -1,8 +1,8 @@
 {
     "1": "====================ENVIRONMENT====================",
 
-    "width": 10,
-    "height": 10,
+    "width": 40,
+    "height": 40,
     "sight_len": 3,
     "num_obj_types": 2,
     "num_agents": 5,
@@ -16,7 +16,7 @@
     "aging_type": "linear",
     "mating_cooldown_len": 1e12,
 	"policy_score_mating_threshold": 0.2,
-    "print_repr": false,
+    "print_repr": true,
     "num_displayed_agents": 20,
 
     "2": "====================TRAINER====================",
@@ -71,7 +71,7 @@
     "seed": 2,
     "cuda_deterministic": false,
     "num_processes": 1,
-    "num_steps": 256,
+    "num_steps": 25600,
     "ppo_epoch": 4,
     "num_mini_batch": 1,
     "clip_param": 0.3,
@@ -79,7 +79,7 @@
     "save_interval": 2048,
     "env_name": "bees",
     "log_dir": "/tmp/gym/",
-    "cuda": true,
+    "cuda": false,
     "use_proper_time_limits": false,
     "base_kwargs": {
         "recurrent": false,
