@@ -39,6 +39,9 @@ This seems wrong. Probably better to have everything be an agent. Garbage bags
 maybe form randomly, so they're drawn from some distribution. All agents are
 functions, which take in some input.
 
+Perhaps when an agent subsumes another agent, this is represented as function
+composition?
+
 Okay so there's got to be some sort of notion of an "observation" which is made
 at each timestep. What can agents see? Let's take a 2D grid world, do we want
 to give them structured data? A matrix of inputs around them? This seems a
@@ -55,14 +58,25 @@ It probably doesn't make any sense to take lessons from eukaryotes. Modern-day
 archaea are already super-evolved from whatever the first garbage bag
 "organisms" looked like, if that model is true.
 
-It seems we want the most simplified model of interactions between an agent and
-its surrounding chemistry as is possible. Perhaps the environment randomly
-fluctuates in temperature, and temperature can vary across location. Perhaps
-it's a smooth scalar field or something, so just a C-infty function on a
-manifold.
+It seems like we want the most simplified model of interactions between an
+agent and its surrounding chemistry as is possible. Perhaps the environment
+randomly fluctuates in temperature, and temperature can vary across location.
+Perhaps it's a smooth scalar field or something, so just a C-infty function on
+a manifold.
 
 Propulsion is probably another thing which is wayyyyyy too complex to hardcode
 into the agents. It probably took a ton of generations for even the most basic
 functionality for propulsion to develop.
 
 It might not even make sense to have it be a gridworld.
+
+things to look at
+-----------------
+chemotaxis
+non-motile bacteria
+bacterial motility
+evolution of flagella
+
+questions
+---------
+How did bacterial evolve to become motile?

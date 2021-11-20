@@ -1,0 +1,48 @@
+Imagine you are half-starved, blindfolded, then placed into a large gymnasium
+with a plate full of freshly-baked cookies. How do you find the cookies? You
+could try to randomly walk around until you step on them. Interestingly, you
+are mathematically guaranteed to reach the cookies this way, even if the gym is
+infinitely large^[1], but that could take a very long time, and you’re hungry
+now. Luckily, you can use your senses to speed things up.
+
+It turns out that smell is the only useful sense here, as your vision is
+blocked and your other senses are either too short-ranged (taste, touch) or
+functionally unable (hearing) to help you find the cookies. But, generally, you
+cannot use smell to turn towards distant objects, because the change in odor
+intensity is too weak to detect when standing in place and turning around. So
+how can you find the cookies?
+
+You could start by sniffing, walking for a while, then sniffing again. If the
+odor got stronger, then you must be moving towards the cookies. Great! You
+should keep moving in that direction. If the smell got weaker, that’s okay;
+just spin around and try again in a new direction. By following this procedure
+you will reach the cookies much more quickly than before (Figure 1).
+
+It turns out that many bacteria use this cookie-finding procedure to help them
+move towards food, and in this context the procedure is called chemotaxis. Why
+do bacteria need to do this? Well, many kinds of bacteria can move using a
+flagella, which is a long filament that sticks off of the cell surface and
+rotates, working like a propeller to push the cell forward. But just like our
+noses are too weak to directly help us turn toward the cookies, bacteria are
+too small to directly sense the direction food is in. So bacteria use
+chemotaxis to move towards their food by swimming, sensing whether it has moved
+towards or away from the food, then deciding whether to keep swimming in the
+same direction or to change directions.
+
+But there’s a hidden assumption here. Think back to the cookie-finding
+procedure. You smelled, walked, then smelled again and compared the current
+smell to the previous smell. That means that you need to remember what the
+smell was previously. Can bacteria actually do this? It turns out the answer is
+yes. A series of chemical reactions inside of the cell stores information about
+how strong the “smell” of the food was previously, so that the bacteria can
+tell if they have moved toward or away from the food source.
+
+The reason chemotaxis works so well for bacteria is that, at the size of a
+bacterium, diffusion spreads chemicals into gradients very quickly. In fact,
+the bacterial world is dominated by diffusion-generated chemical gradients.
+This is hugely different from the world we normally see, where diffusion plays
+a only minor role^[2]. From a bacterial point of view, the world is a series of
+chemical gradients that can lead them toward food or away from predators, and
+chemotaxis enables the cells to navigate these gradients effectively.
+
+Joshua Franklin, MSU
