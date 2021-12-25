@@ -180,6 +180,7 @@ micelles
 vesicles
 lipid monomers
 cross-catalysis
+compositional inheritance
 
 
 General and meaningless notes
@@ -212,6 +213,11 @@ challenges. Journal of theoretical biology. 381. 29-38.
 10.1016/j.jtbi.2015.06.047. 
 
 This is a follow up to the top two papers.
+
+
+
+Szathmáry, E. On the propagation of a conceptual error concerning hypercycles
+and cooperation. J Syst Chem 4, 1 (2013). https://doi.org/10.1186/1759-2208-4-1
 
 
 
