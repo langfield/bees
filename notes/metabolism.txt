@@ -171,6 +171,20 @@ self-replicating polymers
 autocatalysis
 autocatalytic sets
 coacervate theory
+GARD (graded autocatalytic replication domain) model
+template replicators
+attractors
+covalent vs. non-covalent bonds
+lipid world scenario
+micelles
+vesicles
+lipid monomers
+cross-catalysis
+
+
+General and meaningless notes
+-----------------------------
+Can you run the selection process backwards?
 
 
 References
