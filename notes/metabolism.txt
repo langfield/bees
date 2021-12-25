@@ -159,6 +159,15 @@ chemotaxis
 non-motile bacteria
 bacterial motility
 evolution of flagella
+molecular dynamics
+coarse-grained modeling
+domain decomposition method
+anton (DE Shaw supercomputer)
+molecular modeling on GPU
+comparison of force field implementations
+comparison of software for molecular mechanics modeling
+discrete element method (maybe too slow)
+
 
 questions
 ---------
