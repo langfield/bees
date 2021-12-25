@@ -153,7 +153,7 @@ Metabolism:   sufficiently small molecules can pass through the membrane in
 Aggregation:  molecules can combine within a garbage bag
 
 
-things to look at
+Things to look at
 -----------------
 chemotaxis
 non-motile bacteria
@@ -167,8 +167,44 @@ molecular modeling on GPU
 comparison of force field implementations
 comparison of software for molecular mechanics modeling
 discrete element method (maybe too slow)
+self-replicating polymers
+autocatalysis
+autocatalytic sets
+coacervate theory
 
 
-questions
+References
+----------
+Vasas V, Szathmáry E, Santos M. Lack of evolvability in self-sustaining
+autocatalytic networks constraints metabolism-first scenarios for the origin of
+life. Proc Natl Acad Sci U S A. 2010;107(4):1470-1475.
+doi:10.1073/pnas.0912628107
+
+This paper claims that the garbage bag model is garbage.
+
+
+
+Vasas, V., Fernando, C., Santos, M. et al. Evolution before genes. Biol Direct
+7, 1 (2012). https://doi.org/10.1186/1745-6150-7-1
+
+This paper (by the same! authors) claims that it isn't as garbage as they
+thought in 2010.
+
+
+
+Vasas, Vera & Fernando, Chrisantha & Szilágyi, András & Zachar, István &
+Santos, Mauro & Szathmáry, Eörs. (2015). Primordial evolvability: Impasses and
+challenges. Journal of theoretical biology. 381. 29-38.
+10.1016/j.jtbi.2015.06.047. 
+
+This is a follow up to the top two papers.
+
+
+
+Would be a good idea to look at papers by mathematicians which cite these
+papers, and to look at their references.
+
+
+Questions
 ---------
 How did bacterial evolve to become motile?
