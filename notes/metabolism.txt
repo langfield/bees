@@ -181,6 +181,12 @@ vesicles
 lipid monomers
 cross-catalysis
 compositional inheritance
+(M, R) systems (almost certainly not vague bullshit)
+Robert Rosen
+hypercycles
+autopoiesis (likely vague bullshit)
+chemoton (slightly less likely vague bullshit)
+
 
 
 General and meaningless notes
