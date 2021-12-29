@@ -155,12 +155,13 @@ Aggregation:  molecules can combine within a garbage bag
 
 Things to look at
 -----------------
-chemotaxis
-non-motile bacteria
-bacterial motility
-evolution of flagella
-molecular dynamics
-coarse-grained modeling
+- chemotaxis
+- non-motile bacteria
+- pili motility
+- bacterial motility
+- evolution of flagella
+- molecular dynamics
+- coarse-grained modeling
 domain decomposition method
 anton (DE Shaw supercomputer)
 molecular modeling on GPU
@@ -186,6 +187,9 @@ Robert Rosen
 hypercycles
 autopoiesis (likely vague bullshit)
 chemoton (slightly less likely vague bullshit)
+emsemble replication
+espressomd (has python interface)
+lammps python interface
 
 
 
@@ -193,10 +197,60 @@ General and meaningless notes
 -----------------------------
 Can you run the selection process backwards?
 
+We want a way to measure how interesting the behavior of the protocells is. So
+examples of uninteresting behavior are:
+- they don't move
+- they move but randomly and not much else
+- they replicate but they just fill up the whole grid
+
+The best example of interesting behavior is chemotaxis (so far, that I've read
+about). If protocells can eat molecules, then it would be cool if they start
+getting good at finding them. That is interesting.
+
+There are a couple ways we could measure this. What do intelligent chemotaxers
+do? Well they behave differently depending on what types of molecules are
+around. They'll do something random if there's no interesting food around, and
+they'll do something else when there is. So we can measure the difference in
+their activity levels somehow. We could measure what proportion of the types of
+food items they eat.
+
+How do you get them to not fill up the whole grid or die out? This is an
+evolutionary game theory thing. Something to do with population dynamics.
+
+
+On RNA world vs. metabolism-first
+---------------------------------
+Systems chemists and mathematicians (Dyson and Rosen) are all on the metabolism
+side. The popular authors on the metabolism side actually know differential
+equations and evolutionary game theory. The people on the RNA world side are
+biologists and organic chemists. Their theories sound like good stories and not
+much else. In any case learning chemistry sounds boring so I'll stick with
+metabolism out of laziness.
+
+See papers by Orgel.
+
+
+On Tim Hutton's artificial chemistry
+------------------------------------
+Bunch of atoms, atoms have states, there is a small table of reactions between
+atoms. These are hand-coded. Using these reactions, starting with a soup of
+individual atoms, he got replication and evolution, but they stopped evolving,
+or, well selection pressures only made the molecules shorter. That isn't very
+interesting.
+
+So he got replication from nothing, but replication is not enough, we need
+replication with nice heredity. Is this also the problem with the GARD model?
+Who knows.
+
+Hutton's world could never support chemotaxis because you can't smell stuff
+from far away. So his little molecules aren't going to be able to learn to get
+better at surviving by finding the reagents they need, because they can't see
+them.
+
 
 References
 ----------
-Vasas V, Szathmáry E, Santos M. Lack of evolvability in self-sustaining
+[1] Vasas V, Szathmáry E, Santos M. Lack of evolvability in self-sustaining
 autocatalytic networks constraints metabolism-first scenarios for the origin of
 life. Proc Natl Acad Sci U S A. 2010;107(4):1470-1475.
 doi:10.1073/pnas.0912628107
@@ -205,7 +259,7 @@ This paper claims that the garbage bag model is garbage.
 
 
 
-Vasas, V., Fernando, C., Santos, M. et al. Evolution before genes. Biol Direct
+[2] Vasas, V., Fernando, C., Santos, M. et al. Evolution before genes. Biol Direct
 7, 1 (2012). https://doi.org/10.1186/1745-6150-7-1
 
 This paper (by the same! authors) claims that it isn't as garbage as they
@@ -213,7 +267,7 @@ thought in 2010.
 
 
 
-Vasas, Vera & Fernando, Chrisantha & Szilágyi, András & Zachar, István &
+[3] Vasas, Vera & Fernando, Chrisantha & Szilágyi, András & Zachar, István &
 Santos, Mauro & Szathmáry, Eörs. (2015). Primordial evolvability: Impasses and
 challenges. Journal of theoretical biology. 381. 29-38.
 10.1016/j.jtbi.2015.06.047. 
@@ -222,8 +276,16 @@ This is a follow up to the top two papers.
 
 
 
-Szathmáry, E. On the propagation of a conceptual error concerning hypercycles
+[4] Szathmáry, E. On the propagation of a conceptual error concerning hypercycles
 and cooperation. J Syst Chem 4, 1 (2013). https://doi.org/10.1186/1759-2208-4-1
+
+[5] Orgel LE. Prebiotic chemistry and the origin of the RNA world. Crit Rev Biochem
+Mol Biol. 2004 Mar-Apr;39(2):99-123. doi: 10.1080/10409230490460765. PMID:
+15217990.
+
+[6] Miyata M, Robinson RC, Uyeda TQP, et al. Tree of motility - A proposed history
+of motility systems in the tree of life. Genes Cells. 2020;25(1):6-21.
+doi:10.1111/gtc.12737 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7004002/
 
 
 
